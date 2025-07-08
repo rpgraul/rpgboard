@@ -1,0 +1,1 @@
+#board-view-container .card{position:absolute;width:320px;min-height:150px;cursor:grab;z-index:100;box-shadow:0 5px 15px rgba(0,0,0,.3);transition:transform .2s ease-in-out,box-shadow .2s ease-in-out}#board-view-container .card:active{cursor:grabbing;z-index:101;transform:scale(1.02);box-shadow:0 8px 20px rgba(0,0,0,.4)}
