@@ -5,7 +5,7 @@ import * as firebaseService from './modules/firebaseService.js';
 import * as narrator from './modules/narrator.js';
 import * as bulkEdit from './modules/bulkEdit.js';
 import * as settings from './modules/settings.js';
-import * as grid from './modules/grid.js';
+import * as grid from './modules/grid.js'; // Este import já existe, apenas para referência
 import * as board from './modules/board.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         appSettings = await firebaseService.getSettings();
         if (topBarTitle) topBarTitle.textContent = appSettings.siteTitle;
         document.title = `${appSettings.siteTitle} - GameBoard`;
+        cardRenderer.initializeCardRenderer(appSettings); // Inicializa o renderizador com as configurações
         generateTagFilters(appSettings.filters, tagFiltersContainer);
     } catch (error) {
         console.error("Falha ao carregar as configurações do site:", error);
@@ -358,6 +359,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /**
+     * Lida com a alteração do valor do shortcode de dinheiro, incluindo operações matemáticas.
+     * @param {HTMLInputElement} inputElement - O elemento de input que foi editado.
+     */
+    async function handleMoneyChange(inputElement) {
+        const moneyComponent = inputElement.closest('.shortcode-money');
+        if (!moneyComponent || !moneyComponent.dataset.itemId) return;
+
+        const { itemId, shortcode: encodedShortcode } = moneyComponent.dataset;
+        const item = allItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        const decodedShortcode = decodeURIComponent(encodedShortcode);
+        const originalArgs = shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1);
+        const originalParams = shortcodeParser._parseKeyValueArgs(originalArgs);
+        const originalValue = parseFloat(originalParams.current) || 0;
+
+        const userInput = inputElement.value.trim();
+        // Remove dots (thousand separators) to allow for calculation.
+        const cleanedInput = userInput.replace(/\./g, '');
+        let newValue = originalValue;
+
+        // Case 1: Full expression (e.g., "10+10", "5 * 2")
+        const fullExpressionMatch = cleanedInput.match(/^(\d+\.?\d*)\s*([+\-*/])\s*(\d+\.?\d*)$/);
+        if (fullExpressionMatch) {
+            const operand1 = parseFloat(fullExpressionMatch[1]);
+            const operator = fullExpressionMatch[2];
+            const operand2 = parseFloat(fullExpressionMatch[3]);
+
+            if (!isNaN(operand1) && !isNaN(operand2)) {
+                if (operator === '+') newValue = operand1 + operand2;
+                else if (operator === '-') newValue = operand1 - operand2;
+                else if (operator === '*') newValue = operand1 * operand2;
+                else if (operator === '/' && operand2 !== 0) newValue = operand1 / operand2;
+            }
+        }
+        // Case 2: Relative operation (e.g., "+10", "-5")
+        else {
+            const relativeOperationMatch = cleanedInput.match(/^([+\-*/])\s*(\d+\.?\d*)$/);
+            if (relativeOperationMatch) {
+                const operator = relativeOperationMatch[1];
+                const operand = parseFloat(relativeOperationMatch[2]);
+                if (!isNaN(operand)) {
+                    if (operator === '+') newValue = originalValue + operand;
+                    else if (operator === '-') newValue = originalValue - operand;
+                    else if (operator === '*') newValue = originalValue * operand;
+                    else if (operator === '/' && operand !== 0) newValue = originalValue / operand;
+                }
+            }
+            // Case 3: Absolute value (e.g., "20")
+            else if (!isNaN(parseFloat(cleanedInput))) {
+                newValue = parseFloat(cleanedInput);
+            }
+        }
+
+        newValue = Math.round(newValue * 100) / 100; // Arredonda para 2 casas decimais
+
+        // Atualiza o shortcode na string de conteúdo
+        const newShortcode = decodedShortcode.replace(/current=([\d\."]+)/, `current="${newValue}"`);
+        const newContent = item.conteudo.replace(decodedShortcode, newShortcode);
+
+        // Salva no Firebase apenas se o conteúdo mudou
+        if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
+    }
+
     // Objeto unificado de handlers para os cards
     const cardActionHandlers = {
         onDelete: handleDeleteItem,
@@ -409,6 +475,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 handleShortcodeValueChange(itemId, shortcode, clampedValue, countTrigger);
             }
             return; // Encerra após tratar o clique no contador.
+        }
+
+        // Prioridade 1.5: Edição do dinheiro.
+        const moneyDisplay = target.closest('.shortcode-money .money-value-display');
+        if (moneyDisplay) {
+            event.stopPropagation();
+            const moneyComponent = moneyDisplay.closest('.shortcode-money');
+            const input = moneyComponent.querySelector('.money-value-input');
+            moneyDisplay.classList.add('is-hidden');
+            input.classList.remove('is-hidden');
+            input.focus();
+            input.select();
+            return;
         }
 
         // Prioridade 2: Toggle do Tooltip.
@@ -500,6 +579,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             handleShortcodeValueChange(itemId, shortcode, clampedValue, target);
+        }
+    });
+
+    // Listener para os inputs de dinheiro (quando perdem o foco)
+    document.body.addEventListener('focusout', (event) => {
+        if (event.target.classList.contains('money-value-input')) {
+            handleMoneyChange(event.target);
+        }
+    });
+
+    // Listener para as teclas Enter/Escape nos inputs de dinheiro
+    document.body.addEventListener('keydown', (event) => {
+        if (event.target.classList.contains('money-value-input')) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                event.target.blur(); // Aciona o 'focusout' para salvar
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                const moneyComponent = event.target.closest('.shortcode-money');
+                const display = moneyComponent.querySelector('.money-value-display');
+
+                // Re-parse to get original raw value to avoid issues with formatted display value
+                const { shortcode: encodedShortcode } = moneyComponent.dataset;
+                const decodedShortcode = decodeURIComponent(encodedShortcode);
+                const originalArgs = shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1);
+                const originalParams = shortcodeParser._parseKeyValueArgs(originalArgs);
+                const originalValue = parseFloat(originalParams.current) || 0;
+
+                event.target.classList.add('is-hidden');
+                display.classList.remove('is-hidden');
+                event.target.value = originalValue; // Reseta o valor do input para o valor puro
+            }
         }
     });
 
@@ -992,4 +1103,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicializa os campos de tag com a funcionalidade de sugestão
     initializeTagInput(cardTagsInput, { suggestions: appSettings.recommendedTags || [] });
     initializeTagInput(searchInput, { isMultiTag: false, showRecsOnFocus: false });
+
+    /**
+     * Creates a temporary visual feedback element near the cursor.
+     * @param {MouseEvent} event - The click event.
+     * @param {string} text - The text to display.
+     */
+    function createClickFeedback(event, text = 'Copiado!') {
+        const feedbackEl = document.createElement('div');
+        feedbackEl.textContent = text;
+        feedbackEl.className = 'click-feedback';
+        document.body.appendChild(feedbackEl);
+
+        // Position near the cursor
+        feedbackEl.style.left = `${event.pageX + 15}px`;
+        feedbackEl.style.top = `${event.pageY}px`;
+
+        // Animate out and remove
+        setTimeout(() => {
+            feedbackEl.style.opacity = '0';
+            setTimeout(() => {
+                feedbackEl.remove();
+            }, 500);
+        }, 700);
+    }
+
+    // Listener global para copiar conteúdo de tags <code> dentro de modais
+    document.body.addEventListener('click', async (event) => {
+        if (event.target.closest('.modal-card-body')) {
+            const codeBlock = event.target.closest('pre > code');
+            if (codeBlock) {
+                await navigator.clipboard.writeText(codeBlock.textContent);
+                createClickFeedback(event);
+            }
+        }
+    });
 });

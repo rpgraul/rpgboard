@@ -15,6 +15,7 @@
         <div class="container">
             <span class="top-bar-title"></span>
             <div class="top-bar-right">
+                <a href="/converter.html" class="button is-small is-light">Adicionar em Massa</a>
                 <a id="narrator-login-btn" class="button is-small is-dark">Entrar como Narrador</a>
             </div>
         </div>
@@ -230,12 +231,19 @@
                     <p>Shortcodes são códigos especiais que você pode inserir no campo <strong>"Conteúdo Principal"</strong> de um card para exibir informações dinâmicas e interativas.</p>
 
                     <h4>Status Simples: <code>[stat]</code></h4>
-                    <p>Exibe um texto simples. Por padrão, aparece no canto superior esquerdo do card.</p>
+                    <p>Exibe um texto simples. Por padrão, aparece no canto superior esquerdo do card. Você pode adicionar um tooltip colocando parte do texto entre parênteses.</p>
                     <pre><code>[stat "Ocupação" "Arqueóloga"]</code></pre>
+                    <pre><code>[stat "Local" "Taverna (O Pônei Saltitante)"]</code></pre>
 
                     <h4>Pontos de Vida: <code>[hp]</code></h4>
                     <p>Exibe um contador de vida interativo. Por padrão, aparece na parte inferior central do card.</p>
                     <pre><code>[hp max=100 current=75]</code></pre>
+
+                    <h4>Dinheiro: <code>[money]</code></h4>
+                    <p>Exibe um valor de moeda interativo. Clique no valor para editar. Você pode definir um novo valor, usar operações relativas (<code>+50</code>, <code>-10</code>) ou digitar uma expressão completa (<code>1250+50</code>). Se a moeda não for especificada, usará a "Moeda Padrão" definida nas Configurações.</p>
+                    <pre><code>[money current=1250 GP]</code></pre>
+                    <pre><code>[money current=80000]</code></pre>
+                    <pre><code>[money current=80000 bottom]</code></pre>
 
                     <h4>Contadores: <code>[count]</code> e <code>[*count]</code></h4>
                     <p>Use <code>*count</code> (com asterisco) para um contador que aparece no overlay do card (canto superior direito por padrão). Use <code>count</code> (sem asterisco) para um contador que só aparece na visualização de detalhes.</p>
@@ -291,6 +299,13 @@
                         <div class="control">
                             <textarea class="textarea" id="settings-recommended-tags" placeholder="Tags separadas por vírgula. Ex: NPC, Aliado, Item"></textarea>
                         </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Moeda Padrão</label>
+                        <div class="control">
+                            <input class="input" id="settings-default-currency" type="text" placeholder="Ex: GP, Berries, Zenny">
+                        </div>
+                        <p class="help">Esta moeda será usada no shortcode [money] se nenhuma outra for especificada.</p>
                     </div>
                     <div class="field">
                         <label class="label">Filtros de Tag</label>

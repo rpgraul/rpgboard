@@ -10,7 +10,7 @@ const ALWAYS_VISIBLE_COMMANDS = ['stat']; // HP agora é tratado separadamente
  * @param {string} argString - A string de conteúdo do shortcode.
  * @returns {string[]} Um array de argumentos.
  */
-function _parseArguments(argString) {
+export function _parseArguments(argString) {
     // Regex: Encontra palavras entre aspas ou sequências de caracteres sem espaço.
     const regex = /"([^"]+)"|\S+/g;
     const args = [];
@@ -28,13 +28,27 @@ function _parseArguments(argString) {
  * @param {string[]} args - Array de argumentos como ["max=100", "current=80"].
  * @returns {object} - Objeto com os pares chave-valor.
  */
-function _parseKeyValueArgs(args) {
+export function _parseKeyValueArgs(args) {
     const params = {};
     args.forEach(arg => {
         const parts = arg.split('=');
-        if (parts.length === 2) params[parts[0].toLowerCase()] = parts[1];
+        if (parts.length === 2) {
+            // Remove aspas do início e do fim do valor, se existirem.
+            params[parts[0].toLowerCase()] = parts[1].replace(/^"|"$/g, '');
+        }
     });
     return params;
+}
+
+/**
+ * Formats a number with dots as thousand separators.
+ * @param {number} num The number to format.
+ * @returns {string} The formatted number string.
+ */
+function formatNumber(num) {
+    if (typeof num !== 'number' && typeof num !== 'string') return num;
+    // Handles both numbers and strings that might represent numbers
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 /**
@@ -46,23 +60,36 @@ function _parseStat(args) {
     const positionKeywords = ['left', 'right', 'bottom'];
     const filteredArgs = args.filter(arg => !positionKeywords.includes(arg));
 
-    // Se não houver argumentos filtrados, não renderiza nada.
     if (filteredArgs.length === 0) {
         return '';
     }
 
-    // Se houver apenas um argumento, trata-o como um valor sem nome.
-    // Ex: [stat "Apenas um valor"] ou [stat null "Apenas um valor"]
+    /**
+     * Helper para analisar um valor e extrair o texto principal e o tooltip.
+     * @param {string} value - O valor a ser analisado.
+     * @returns {string} O HTML com o atributo data-tooltip, se aplicável.
+     */
+    const parseValueForTooltip = (value) => {
+        const tooltipMatch = value.match(/(.*?)\s*\((.*?)\)/);
+        if (tooltipMatch) {
+            const mainText = tooltipMatch[1].trim();
+            const tooltipText = tooltipMatch[2].trim();
+            return `<span class="has-tooltip" data-tooltip="${tooltipText}">${mainText}</span>`;
+        }
+        return value || '';
+    };
+
     if (filteredArgs.length === 1 || filteredArgs[0].toLowerCase() === 'null') {
         const value = filteredArgs.length === 1 ? filteredArgs[0] : filteredArgs.slice(1).join(' ');
-        return `<div class="shortcode-stat">${value || ''}</div>`;
+        const valueHtml = parseValueForTooltip(value);
+        return `<div class="shortcode-stat">${valueHtml}</div>`;
     }
 
-    // Assume que o último argumento é o valor e todo o resto compõe o nome.
     const value = filteredArgs[filteredArgs.length - 1];
     const name = filteredArgs.slice(0, -1).join(' ');
+    const valueHtml = parseValueForTooltip(value);
 
-    return `<div class="shortcode-stat"><strong>${name}:</strong> ${value || ''}</div>`;
+    return `<div class="shortcode-stat"><strong>${name}:</strong> ${valueHtml}</div>`;
 }
 
 /**
@@ -196,7 +223,7 @@ export function parseMainContent(text) {
 
         // Se for um comando visível (com *) ou um comando que tem sua própria área de renderização
         // (stat, hp, count), remove-o do conteúdo principal.
-        if (command.startsWith('*') || ALWAYS_VISIBLE_COMMANDS.includes(cleanCommand.toLowerCase()) || ['hp', 'count'].includes(cleanCommand.toLowerCase())) {
+        if (command.startsWith('*') || ALWAYS_VISIBLE_COMMANDS.includes(cleanCommand.toLowerCase()) || ['hp', 'count', 'money'].includes(cleanCommand.toLowerCase())) {
             return '';
         }
 
@@ -218,7 +245,7 @@ export function parseMainContent(text) {
  * @param {object} item - O objeto do item completo, necessário para IDs e shortcodes originais.
  * @returns {string} O texto com os shortcodes renderizados como HTML.
  */
-export function parseAllShortcodes(item) {
+export function parseAllShortcodes(item, settings = {}) {
     if (!item || !item.conteudo) return { left: '', right: '', bottom: '', details: '' };
 
     const rendered = {
@@ -229,7 +256,7 @@ export function parseAllShortcodes(item) {
     };
 
     // Define a ordem de renderização
-    const ORDER = { stat: 1, hp: 2, count: 3, default: 99 };
+    const ORDER = { stat: 1, money: 2, hp: 3, count: 4, default: 99 };
 
     // 1. Extrai todos os shortcodes do texto
     const allShortcodes = [];
@@ -238,7 +265,7 @@ export function parseAllShortcodes(item) {
         const command = (allArgs[0] || '').replace('*', '').toLowerCase();
         const args = allArgs.slice(1);
 
-        if (['stat', 'hp', 'count'].includes(command)) {
+        if (['stat', 'hp', 'count', 'money'].includes(command)) {
             allShortcodes.push({ command, args, originalShortcode });
         }
     });
@@ -262,6 +289,33 @@ export function parseAllShortcodes(item) {
             case 'hp':
                 html = _parseHp(sc.args, item.id, sc.originalShortcode);
                 rendered[position || 'bottom'].push(html);
+                break;
+            case 'money':
+                const moneyParams = _parseKeyValueArgs(sc.args);
+                const currentAmount = parseFloat(moneyParams.current) || 0;
+
+                // Procura pela moeda: primeiro como 'currency=', depois como um argumento solto.
+                let currency = moneyParams.currency || '';
+                if (!currency) {
+                    const positionKeywords = ['left', 'right', 'bottom'];
+                    // Encontra o primeiro argumento que não é um par chave=valor E não é uma palavra-chave de posição.
+                    const currencyArg = sc.args.find(arg => !arg.includes('=') && !positionKeywords.includes(arg));
+                    if (currencyArg) {
+                        currency = currencyArg;
+                        } else if (settings.defaultCurrency) {
+                            // Se nenhuma moeda foi encontrada, usa a padrão das configurações
+                            currency = settings.defaultCurrency;
+                        }
+                }
+                const formattedAmount = formatNumber(currentAmount);
+
+                html = `
+                    <div class="shortcode-money is-interactive" data-item-id="${item.id}" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
+                        <i class="fas fa-coins"></i>
+                        <span class="money-value-display">${formattedAmount}</span><input type="text" class="money-value-input is-hidden" value="${currentAmount}"><span class="money-currency">${currency}</span>
+                    </div>
+                `.trim().replace(/\s+/g, ' ');
+                rendered[position || 'left'].push(html);
                 break;
             case 'count':
                 const isVisibleOnOverlay = sc.originalShortcode.includes('[*count');

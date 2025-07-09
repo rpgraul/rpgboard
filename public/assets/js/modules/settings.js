@@ -7,6 +7,7 @@ let settingsForm = null;
 let titleInput = null;
 let tagsInput = null;
 let filtersInput = null;
+let defaultCurrencyInput = null; // Novo campo
 let fabSettings = null;
 let submitButton = null;
 
@@ -20,6 +21,7 @@ function populateForm(settings) {
     tagsInput.value = (settings.recommendedTags || []).join(', ');
     // Pretty-print the JSON for better readability in the textarea
     filtersInput.value = JSON.stringify(settings.filters || [], null, 2);
+    defaultCurrencyInput.value = settings.defaultCurrency || ''; // Popula o novo campo
 }
 
 /**
@@ -63,7 +65,8 @@ async function handleSave(event) {
     const newSettings = {
         siteTitle: titleInput.value,
         recommendedTags: recommendedTags,
-        filters: filters
+        filters: filters,
+        defaultCurrency: defaultCurrencyInput.value.trim() // Salva a moeda padrão
     };
 
     try {
@@ -88,6 +91,7 @@ export function initializeSettings() {
     titleInput = document.getElementById('settings-title');
     tagsInput = document.getElementById('settings-recommended-tags');
     filtersInput = document.getElementById('settings-filters');
+    defaultCurrencyInput = document.getElementById('settings-default-currency');
 
     if (!settingsModal || !fabSettings || !settingsForm) return;
 

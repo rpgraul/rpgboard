@@ -2,6 +2,16 @@
 import * as shortcodeParser from './shortcodeParser.js';
 import { isNarrator } from './auth.js';
 
+let appSettings = {};
+
+/**
+ * Inicializa o renderizador de cards com as configurações globais do aplicativo.
+ * @param {object} settings - O objeto de configurações carregado.
+ */
+export function initializeCardRenderer(settings) {
+    appSettings = settings;
+}
+
 /**
  * Cria o elemento base do card e o popula com o conteúdo inicial.
  * @param {object} item - O objeto de dados do item.
@@ -63,7 +73,7 @@ export function renderCardViewMode(cardElement, item) {
         const placeholderStyle = `padding-bottom: ${aspectRatio}%;`;
 
         // Gera o HTML para os shortcodes, já agrupados.
-        const parsedShortcodes = item.conteudo ? shortcodeParser.parseAllShortcodes(item) : {};
+        const parsedShortcodes = item.conteudo ? shortcodeParser.parseAllShortcodes(item, appSettings) : {};
         
         // Pega a descrição separadamente.
         const descriptionForTooltip = item.descricao ? item.descricao.replace(/\n/g, '<br>') : '';
@@ -152,7 +162,7 @@ function updateCardView(cardElement, item) {
     const infoLayerContainer = cardElement.querySelector('.card-info-layer');
     if (infoLayerContainer) {
         // Gera o HTML para os shortcodes, já agrupados.
-        const parsedShortcodes = item.conteudo ? shortcodeParser.parseAllShortcodes(item) : {};
+        const parsedShortcodes = item.conteudo ? shortcodeParser.parseAllShortcodes(item, appSettings) : {};
         const descriptionForTooltip = item.descricao ? item.descricao.replace(/\n/g, '<br>') : '';
 
         const hasAnyShortcodes = Object.values(parsedShortcodes).some(v => v);

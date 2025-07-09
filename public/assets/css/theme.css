@@ -46,7 +46,7 @@ strong,
 .content h6 {
     color: #ffffff !important;
 }
-
+.content pre{max-width: 590px;}
 .label {
     color: #ffffff;
 }
@@ -348,7 +348,8 @@ strong,
 /* No modo de detalhes, todos os shortcodes se comportam como itens de uma lista limpa */
 .card.is-details-visible .card-info-layer .shortcode-stat,
 .card.is-details-visible .card-info-layer .shortcode-hp,
-.card.is-details-visible .card-info-layer .shortcode-count {
+.card.is-details-visible .card-info-layer .shortcode-count,
+.card.is-details-visible .card-info-layer .shortcode-money {
     display: flex;
     justify-content: start;
     align-items: center;
@@ -430,6 +431,44 @@ strong,
     width: fit-content;
     pointer-events: auto; /* Permite cliques no stat */
     user-select: text; /* Permite seleção de texto no stat */
+}
+
+.shortcode-money {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto;
+    user-select: text;
+}
+
+.shortcode-money .fa-coins {
+    color: #ffdd57; /* Cor de ouro */
+}
+
+.shortcode-money.is-interactive .money-value-display {
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+    transition: border-bottom-color 0.2s ease;
+}
+.shortcode-money.is-interactive:hover .money-value-display {
+    border-bottom-color: var(--light-text);
+}
+
+.shortcode-money .money-value-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--light-text);
+    color: var(--light-text);
+    font-size: 0.85rem;
+    width: 70px;
+    padding: 0;
+    outline: none;
 }
 
 .shortcode-hp {
@@ -922,16 +961,51 @@ body.is-bulk-editing .fab-container {
     color: var(--light-text);
 }
 
-/* Bulma Tooltip Dark Theme Override */
-[data-tooltip]:before {
+/* --- Tooltip Implementation --- */
+.has-tooltip {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.5);
+}
+
+.has-tooltip[data-tooltip]::before,
+.has-tooltip[data-tooltip]::after {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s ease-out 0.1s;
+}
+
+.has-tooltip[data-tooltip]:hover::before,
+.has-tooltip[data-tooltip]:hover::after {
+    opacity: 1;
+}
+
+/* Tooltip Content Box */
+.has-tooltip[data-tooltip]::before {
+    content: attr(data-tooltip);
     background: var(--darker-bg);
     color: var(--light-text);
     border: 1px solid var(--border-color);
-}
-[data-tooltip]:after {
-    border-top-color: var(--darker-bg) !important;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    padding: 0.4em 0.8em;
+    white-space: nowrap;
+    bottom: 100%;
+    margin-bottom: 5px; /* Space for the arrow */
 }
 
+/* Tooltip Arrow */
+.has-tooltip[data-tooltip]::after {
+    content: '';
+    border-style: solid;
+    border-width: 5px;
+    border-color: var(--darker-bg) transparent transparent transparent;
+    bottom: 100%;
+}
 
 /* Estilos para o Modal de Configurações */
 #settings-filters {
@@ -988,6 +1062,21 @@ body.is-bulk-editing .fab-container {
     display: flex;
     justify-content: space-around;
     gap: 0.5rem;
+}
+
+/* Feedback visual para cópia de texto */
+.click-feedback {
+    position: absolute;
+    padding: 4px 10px;
+    background-color: var(--dark-blue);
+    color: white;
+    border-radius: 4px;
+    z-index: 9999;
+    pointer-events: none;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: opacity 0.5s ease;
+    white-space: nowrap;
 }
 #active-filters-container {
     display: flex;
