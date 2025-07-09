@@ -282,8 +282,9 @@ document.addEventListener('DOMContentLoaded', async () => {
      * @param {string} itemId - O ID do item.
      * @param {string} encodedShortcode - O shortcode original, já codificado para uso em atributos de dados.
      * @param {number} newCurrentValue - O novo valor para 'current'.
+     * @param {HTMLElement|null} triggerElement - O elemento que iniciou a ação, para feedback visual.
      */
-    async function handleShortcodeValueChange(itemId, encodedShortcode, newCurrentValue) {
+    async function handleShortcodeValueChange(itemId, encodedShortcode, newCurrentValue, triggerElement = null) {
         const item = allItems.find(i => i.id === itemId);
         if (!item || !item.conteudo) {
             console.error("Item não encontrado para atualização de shortcode:", itemId);
@@ -291,15 +292,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // --- Feedback Visual Otimista ---
-        // Aplica a classe de animação ao elemento antes mesmo de salvar no banco.
-        const elementToUpdate = document.querySelector(
-            `.card[data-id="${itemId}"] [data-shortcode="${encodedShortcode}"]`
-        );
-
-        if (elementToUpdate) {
-            elementToUpdate.classList.add('is-updating');
-            // Remove a classe após a animação para que possa ser acionada novamente.
-            setTimeout(() => elementToUpdate.classList.remove('is-updating'), 700); // Duração da animação
+        if (triggerElement) {
+            const componentRoot = triggerElement.closest('.shortcode-hp, .shortcode-count');
+            if (componentRoot) {
+                componentRoot.classList.add('is-updating');
+                // Remove a classe após a animação para que possa ser acionada novamente.
+                setTimeout(() => componentRoot.classList.remove('is-updating'), 700);
+            }
         }
 
         const decodedShortcode = decodeURIComponent(encodedShortcode);
@@ -369,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const clampedValue = Math.max(0, Math.min(newCurrent, max));
-                handleShortcodeValueChange(itemId, shortcode, clampedValue);
+                handleShortcodeValueChange(itemId, shortcode, clampedValue, countTrigger);
             }
             return; // Encerra após tratar o clique no contador.
         }
@@ -462,7 +461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 target.value = clampedValue;
             }
 
-            handleShortcodeValueChange(itemId, shortcode, clampedValue);
+            handleShortcodeValueChange(itemId, shortcode, clampedValue, target);
         }
     });
 
@@ -536,6 +535,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (allItems[indexInCache].order !== itemData.order) orderChanged = true;
                             allItems[indexInCache] = itemData;
                             if (existingCardElement) cardRenderer.renderCardViewMode(existingCardElement, itemData);
+                        }
+
+                        // Adicionalmente, verifica se o modal de detalhes está aberto e mostrando este item
+                        if (detailModal.classList.contains('is-active')) {
+                            const modalBox = detailModal.querySelector('.box');
+                            // Se o modal estiver mostrando o item modificado, re-renderiza o conteúdo do modal
+                            if (modalBox && modalBox.dataset.itemId === itemData.id) {
+                                showDetailModal(itemData);
+                            }
                         }
                     }
                     break;
@@ -856,6 +864,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
         const box = document.createElement('div');
         box.className = 'box';
+        box.dataset.itemId = item.id; 
     
         let imageHTML = '';
         let textHTML = '';
