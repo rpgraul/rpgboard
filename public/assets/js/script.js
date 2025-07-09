@@ -59,6 +59,30 @@ function generateTagFilters(filters, container) {
     });
 }
 
+/**
+ * Injeta estilos CSS na cabeça do documento para melhorar a usabilidade do drag-and-drop.
+ */
+function injectDragDropStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Adiciona o cursor de "agarrar" aos cards que podem ser arrastados */
+        .card.muuri-item-draggable {
+            cursor: grab;
+        }
+        .card.muuri-item-dragging {
+            cursor: grabbing;
+        }
+        /* Reseta o cursor para o conteúdo interno, fazendo com que a "alça" seja a borda/padding do card */
+        .card.muuri-item-draggable .card-content,
+        .card.muuri-item-draggable .card-image,
+        .card.muuri-item-draggable .card-actions-top,
+        .card.muuri-item-draggable .card-info-layer {
+            cursor: auto;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Obter referências aos elementos principais
     const viewToggleButton = document.getElementById('fab-toggle-view');
@@ -81,6 +105,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cardTagsInput = document.getElementById('card-tags');
     const gridViewContainer = document.getElementById('grid-view-container');
     const boardViewContainer = document.getElementById('board-view-container');
+
+    // Injeta os estilos para a alça de arrasto
+    injectDragDropStyles();
 
     // Carrega e aplica as configurações do site
     try {
@@ -107,35 +134,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         muuriGrid = new Muuri(gridViewContainer, {
             items: '.card',
             dragEnabled: true,
+            // Predicado customizado para iniciar o arraste
             dragStartPredicate: function (item, event) {
                 const cardElement = item.getElement();
-                const clickTarget = event.target;
+                const clickTarget = event.target; // O elemento exato que foi clicado
 
-                // Impede o arraste quando em modo de edição em massa
-                if (bulkEdit.isBulkEditingActive()) {
+                // Condições para NUNCA arrastar
+                if (bulkEdit.isBulkEditingActive() ||
+                    cardElement.classList.contains('editing') ||
+                    cardElement.classList.contains('is-details-visible') ||
+                    clickTarget.closest('.shortcode-hp') ||
+                    clickTarget.closest('.shortcode-count') ||
+                    clickTarget.closest('.shortcode-stat') ||
+                    clickTarget.closest('.toggle-view-icon') ||
+                    clickTarget.closest('.card-actions-top')) {
                     return false;
                 }
 
-                // 1. Não arrastar se o card estiver em modo de edição.
-                if (cardElement.classList.contains('editing')) {
-                    return false;
+                // Lógica da "alça de arrasto" na borda
+                const rect = cardElement.getBoundingClientRect();
+                const handleSize = 15; // Tamanho da borda sensível ao arraste (em pixels)
+
+                // Usa as coordenadas do evento original (funciona para mouse e toque)
+                const x = event.srcEvent.clientX || event.clientX;
+                const y = event.srcEvent.clientY || event.clientY;
+
+                const isNearBorder =
+                    (x - rect.left < handleSize) ||   // Borda Esquerda
+                    (rect.right - x < handleSize) ||  // Borda Direita
+                    (y - rect.top < handleSize) ||    // Borda Superior
+                    (rect.bottom - y < handleSize);   // Borda Inferior
+
+                if (isNearBorder) {
+                    // Se estiver na borda, usa o predicado padrão do Muuri.
+                    // Isso é importante para evitar o arraste em botões ou links que possam estar na borda.
+                    return Muuri.ItemDrag.defaultStartPredicate(item, event);
                 }
 
-                // 2. Não arrastar se a visualização de detalhes estiver ativa.
-                if (cardElement.classList.contains('is-details-visible')) {
-                    return false;
-                }
-
-                // 3. Não arrastar se o clique for em qualquer um dos nossos componentes interativos.
-                if (clickTarget.closest('.shortcode-hp') || clickTarget.closest('.shortcode-count') || clickTarget.closest('.shortcode-stat') || clickTarget.closest('.toggle-view-icon')) {
-                    return false;
-                }
-
-                // 4. Para todo o resto (cliques na imagem vazia, no título, etc.),
-                // usa o comportamento padrão do Muuri, que já impede o arraste
-                // a partir de inputs e botões padrão, mas não dos nossos
-                // componentes customizados.
-                return Muuri.ItemDrag.defaultStartPredicate(item, event);
+                // Se não estiver na borda, não arrasta.
+                return false;
             }
         });
 
