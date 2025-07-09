@@ -907,6 +907,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (viewWrapper.classList.contains('view-board')) {
             // Mudar para a visualização em Grade
+            document.body.classList.remove('body-view-board');
             viewWrapper.classList.remove('view-board');
             viewWrapper.classList.add('view-grid');
             viewToggleButton.title = "Mudar para Visualização em Board";
@@ -915,6 +916,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             initializeGrid();
         } else {
             // Mudar para a visualização em Board
+            document.body.classList.add('body-view-board');
             viewWrapper.classList.remove('view-grid');
             viewWrapper.classList.add('view-board');
             viewToggleButton.title = "Mudar para Visualização em Grade";

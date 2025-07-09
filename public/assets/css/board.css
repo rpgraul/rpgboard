@@ -1,18 +1,45 @@
-/* Estilos específicos para o modo de visualização em Board */
+/* Estilos para a visualização em Board */
 
-#board-view-container .card {
-    position: absolute; /* Chave para um board de livre posicionamento */
-    width: 320px; /* Largura fixa para os cards no board */
-    min-height: 150px;
-    cursor: grab; /* Indica que o item pode ser arrastado */
-    z-index: 100;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
+/* No mobile, quando em modo board, transforma os botões flutuantes (FAB)
+   em uma barra de ações no final da página. */
+@media (max-width: 768px) {
+    /* A classe 'body-view-board' é adicionada via JS para ativar estes estilos */
+    body.body-view-board .fab-container {
+        /* 1. Tira do modo flutuante e posiciona no fluxo normal do documento */
+        position: relative;
+        bottom: auto;
+        right: auto;
+        z-index: auto;
 
-#board-view-container .card:active {
-    cursor: grabbing;
-    z-index: 101; /* Traz o card ativo para a frente */
-    transform: scale(1.02);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        /* 2. Transforma em uma barra horizontal */
+        flex-direction: row-reverse; /* Inverte a ordem dos botões */
+        justify-content: space-around; /* Distribui os botões uniformemente */
+        align-items: center;
+        gap: 0.5rem; /* Pequeno espaçamento entre os botões */
+        
+        /* 3. Estiliza como uma barra de rodapé */
+        width: 100%;
+        padding: 0.75rem 0;
+        margin-top: 1.5rem; /* Espaçamento acima da barra */
+        background-color: var(--darker-bg);
+        border-top: 1px solid var(--border-color);
+        box-shadow: none; /* Remove a sombra do botão flutuante */
+    }
+
+    /* Ajusta o tamanho dos botões na barra para não serem tão grandes */
+    body.body-view-board .fab-button {
+        width: 48px;
+        height: 48px;
+        box-shadow: none;
+    }
+
+    /* Remove o efeito de escala no hover, que não faz sentido na barra */
+    body.body-view-board .fab-button:hover {
+        transform: none;
+    }
+
+    /* Remove a margem que foi adicionada na solução anterior, garantindo que não haja conflito. */
+    #view-wrapper.view-board #board-view-container {
+        margin-bottom: 0;
+    }
 }
