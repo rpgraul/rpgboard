@@ -939,6 +939,20 @@ body.is-bulk-editing .fab-container {
     gap: 0.5rem;
 }
 
+/* Estilo para links internos entre cards */
+.card-link {
+    color: #63b3ed; /* Azul claro, bom para temas escuros */
+    text-decoration: none;
+    cursor: pointer;
+    border-bottom: 1px dotted #63b3ed;
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+}
+
+.card-link:hover {
+    color: #90cdf4; /* Azul mais claro no hover */
+    border-bottom-color: #90cdf4;
+}
+
 /* Estilos para os ícones de ajuda nos formulários */
 .label-with-help {
     display: flex;
@@ -1082,4 +1096,10 @@ body.is-bulk-editing .fab-container {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+}
+
+/* Permite a seleção de texto no título e no conteúdo do card */
+.card .card-content .title,
+.card .card-content .content {
+    user-select: text;
 }

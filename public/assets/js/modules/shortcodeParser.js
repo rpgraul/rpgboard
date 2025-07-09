@@ -232,6 +232,12 @@ export function parseMainContent(text) {
         return match;
     });
 
+    // Após remover os shortcodes de bloco, processa os links de card {nome do card}
+    processedText = processedText.replace(/\{(.*?)\}/g, (match, cardName) => {
+        const sanitizedName = cardName.replace(/"/g, '&quot;'); // Sanitização básica para o atributo
+        return `<span class="card-link" data-card-name="${sanitizedName}">${cardName}</span>`;
+    });
+
     // Remove os espaços em branco (incluindo quebras de linha) no início e no fim do texto restante.
     processedText = processedText.trim();
 

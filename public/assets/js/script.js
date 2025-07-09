@@ -149,7 +149,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     clickTarget.closest('.shortcode-count') ||
                     clickTarget.closest('.shortcode-stat') ||
                     clickTarget.closest('.toggle-view-icon') ||
-                    clickTarget.closest('.card-actions-top')) {
+                    clickTarget.closest('.card-actions-top') ||
+                    clickTarget.closest('.card-content .title') || // Impede o arrasto a partir do título
+                    clickTarget.closest('.card-content .content')) { // Impede o arrasto a partir do conteúdo
                     return false;
                 }
 
@@ -443,6 +445,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     // evitando conflitos ao checar o alvo mais específico primeiro.
     document.body.addEventListener('click', (event) => {
         const target = event.target;
+
+        // Prioridade 0: Links de Card.
+        const cardLink = target.closest('.card-link');
+        if (cardLink) {
+            event.stopPropagation();
+            const cardNameToFind = cardLink.dataset.cardName;
+            if (cardNameToFind) {
+                // Procura o card no cache local, ignorando maiúsculas/minúsculas e espaços.
+                const targetItem = allItems.find(item => item.titulo.trim().toLowerCase() === cardNameToFind.trim().toLowerCase());
+                if (targetItem) {
+                    showDetailModal(targetItem);
+                } else {
+                    // Feedback visual se o card não for encontrado.
+                    createClickFeedback(event, 'Card não encontrado');
+                    console.warn(`Link de card clicado, mas o card "${cardNameToFind}" não foi encontrado.`);
+                }
+            }
+            return;
+        }
 
         // Prioridade 1: Alterações nos contadores.
         const countTrigger = target.closest('.count-btn, .count-checkbox');
