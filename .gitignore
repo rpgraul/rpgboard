@@ -70,3 +70,6 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Firebase client configuration
+public/assets/js/firebase-config.js

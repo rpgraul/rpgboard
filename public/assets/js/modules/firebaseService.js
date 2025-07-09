@@ -1,4 +1,3 @@
-import { db, storage } from '../firebase-config.js';
 import { 
     collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, 
     serverTimestamp, query, orderBy, writeBatch,
@@ -7,6 +6,9 @@ import {
 import { 
     ref, uploadBytes, getDownloadURL, deleteObject 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
+
+// Lê as instâncias do Firebase que foram injetadas no objeto global 'window' pelo Netlify.
+const { db, storage } = window.firebaseInstances;
 
 const itemsCollectionRef = collection(db, "rpg-items");
 
