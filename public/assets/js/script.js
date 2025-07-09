@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fabBulkEdit = document.getElementById('fab-bulk-edit');
     const searchInput = document.getElementById('search-input');
     const activeFiltersContainer = document.getElementById('active-filters-container');
+    const clearFiltersBtn = document.getElementById('clear-filters-btn');
     const tagFiltersContainer = document.getElementById('tag-filters');
     const viewWrapper = document.getElementById('view-wrapper');
     const topBarTitle = document.querySelector('.top-bar-title');
@@ -657,6 +658,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    /**
+     * Mostra ou esconde o botão de limpar filtros com base no estado atual.
+     */
+    function updateClearButtonVisibility() {
+        const isSearchActive = searchInput.value.trim() !== '';
+        const areFiltersActive = tagFiltersContainer.querySelector('input:checked') !== null;
+        if (clearFiltersBtn) {
+            clearFiltersBtn.classList.toggle('is-hidden', !isSearchActive && !areFiltersActive);
+        }
+    }
+
     function updateActiveFiltersDisplay() {
         activeFiltersContainer.innerHTML = '';
         const checkedFilters = tagFiltersContainer.querySelectorAll('input:checked');
@@ -673,7 +685,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Listeners para os filtros
-    searchInput.addEventListener('input', applyFilters);
+    searchInput.addEventListener('input', () => {
+        applyFilters();
+        updateClearButtonVisibility();
+    });
     tagFiltersContainer.addEventListener('change', (event) => {
         // Garante que o evento veio de um checkbox
         if (event.target.type === 'checkbox') {
@@ -697,6 +712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             label.classList.toggle('is-active', clickedCheckbox.checked);
             applyFilters();
             updateActiveFiltersDisplay();
+            updateClearButtonVisibility();
         }
     });
 
@@ -711,6 +727,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            // 1. Limpa o campo de busca
+            searchInput.value = '';
+
+            // 2. Desmarca todos os checkboxes de filtro
+            const allCheckboxes = tagFiltersContainer.querySelectorAll('input[type="checkbox"]');
+            allCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.closest('label').classList.remove('is-active');
+            });
+
+            // 3. Atualiza a UI
+            applyFilters();
+            updateActiveFiltersDisplay();
+            updateClearButtonVisibility();
+        });
+    }
 
     /**
      * Inicializa um campo de input para ter sugestões de tags.

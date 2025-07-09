@@ -24,25 +24,31 @@
         <div class="container">
             <div id="view-wrapper">
                 <div id="grid-view-wrapper">
-                    <div class="field is-grouped mb-5">
+                    <!-- Linha 1: Busca e botão de limpar -->
+                    <div class="field is-grouped mb-4">
                         <p class="control has-icons-left is-expanded">
                             <input class="input is-medium" type="text" id="search-input" placeholder="Buscar por título, conteúdo ou tag...">
                             <span class="icon is-small is-left"><i class="fas fa-search"></i></span>
                         </p>
-                        <div id="tag-filters" class="field is-grouped">
-                            <!-- Filtros exclusivos do Narrador, escondidos por padrão -->
-                            <div class="control narrator-only is-hidden">
-                                <label class="checkbox">
-                                    <input type="checkbox" value="visible">
-                                    <span>Visível</span>
-                                </label>
-                            </div>
-                            <div class="control narrator-only is-hidden">
-                                <label class="checkbox">
-                                    <input type="checkbox" value="hidden">
-                                    <span>Oculto</span>
-                                </label>
-                            </div>
+                        <p class="control">
+                            <button id="clear-filters-btn" class="button is-light is-hidden" title="Limpar busca e filtros"><span class="icon"><i class="fas fa-times"></i></span></button>
+                        </p>
+                    </div>
+
+                    <!-- Linha 2: Filtros de Tag com quebra de linha -->
+                    <div id="tag-filters" class="field is-grouped is-grouped-multiline mb-4">
+                        <!-- Filtros exclusivos do Narrador, escondidos por padrão -->
+                        <div class="control narrator-only is-hidden">
+                            <label class="checkbox">
+                                <input type="checkbox" value="visible">
+                                <span>Visível</span>
+                            </label>
+                        </div>
+                        <div class="control narrator-only is-hidden">
+                            <label class="checkbox">
+                                <input type="checkbox" value="hidden">
+                                <span>Oculto</span>
+                            </label>
                         </div>
                     </div>
                     <div id="active-filters-container" class="mb-4"></div>
