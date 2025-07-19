@@ -5,12 +5,12 @@ import * as firebaseService from './modules/firebaseService.js';
 import * as narrator from './modules/narrator.js';
 import * as bulkEdit from './modules/bulkEdit.js';
 import * as settings from './modules/settings.js';
-import * as grid from './modules/grid.js'; // Este import já existe, apenas para referência
+import * as grid from './modules/grid.js'; 
 import * as board from './modules/board.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
 
-let muuriGrid = null; // Variável para a instância do Muuri
+
 let allItems = []; // Cache local de todos os itens para a busca
 let tagSuggestionsContainer = null; // Container único para as sugestões de tags
 let isInitialGridLoaded = false; // Flag para controlar o carregamento inicial da grade
@@ -83,6 +83,9 @@ function injectDragDropStyles() {
     document.head.appendChild(style);
 }
 
+import * as cardManager from './modules/cardManager.js';
+
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Obter referências aos elementos principais
     const viewToggleButton = document.getElementById('fab-toggle-view');
@@ -91,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fabBulkEdit = document.getElementById('fab-bulk-edit');
     const searchInput = document.getElementById('search-input');
     const activeFiltersContainer = document.getElementById('active-filters-container');
+    const boardSearchInput = document.getElementById('board-search-input');
     const clearFiltersBtn = document.getElementById('clear-filters-btn');
     const tagFiltersContainer = document.getElementById('tag-filters');
     const viewWrapper = document.getElementById('view-wrapper');
@@ -111,8 +115,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     injectDragDropStyles();
 
     // Carrega e aplica as configurações do site
+    console.log('Iniciando carregamento das configurações do site...');
     try {
         appSettings = await firebaseService.getSettings();
+        console.log('Configurações carregadas:', appSettings);
         if (topBarTitle) topBarTitle.textContent = appSettings.siteTitle;
         document.title = `${appSettings.siteTitle} - GameBoard`;
         cardRenderer.initializeCardRenderer(appSettings); // Inicializa o renderizador com as configurações
@@ -122,80 +128,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // A aplicação continuará com os valores de fallback definidos em getSettings()
     }
 
-    function initializeGrid() {
-        // Garante que só execute na visualização em grade
-        if (!viewWrapper.classList.contains('view-grid')) return;
-
-        // Destrói a instância antiga se existir, para evitar conflitos
-        if (muuriGrid) {
-            muuriGrid.destroy();
-            muuriGrid = null;
-        }
-
-        // Cria a nova instância do Muuri
-        muuriGrid = new Muuri(gridViewContainer, {
-            items: '.card',
-            dragEnabled: true,
-            // Predicado customizado para iniciar o arraste
-            dragStartPredicate: function (item, event) {
-                const cardElement = item.getElement();
-                const clickTarget = event.target; // O elemento exato que foi clicado
-
-                // Condições para NUNCA arrastar
-                if (bulkEdit.isBulkEditingActive() ||
-                    cardElement.classList.contains('editing') ||
-                    cardElement.classList.contains('is-details-visible') ||
-                    clickTarget.closest('.shortcode-hp') ||
-                    clickTarget.closest('.shortcode-count') ||
-                    clickTarget.closest('.shortcode-stat') ||
-                    clickTarget.closest('.toggle-view-icon') ||
-                    clickTarget.closest('.card-actions-top') ||
-                    clickTarget.closest('.card-content .title') || // Impede o arrasto a partir do título
-                    clickTarget.closest('.card-content .content')) { // Impede o arrasto a partir do conteúdo
-                    return false;
-                }
-
-                // Lógica da "alça de arrasto" na borda
-                const rect = cardElement.getBoundingClientRect();
-                const handleSize = 15; // Tamanho da borda sensível ao arraste (em pixels)
-
-                // Usa as coordenadas do evento original (funciona para mouse e toque)
-                const x = event.srcEvent.clientX || event.clientX;
-                const y = event.srcEvent.clientY || event.clientY;
-
-                const isNearBorder =
-                    (x - rect.left < handleSize) ||   // Borda Esquerda
-                    (rect.right - x < handleSize) ||  // Borda Direita
-                    (y - rect.top < handleSize) ||    // Borda Superior
-                    (rect.bottom - y < handleSize);   // Borda Inferior
-
-                if (isNearBorder) {
-                    // Se estiver na borda, usa o predicado padrão do Muuri.
-                    // Isso é importante para evitar o arraste em botões ou links que possam estar na borda.
-                    return Muuri.ItemDrag.defaultStartPredicate(item, event);
-                }
-
-                // Se não estiver na borda, não arrasta.
-                return false;
-            }
-        });
-
-        // Registra o evento de 'dragEnd' para salvar a nova ordem.
-        muuriGrid.on('dragEnd', function (item) {
-            const orderedItems = muuriGrid.getItems();
-            const orderedIds = orderedItems.map(item => item.getElement().dataset.id);
-
-            // Chama a função do Firebase para salvar a nova ordem de forma persistente
-            firebaseService.updateItemsOrder(orderedIds).catch(err => {
-                console.error("Falha ao reordenar:", err);
-                alert("Não foi possível salvar a nova ordem. A grade será restaurada.");
-            });
-        });
-    }
-
-    // Inicializa a grade do Muuri uma única vez.
-    // A função será chamada novamente apenas se a visualização for trocada.
-    initializeGrid();
 
     // 2. Inicializar os módulos
     // Passa o detailModal para que possa ser fechado globalmente
@@ -203,6 +135,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Define a visualização padrão
     viewWrapper.classList.add('view-grid');
 
+    // Inicializa o módulo de autenticação primeiro
+    await auth.initializeAuth();
+
+    // Inicializa o gerenciador de cards depois da autenticação
+    await cardManager.initialize({
+        onDelete: handleDeleteItem,
+        onEdit: handleEditCard,
+        onSave: handleSaveCard,
+        onView: showDetailModal,
+        onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
+        onReorder: (orderedIds) => firebaseService.updateItemsOrder(orderedIds).catch(err => {
+            console.error("Falha ao reordenar:", err);
+        }),
+        gridContainer: gridViewContainer,
+        boardContainer: boardViewContainer,
+    });
+    
     // Inicializa o módulo de autenticação
     auth.initializeAuth();
     // Inicializa o módulo de edição em massa
@@ -222,15 +171,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             bulkEdit.exitBulkEditMode();
         }
 
-        // Força uma reavaliação dos filtros e da renderização quando o status muda
-        if (isInitialGridLoaded) {
-            let itemsToRender = [...allItems];
-            if (!isNarrator) {
-                itemsToRender = itemsToRender.filter(item => item.isVisibleToPlayers !== false);
-            }
-            grid.updateItems(itemsToRender);
-            initializeGrid(); // Re-inicializa o Muuri sobre os novos elementos
-        }
+        // A UI será atualizada automaticamente pelo listener do Firebase, que refiltrará os dados
+        // com base no novo status de narrador.
+        applyFilters();
     });
 
     // Handlers centralizados para as ações dos cards
@@ -256,10 +199,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     cardRenderer.getImageDimensions(file).then(dimensions => {
                         const newAspectRatio = (dimensions.height / dimensions.width) * 100;
                         figure.style.paddingBottom = `${newAspectRatio}%`;
-                        // Se estivermos na grade, recalcula o layout
-                        if (container.id === 'grid-view-container') {
-                            muuriGrid?.layout(true);
-                        }
+                        // A lógica de layout será tratada pelo grid.js
+                        grid.refreshLayout();
                     });
 
                     card._newImageFile = file;
@@ -313,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             container.classList.remove('is-editing-item');
             cardRenderer.renderCardViewMode(card, item); // Reverte para o modo de visualização
             if (card._newImageFile) delete card._newImageFile;
-            if (container.id === 'grid-view-container') muuriGrid?.layout(true);
+            grid.refreshLayout();
         }
     }
 
@@ -346,9 +287,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let newShortcode;
         if (/current=/.test(decodedShortcode)) {
-            newShortcode = decodedShortcode.replace(/current=(\d+)/, `current=${newCurrentValue}`);
+            // Substitui current=valor ou current="valor" por current="novoValor"
+            newShortcode = decodedShortcode.replace(/current=("?)(\d+)("?)/, `current="${newCurrentValue}"`);
         } else {
-            newShortcode = decodedShortcode.replace(/\]$/, ` current=${newCurrentValue}]`);
+            newShortcode = decodedShortcode.replace(/\]$/, ` current="${newCurrentValue}"]`);
         }
 
         const newContent = item.conteudo.replace(decodedShortcode, newShortcode);
@@ -426,6 +368,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
     }
 
+    /**
+     * Lida com a mudança de posição de um card no board.
+     * @param {string} itemId - O ID do item.
+     * @param {{x: number, y: number}} position - A nova posição.
+     */
+    async function handlePositionChange(itemId, position) {
+        await firebaseService.updateItem({ id: itemId }, { boardPosition: position });
+    }
+
     // Objeto unificado de handlers para os cards
     const cardActionHandlers = {
         onDelete: handleDeleteItem,
@@ -433,6 +384,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         onSave: handleSaveCard,
         onView: showDetailModal,
         onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
+        onPositionChange: handlePositionChange, // Handler para o board
     };
 
     initializeModals();
@@ -453,14 +405,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cardNameToFind = cardLink.dataset.cardName;
             if (cardNameToFind) {
                 // Procura o card no cache local, ignorando maiúsculas/minúsculas e espaços.
-                const targetItem = allItems.find(item => item.titulo.trim().toLowerCase() === cardNameToFind.trim().toLowerCase());
-                if (targetItem) {
-                    showDetailModal(targetItem);
-                } else {
-                    // Feedback visual se o card não for encontrado.
-                    createClickFeedback(event, 'Card não encontrado');
-                    console.warn(`Link de card clicado, mas o card "${cardNameToFind}" não foi encontrado.`);
-                }
             }
             return;
         }
@@ -468,8 +412,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Prioridade 1: Alterações nos contadores.
         const countTrigger = target.closest('.count-btn, .count-checkbox');
         if (countTrigger) {
-            // A CHAVE: Impede que o clique "vaze" para outros listeners.
-            // Isso resolve o bug do tooltip fechando sozinho.
             event.stopPropagation();
 
             const countComponent = countTrigger.closest('.shortcode-count');
@@ -478,24 +420,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { itemId, shortcode } = countComponent.dataset;
             if (itemId && shortcode) {
                 const decodedShortcode = decodeURIComponent(shortcode);
-                const maxMatch = decodedShortcode.match(/max=(\d+)/);
-                const currentMatch = decodedShortcode.match(/current=(\d+)/);
+                const maxMatch = decodedShortcode.match(/max=(?:"|')?(\d+)(?:"|')?/);
+                const currentMatch = decodedShortcode.match(/current=(?:"|')?(\d+)(?:"|')?/);
                 const max = maxMatch ? parseInt(maxMatch[1], 10) : 0;
-                let current = currentMatch ? parseInt(currentMatch[1], 10) : max;
-                let newCurrent;
+                let current = currentMatch ? parseInt(currentMatch[1], 10) : 0;
+                let newCurrent = current;
 
                 if (countTrigger.classList.contains('count-btn')) {
                     const action = countTrigger.dataset.action;
-                    newCurrent = action === 'increment' ? current + 1 : current - 1;
-                } else { // .count-checkbox
-                    newCurrent = parseInt(countTrigger.dataset.value, 10);
-                    if (newCurrent === current) newCurrent = 0;
+                    if (action === 'increment') {
+                        newCurrent = Math.min(current + 1, max);
+                    } else if (action === 'decrement') {
+                        newCurrent = Math.max(current - 1, 0);
+                    }
+                } else if (countTrigger.classList.contains('count-checkbox')) {
+                    const clickedValue = parseInt(countTrigger.dataset.value, 10);
+                    if (clickedValue === current) {
+                        newCurrent = 0;
+                    } else {
+                        newCurrent = clickedValue;
+                    }
                 }
 
-                const clampedValue = Math.max(0, Math.min(newCurrent, max));
-                handleShortcodeValueChange(itemId, shortcode, clampedValue, countTrigger);
+                handleShortcodeValueChange(itemId, shortcode, newCurrent, countTrigger);
             }
-            return; // Encerra após tratar o clique no contador.
+            return;
         }
 
         // Prioridade 1.5: Edição do dinheiro.
@@ -636,131 +585,105 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 3. Conectar o backend (Firebase) com o frontend (UI)
-    firebaseService.listenToItems((snapshot) => {
-        // Se for o primeiro carregamento de dados, renderiza tudo de uma vez.
-        if (!isInitialGridLoaded) {
-            let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // Filtra os itens para não-narradores já no carregamento inicial
-            if (!auth.isNarrator()) {
-                items = items.filter(item => item.isVisibleToPlayers !== false);
+    firebaseService.listenToItems(async (snapshot) => {
+        try {
+            // Se for o primeiro carregamento de dados, renderiza tudo de uma vez.
+            if (!isInitialGridLoaded) {
+                let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Filtra os itens para não-narradores já no carregamento inicial
+                if (!auth.isNarrator()) {
+                    items = items.filter(item => item.isVisibleToPlayers !== false);
+                }
+                allItems = items;
+
+                allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+                // Carrega os items no cardManager e espera a conclusão
+                await cardManager.loadItems(allItems);
+                                
+                isInitialGridLoaded = true;
+
+                // Dispara a primeira renderização da UI
+                applyFilters();
+                return;
             }
-            allItems = items;
-
-            allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-
-            // Renderiza a grade e o board com os itens iniciais
-            grid.updateItems(allItems);
-            board.renderBoardItems(allItems);
-            initializeGrid(); // Inicializa o Muuri sobre os elementos recém-criados
-
-            isInitialGridLoaded = true; // Marca que o carregamento inicial foi concluído
-            return;
+        } catch (error) {
+            console.error('Erro ao processar os dados do Firebase:', error);
+            const loadingIndicator = document.querySelector('.loading-indicator');
+            if (loadingIndicator) {
+                loadingIndicator.innerHTML = `
+                    <div class="notification is-danger">
+                        Erro ao carregar os cards. <a href="javascript:location.reload()">Tente novamente</a>.
+                    </div>
+                `;
+            }
         }
-
         // Para todas as atualizações subsequentes, processa apenas as mudanças (deltas).
-        let orderChanged = false;
+        // A lógica aqui é manter o cache `allItems` perfeitamente sincronizado com o DB.
+        // A renderização é delegada para a função `applyFilters` no final.
+
         snapshot.docChanges().forEach((change) => {
             const itemData = { id: change.doc.id, ...change.doc.data() };
-            const isVisibleForPlayers = itemData.isVisibleToPlayers !== false;
             const indexInCache = allItems.findIndex(i => i.id === itemData.id);
-            const isInCache = indexInCache > -1;
+            const isNarrator = auth.isNarrator();
 
             switch (change.type) {
-                case "added": {
-                    if (auth.isNarrator() || isVisibleForPlayers) {
-                        allItems.push(itemData);
-                        if (muuriGrid) {
-                            const newCardElement = cardRenderer.createCardElement(itemData);
-                            muuriGrid.add(newCardElement, { index: change.newIndex });
+                case "added":
+                    // Adiciona se for narrador, ou se for jogador e o item for visível.
+                    if (isNarrator || itemData.isVisibleToPlayers !== false) {
+                        if (indexInCache === -1) allItems.push(itemData);
+                    }
+                    break;
+                case "modified":
+                    const shouldBeVisible = isNarrator || itemData.isVisibleToPlayers !== false;
+                    if (indexInCache > -1) { // Estava no cache
+                        if (shouldBeVisible) allItems[indexInCache] = itemData; // Atualiza
+                        else allItems.splice(indexInCache, 1); // Tornou-se invisível, remove
+                    } else { // Não estava no cache
+                        if (shouldBeVisible) allItems.push(itemData); // Tornou-se visível, adiciona
+                    }
+                    break;
+                case "removed":
+                    if (indexInCache > -1) {
+                        allItems.splice(indexInCache, 1);
+                    }
+                    // Adicionalmente, se o modal de detalhes estiver aberto com este item, fecha-o.
+                    if (detailModal.classList.contains('is-active')) {
+                        const modalBox = detailModal.querySelector('.box');
+                        if (modalBox && modalBox.dataset.itemId === itemData.id) {
+                            closeModal(detailModal);
                         }
                     }
                     break;
                 }
-                case "modified": {
-                    const existingCardElement = gridViewContainer.querySelector(`.card[data-id="${itemData.id}"]`);
-                    if (auth.isNarrator()) {
-                        // Narrador sempre vê a modificação
-                        if (isInCache) {
-                            if (allItems[indexInCache].order !== itemData.order) orderChanged = true;
-                            allItems[indexInCache] = itemData;
-                        } else {
-                            allItems.push(itemData);
-                            orderChanged = true;
-                        }
-                        if (existingCardElement) cardRenderer.renderCardViewMode(existingCardElement, itemData);
-
-                    } else { // Lógica para o jogador
-                        if (isVisibleForPlayers && !isInCache) {
-                            // Um card oculto se tornou visível: Adiciona à UI
-                            allItems.push(itemData);
-                            if (muuriGrid) muuriGrid.add(cardRenderer.createCardElement(itemData));
-                            orderChanged = true;
-                        } else if (!isVisibleForPlayers && isInCache) {
-                            // Um card visível se tornou oculto: Remove da UI
-                            allItems.splice(indexInCache, 1);
-                            if (muuriGrid && existingCardElement) muuriGrid.remove([existingCardElement], { removeElements: true });
-                        } else if (isVisibleForPlayers && isInCache) {
-                            // Modificação padrão de um card visível
-                            if (allItems[indexInCache].order !== itemData.order) orderChanged = true;
-                            allItems[indexInCache] = itemData;
-                            if (existingCardElement) cardRenderer.renderCardViewMode(existingCardElement, itemData);
-                        }
-
-                        // Adicionalmente, verifica se o modal de detalhes está aberto e mostrando este item
-                        if (detailModal.classList.contains('is-active')) {
-                            const modalBox = detailModal.querySelector('.box');
-                            // Se o modal estiver mostrando o item modificado, re-renderiza o conteúdo do modal
-                            if (modalBox && modalBox.dataset.itemId === itemData.id) {
-                                showDetailModal(itemData);
-                            }
-                        }
-                    }
-                    break;
-                }
-                case "removed": {
-                    // Encontra o item do Muuri correspondente ao ID do card deletado.
-                    const muuriItem = muuriGrid?.getItems().find(item => item.getElement().dataset.id === itemData.id);
-                    if (muuriItem) {
-                        // Usa o método do Muuri para remover o item da grade de forma segura.
-                        muuriGrid.remove([muuriItem], { removeElements: true });
-                    }
-                    allItems = allItems.filter(i => i.id !== itemData.id);
-                    break;
-                }
-            }
         });
 
-        // Após processar as mudanças, atualiza a ordem e o board
+        // Após processar todas as mudanças, reordena o cache local e dispara a atualização da UI
         allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-        if (orderChanged && muuriGrid) {
-            const orderedItems = allItems.map(data => muuriGrid.getItems().find(item => item.getElement().dataset.id === data.id)).filter(Boolean);
-            if (orderedItems.length > 0) muuriGrid.sort(orderedItems, { layout: 'instant' });
-        }
-        board.renderBoardItems(allItems);
+        // Dispara o filtro/renderização que usará o `allItems` atualizado
+        applyFilters();
     });
 
     // Função unificada para aplicar todos os filtros (busca e tags)
     function applyFilters() {
-        if (!muuriGrid) return;
-
-        const normalizedSearchTerm = normalizeString(searchInput.value.trim());
+        const searchTerm = searchInput.value.trim();
         const selectedTags = Array.from(tagFiltersContainer.querySelectorAll('input:not([value="visible"]):not([value="hidden"]):checked'))
-                                  .map(checkbox => normalizeString(checkbox.value));
+                                  .map(checkbox => checkbox.value);
 
-        // Lógica para os filtros de visibilidade do narrador
+        const normalizedSearchTerm = normalizeString(searchTerm);
         const visibilityFilters = {
             visible: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.VISIBLE}"]`)?.checked,
             hidden: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.HIDDEN}"]`)?.checked
         };
 
-        muuriGrid.filter(item => {
-            const element = item.getElement();
-            const id = element.dataset.id;
-            const dataItem = allItems.find(i => i.id === id);
+        // Remove o indicador de carregamento se ele ainda existir
+        const loadingIndicator = document.querySelector('.loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.remove();
+        }
 
-            if (!dataItem) return false;
-
+        const filteredItems = allItems.filter(dataItem => {
             // 1. Verifica o filtro de texto
             const textMatch = !normalizedSearchTerm ||
                 (normalizeString(dataItem.titulo || '').includes(normalizedSearchTerm) ||
@@ -778,7 +701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 3. Verifica o filtro de visibilidade (apenas para o narrador)
             let visibilityMatch = true;
             if (auth.isNarrator() && (visibilityFilters.visible || visibilityFilters.hidden)) {
-                // Se ambos ou nenhum estiverem marcados, não filtra por visibilidade
+                // Se ambos ou nenhum estiveram marcados, não filtra por visibilidade
                 if (visibilityFilters.visible && !visibilityFilters.hidden) {
                     visibilityMatch = dataItem.isVisibleToPlayers !== false;
                 } else if (!visibilityFilters.visible && visibilityFilters.hidden) {
@@ -788,6 +711,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             return textMatch && tagMatch && visibilityMatch;
         });
+
+        // Delega a renderização para os módulos de visualização ativos
+        if (viewWrapper.classList.contains('view-grid')) {
+            grid.setItems(filteredItems);
+        }
+        if (viewWrapper.classList.contains('view-board')) {
+            board.setItems(filteredItems);
+        }
     }
 
     /**
@@ -821,6 +752,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilters();
         updateClearButtonVisibility();
     });
+    boardSearchInput.addEventListener('input', () => {
+        applyFilters();
+    });
+
     tagFiltersContainer.addEventListener('change', (event) => {
         // Garante que o evento veio de um checkbox
         if (event.target.type === 'checkbox') {
@@ -1033,10 +968,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     cardFileInput.addEventListener('change', () => grid.updateFileName(cardFileInput));
 
-    // Lógica para trocar o modo de visualização
+    // Persistência do modo de visualização no localStorage
+    function setViewMode(mode) {
+        localStorage.setItem('rpgboard_view_mode', mode);
+    }
+    function getViewMode() {
+        return localStorage.getItem('rpgboard_view_mode') || 'grid';
+    }
+
+    // Troca de modo com persistência
     viewToggleButton.addEventListener('click', () => {
         const icon = viewToggleButton.querySelector('.icon i');
-
         if (viewWrapper.classList.contains('view-board')) {
             // Mudar para a visualização em Grade
             document.body.classList.remove('body-view-board');
@@ -1044,8 +986,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewWrapper.classList.add('view-grid');
             viewToggleButton.title = "Mudar para Visualização em Board";
             icon.className = 'fas fa-project-diagram';
-            // Inicializa a grade ao voltar para esta visualização
-            initializeGrid();
+            setViewMode('grid');
+            grid.show()
         } else {
             // Mudar para a visualização em Board
             document.body.classList.add('body-view-board');
@@ -1053,13 +995,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewWrapper.classList.add('view-board');
             viewToggleButton.title = "Mudar para Visualização em Grade";
             icon.className = 'fas fa-th';
-            // Destrói a instância da grade para liberar recursos
-            if (muuriGrid) {
-                muuriGrid.destroy();
-                muuriGrid = null;
-            }
+            setViewMode('board');
+            grid.hide();
+            setupBoardZoomAndPan();
         }
     });
+
+    // Ao carregar, restaura o modo salvo
+    setTimeout(() => {
+        const mode = getViewMode();
+        if (mode === 'board') {
+            document.body.classList.add('body-view-board');
+            viewWrapper.classList.remove('view-grid');
+            viewWrapper.classList.add('view-board');
+            viewToggleButton.title = "Mudar para Visualização em Grade";
+            viewToggleButton.querySelector('.icon i').className = 'fas fa-th';
+            grid.hide();
+            setupBoardZoomAndPan();
+        } else {
+            document.body.classList.remove('body-view-board');
+            viewWrapper.classList.remove('view-board');
+            viewWrapper.classList.add('view-grid');
+            viewToggleButton.title = "Mudar para Visualização em Board";
+            viewToggleButton.querySelector('.icon i').className = 'fas fa-project-diagram';
+            grid.show();
+        }
+    }, 0);
 
     // 5. Funções de callback para a UI
     function showDetailModal(item) {
@@ -1159,4 +1120,121 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    function setupBoardZoomAndPan() {
+        const boardContainer = document.getElementById('board-view-container');
+        if (!boardContainer) return;
+
+        // Avoid duplicate wrappers
+        if (boardContainer.querySelector('.board-zoom-wrapper')) return;
+
+        // Wrap all board content
+        const zoomWrapper = document.createElement('div');
+        zoomWrapper.className = 'board-zoom-wrapper';
+        const panWrapper = document.createElement('div');
+        panWrapper.className = 'board-pan-wrapper';
+
+        // Move all children into panWrapper
+        while (boardContainer.firstChild) {
+            panWrapper.appendChild(boardContainer.firstChild);
+        }
+        zoomWrapper.appendChild(panWrapper);
+        boardContainer.appendChild(zoomWrapper);
+
+        // State
+        let scale = 1;
+        let panX = 0;
+        let panY = 0;
+        let isPanning = false;
+        let startX, startY;
+
+        // Zoom controls
+        function applyTransform() {
+            zoomWrapper.style.transform = `scale(${scale}) translate(${panX/scale}px, ${panY/scale}px)`;
+        }
+        function zoomIn() {
+            scale = Math.min(scale + 0.1, 2);
+            applyTransform();
+        }
+        function zoomOut() {
+            scale = Math.max(scale - 0.1, 0.5);
+            applyTransform();
+        }
+        // Add zoom buttons if not present
+        if (!document.getElementById('board-zoom-in')) {
+            const zoomInBtn = document.createElement('button');
+            zoomInBtn.id = 'board-zoom-in';
+            zoomInBtn.textContent = '+';
+            zoomInBtn.style.position = 'absolute';
+            zoomInBtn.style.top = '10px';
+            zoomInBtn.style.right = '60px';
+            zoomInBtn.style.zIndex = '20';
+            zoomInBtn.className = 'button is-link';
+            zoomInBtn.onclick = zoomIn;
+            boardContainer.appendChild(zoomInBtn);
+        }
+        if (!document.getElementById('board-zoom-out')) {
+            const zoomOutBtn = document.createElement('button');
+            zoomOutBtn.id = 'board-zoom-out';
+            zoomOutBtn.textContent = '-';
+            zoomOutBtn.style.position = 'absolute';
+            zoomOutBtn.style.top = '10px';
+            zoomOutBtn.style.right = '10px';
+            zoomOutBtn.style.zIndex = '20';
+            zoomOutBtn.className = 'button is-link';
+            zoomOutBtn.onclick = zoomOut;
+            boardContainer.appendChild(zoomOutBtn);
+        }
+        // Mouse/touch drag
+        panWrapper.addEventListener('mousedown', (e) => {
+            isPanning = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            panWrapper.style.cursor = 'grabbing';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            applyTransform();
+        });
+        document.addEventListener('mouseup', () => {
+            isPanning = false;
+            panWrapper.style.cursor = 'grab';
+        });
+        // Touch drag
+        panWrapper.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            isPanning = true;
+            startX = e.touches[0].clientX - panX;
+            startY = e.touches[0].clientY - panY;
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!isPanning || e.touches.length !== 1) return;
+            panX = e.touches[0].clientX - startX;
+            panY = e.touches[0].clientY - startY;
+            applyTransform();
+        });
+        document.addEventListener('touchend', () => {
+            isPanning = false;
+        });
+        // WASD keys
+        document.addEventListener('keydown', (e) => {
+            const step = 40;
+            if (document.body.classList.contains('body-view-board')) {
+                if (e.key === 'w') panY -= step;
+                if (e.key === 's') panY += step;
+                if (e.key === 'a') panX -= step;
+                if (e.key === 'd') panX += step;
+                applyTransform();
+            }
+        });
+        // Initial transform
+        applyTransform();
+    }
+
+    console.log('Verificando instâncias do Firebase:', window.firebaseInstances);
+    if (!window.firebaseInstances || !window.firebaseInstances.db || !window.firebaseInstances.storage) {
+        console.error('As instâncias do Firebase não estão configuradas corretamente. Verifique a configuração do Firebase.');
+    }
 });

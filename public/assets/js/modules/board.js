@@ -1,10 +1,8 @@
 // Este módulo será responsável por toda a lógica do modo de visualização em board.
 import * as cardRenderer from './cardRenderer.js';
 import { showConfirmationPopover } from './ui.js';
+import * as cardManager from './cardManager.js';
 
-// (Renderizar cards, arrastar e soltar, posicionamento, conexões, etc.)
-
-let localItems = [];
 let filteredItems = [];
 let eventHandlers = {}; // Objeto para armazenar as funções de callback
 
@@ -25,8 +23,11 @@ export function initializeBoard(handlers) {
 
     boardSearchInput = document.getElementById('board-search-input');
     if (boardSearchInput) {
-        boardSearchInput.addEventListener('input', filterAndRender);
+        boardSearchInput.addEventListener('input', handleSearch);
     }
+
+    // Subscribe para atualizações dos cards
+    cardManager.subscribe(handleCardsUpdate);
 
     // Delegação de eventos para os botões dos cards no board
     boardContainer.addEventListener('click', (e) => {
@@ -38,7 +39,7 @@ export function initializeBoard(handlers) {
 
         const id = card.dataset.id;
         // Busca tanto nos itens filtrados quanto nos locais para garantir
-        const item = localItems.find(i => i.id === id);
+        const item = cardManager.getItems().find(i => i.id === id);
         if (!item) return;
 
         if (actionButton.classList.contains('view-btn')) {
@@ -65,29 +66,14 @@ export function initializeBoard(handlers) {
  * Recebe a lista completa de itens e dispara a renderização.
  * @param {Array} items - A lista completa de itens.
  */
-export function renderBoardItems(items) {
-    localItems = items;
-    filterAndRender(); // Renderização inicial com todos os itens
+function handleSearch() {
+    const searchTerm = boardSearchInput ? boardSearchInput.value : '';
+    filteredItems = cardManager.filterItems(searchTerm);
+    drawBoard();
 }
 
-/**
- * Filtra os itens com base na busca e redesenha o board.
- */
-function filterAndRender() {
-    const searchTerm = boardSearchInput ? boardSearchInput.value.toLowerCase().trim() : '';
-
-    if (!searchTerm) {
-        filteredItems = [...localItems];
-    } else {
-        filteredItems = localItems.filter(item => {
-            const titleMatch = item.titulo.toLowerCase().includes(searchTerm);
-            const contentMatch = item.tipo === 'texto' && item.conteudo.toLowerCase().includes(searchTerm);
-            const descriptionMatch = item.tipo === 'imagem' && item.descricao?.toLowerCase().includes(searchTerm);
-            const tagMatch = item.tags.some(tag => tag.toLowerCase().includes(searchTerm));
-            return titleMatch || contentMatch || descriptionMatch || tagMatch;
-        });
-    }
-
+function handleCardsUpdate(items) {
+    filteredItems = items;
     drawBoard();
 }
 
@@ -102,12 +88,47 @@ function drawBoard() {
     if (filteredItems.length > 0) {
         const cardElements = filteredItems.map((item, index) => {
             const cardElement = cardRenderer.createCardElement(item);
+            cardElement.style.position = 'absolute';
+            // Se houver posição salva, usa ela; senão, distribui inicial
+            if (item.boardPosition && typeof item.boardPosition.x === 'number' && typeof item.boardPosition.y === 'number') {
+                cardElement.style.left = item.boardPosition.x + 'px';
+                cardElement.style.top = item.boardPosition.y + 'px';
+            } else {
+                const top = 80 + (index * 30);
+                const left = 40 + (index * 30);
+                cardElement.style.top = `${top}px`;
+                cardElement.style.left = `${left}px`;
+            }
 
-            // Posição inicial. Aumentei o 'top' para não ficar sob a busca.
-            const top = 80 + (index * 30);
-            const left = 40 + (index * 30);
-            cardElement.style.top = `${top}px`;
-            cardElement.style.left = `${left}px`;
+            // Drag & drop livre
+            let isDragging = false;
+            let offsetX = 0, offsetY = 0;
+
+            cardElement.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return; // Só botão esquerdo
+                isDragging = true;
+                cardElement.style.zIndex = 10;
+                offsetX = e.clientX - cardElement.offsetLeft;
+                offsetY = e.clientY - cardElement.offsetTop;
+                document.body.style.userSelect = 'none';
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    cardElement.style.left = (e.clientX - offsetX) + 'px';
+                    cardElement.style.top = (e.clientY - offsetY) + 'px';
+                }
+            });
+            document.addEventListener('mouseup', async function(e) {
+                if (isDragging) {
+                    isDragging = false;
+                    cardElement.style.zIndex = 1;
+                    document.body.style.userSelect = '';
+                    // Salva posição no Firebase através do cardManager
+                    const x = cardElement.offsetLeft;
+                    const y = cardElement.offsetTop;
+                    await cardManager.updateItemPosition(item.id, { x, y });
+                }
+            });
 
             return cardElement;
         });

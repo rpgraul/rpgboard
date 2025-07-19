@@ -216,6 +216,7 @@ function updateCardView(cardElement, item) {
 export function renderCardEditMode(cardElement, item, eventHandlers) {
     cardElement.classList.add('editing');
 
+
     const editActions = `
         <div class="card-actions-top">
             <button class="action-icon save-btn"><i class="fas fa-save"></i></button>
@@ -228,7 +229,7 @@ export function renderCardEditMode(cardElement, item, eventHandlers) {
     const hasDimensions = item.width && item.height;
     const aspectRatio = hasDimensions ? (item.height / item.width) * 100 : 56.25; // Fallback 16:9
     const placeholderStyle = `padding-bottom: ${aspectRatio}%;`;
-    const imageSrc = item.url || ''; // Usa a URL se existir, senão string vazia
+    const imageSrc = item.url || '';
 
     editHTML = `
         <div class="card-image ${!imageSrc ? 'is-placeholder' : ''}">
@@ -259,6 +260,9 @@ export function renderCardEditMode(cardElement, item, eventHandlers) {
                 </div>
                 ` : ''
             }
+            <div class="field" style="margin-top: 1.5em; text-align: right;">
+                <button class="button is-primary save-btn"><span class="icon is-small"><i class="fas fa-save"></i></span> <span>Salvar</span></button>
+            </div>
         </div>
     `;
 
@@ -269,6 +273,23 @@ export function renderCardEditMode(cardElement, item, eventHandlers) {
     if (editTagsInput && eventHandlers?.onTagInputInit) {
         eventHandlers.onTagInputInit(editTagsInput);
     }
+
+    // Aplica o mesmo handler de salvar para todos os botões save-btn
+    const saveButtons = cardElement.querySelectorAll('.save-btn');
+    saveButtons.forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            // Busca o card, item e container corretos
+            // O handler espera (card, item, container)
+            if (eventHandlers?.onSave) {
+                // O cardElement é o próprio card em edição
+                // O item é passado como argumento
+                // O container é o pai do card (pode ser usado para remover classe de edição)
+                const container = cardElement.parentElement;
+                eventHandlers.onSave(cardElement, item, container);
+            }
+        };
+    });
 }
 
 /**
