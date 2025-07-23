@@ -122,7 +122,9 @@ strong,
     box-shadow: 0 0 0 2px var(--dark-blue), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-
+.top-bar-right{
+    text-align: right;
+}
 
 /* Estilo para cards selecionados no modo de edição em massa */
 .card.is-bulk-selected {
@@ -139,6 +141,12 @@ strong,
     .card {
         width: calc(100% - 24px);
     }
+    .fab-container {
+    bottom: 0rem;
+    right: 0rem;
+    display: flex;
+    scale: .8;
+}
 }
 .card.muuri-item-dragging {
     z-index: 3;
@@ -320,8 +328,8 @@ strong,
     overflow-y: auto;
     box-sizing: border-box;
     /* Centraliza e define o tamanho do painel de detalhes */
-    width: 90%;
-    max-height: 82%;
+    width: 97%;
+    max-height: 97%;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);

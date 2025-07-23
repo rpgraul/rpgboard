@@ -93,3 +93,8 @@ body.body-view-board #board-view-container {
 .board-pan-wrapper:active {
     cursor: grabbing;
 }
+
+/* Oculta os botões de ação superiores quando a camada de detalhes está visível */
+.card.is-details-visible .card-actions-top {
+    display: none;
+}
