@@ -159,13 +159,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicializa o módulo de configurações
     settings.initializeSettings();
 
+    // Função para atualizar a UI com base no status do narrador
+    function updateMasterView(isNarrator) {
+        narrator.updateNarratorUI(isNarrator);
+        document.body.classList.toggle('master-view', isNarrator);
+    }
+
     // Verifica o status do narrador no carregamento da página e atualiza a UI
-    narrator.updateNarratorUI(auth.isNarrator());
+    updateMasterView(auth.isNarrator());
 
     // Ouve por mudanças no status do narrador para atualizar a UI
     window.addEventListener('narratorStatusChange', () => {
         const isNarrator = auth.isNarrator();
-        narrator.updateNarratorUI(isNarrator);
+        updateMasterView(isNarrator);
+        
         // Se o usuário fizer logout, sai do modo de edição em massa
         if (!isNarrator) {
             bulkEdit.exitBulkEditMode();
@@ -209,52 +216,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    async function handleSaveCard(card, item, container) {
-        const saveButton = card.querySelector('.save-btn');
+    async function handleSaveCard(cardElement, item) {
+        const saveButton = cardElement.querySelector('.save-btn');
         saveButton.classList.add('is-loading');
 
-        const updatedData = cardRenderer.getCardFormData(card);
-        const newImageFile = card._newImageFile || null;
+        const updatedData = cardRenderer.getCardFormData(cardElement);
+        const newImageFile = cardElement._newImageFile || null;
 
-        // Compara os dados antigos com os novos para ver se houve alteração
-        const originalTags = (item.tags || []).sort();
-        const updatedTags = (updatedData.tags || []).sort();
-        const tagsChanged = JSON.stringify(originalTags) !== JSON.stringify(updatedTags);
-
-        const hasTextChanged =
-            (item.titulo || '') !== updatedData.titulo ||
-            (item.conteudo || '') !== updatedData.conteudo ||
-            (item.descricao || '') !== updatedData.descricao ||
-            tagsChanged ||
-            (item.isVisibleToPlayers !== false) !== updatedData.isVisibleToPlayers;
-
-        const hasChanges = hasTextChanged || newImageFile;
-
-        if (hasChanges) {
-            // Se houver mudanças, salva no Firebase
+        try {
+            // Se houver uma nova imagem, obtém suas dimensões antes de salvar
             if (newImageFile) {
                 const dimensions = await cardRenderer.getImageDimensions(newImageFile);
                 updatedData.width = dimensions.width;
                 updatedData.height = dimensions.height;
             }
 
-            try {
-                await firebaseService.updateItem(item, updatedData, newImageFile);
-                // O listener do Firebase cuidará de atualizar a UI.
-                // Apenas removemos a classe do container e limpamos o arquivo temporário.
-                container.classList.remove('is-editing-item');
-                if (card._newImageFile) delete card._newImageFile;
-            } catch (error) {
-                console.error("Falha ao salvar as alterações:", error);
-                alert("Falha ao salvar as alterações.");
-                saveButton.classList.remove('is-loading'); // Reabilita o botão em caso de erro
+            // Envia a atualização para o Firebase
+            await firebaseService.updateItem(item, updatedData, newImageFile);
+
+            // Limpa o arquivo de imagem temporário, se houver
+            if (cardElement._newImageFile) {
+                delete cardElement._newImageFile;
             }
-        } else {
-            // Se não houver mudanças, apenas sai do modo de edição
-            container.classList.remove('is-editing-item');
-            cardRenderer.renderCardViewMode(card, item); // Reverte para o modo de visualização
-            if (card._newImageFile) delete card._newImageFile;
-            grid.refreshLayout();
+
+            // Retorna o item atualizado para que o cardRenderer possa re-renderizar o card
+            // O listener do Firebase também atualizará o cache local, mas retornar o item aqui
+            // permite uma atualização visual imediata sem esperar o round-trip do listener.
+            return { ...item, ...updatedData };
+
+        } catch (error) {
+            console.error("Falha ao salvar as alterações:", error);
+            alert("Falha ao salvar as alterações.");
+            saveButton.classList.remove('is-loading');
+            // Rejeita a promessa para que o chamador (cardRenderer) saiba que algo deu errado
+            throw error;
         }
     }
 
@@ -290,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Substitui current=valor ou current="valor" por current="novoValor"
             newShortcode = decodedShortcode.replace(/current=("?)(\d+)("?)/, `current="${newCurrentValue}"`);
         } else {
-            newShortcode = decodedShortcode.replace(/\]$/, ` current="${newCurrentValue}"]`);
+            newShortcode = decodedShortcode.replace(/]$/, ` current="${newCurrentValue}"]`);
         }
 
         const newContent = item.conteudo.replace(decodedShortcode, newShortcode);
@@ -326,7 +321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let newValue = originalValue;
 
         // Case 1: Full expression (e.g., "10+10", "5 * 2")
-        const fullExpressionMatch = cleanedInput.match(/^(\d+\.?\d*)\s*([+\-*/])\s*(\d+\.?\d*)$/);
+        const fullExpressionMatch = cleanedInput.match(/^(\d+\.?\d*)\s*([+\-*\/])\s*(\d+\.?\d*)$/);
         if (fullExpressionMatch) {
             const operand1 = parseFloat(fullExpressionMatch[1]);
             const operator = fullExpressionMatch[2];
@@ -341,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         // Case 2: Relative operation (e.g., "+10", "-5")
         else {
-            const relativeOperationMatch = cleanedInput.match(/^([+\-*/])\s*(\d+\.?\d*)$/);
+            const relativeOperationMatch = cleanedInput.match(/^([+\-*\/])\s*(\d+\.?\d*)$/);
             if (relativeOperationMatch) {
                 const operator = relativeOperationMatch[1];
                 const operand = parseFloat(relativeOperationMatch[2]);

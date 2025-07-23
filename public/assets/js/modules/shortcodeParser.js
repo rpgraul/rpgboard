@@ -215,15 +215,23 @@ function _parseCount(args, itemId, originalShortcode) {
 export function parseMainContent(text) {
     if (!text) return '';
 
-    let processedText = text.replace(/\[(.*?)\]/g, (match, content) => {
+    // Pass 1: Processa blocos [hide]...[/hide] e [#]...[/#]
+    let processedText = text.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (match, openTag, content, closeTag) => {
+        if (openTag.toLowerCase() !== closeTag.toLowerCase()) {
+            return match; // Retorna a correspondência original se as tags não forem iguais
+        }
+        // Envolve o conteúdo em um div que pode ser estilizado para ser oculto.
+        return `<div class="is-hidden-from-players">${content}</div>`;
+    });
+
+    // Pass 2: Remove os shortcodes de bloco do conteúdo.
+    processedText = processedText.replace(/\[(.*?)\]/g, (match, content) => {
         const allArgs = _parseArguments(content);
         const command = allArgs[0] || '';
-        const args = allArgs.slice(1);
-        const cleanCommand = command.replace('*', '');
+        const cleanCommand = command.replace(/^[#*]/, ''); // Remove prefixos # ou *
 
-        // Se for um comando visível (com *) ou um comando que tem sua própria área de renderização
-        // (stat, hp, count), remove-o do conteúdo principal.
-        if (command.startsWith('*') || ALWAYS_VISIBLE_COMMANDS.includes(cleanCommand.toLowerCase()) || ['hp', 'count', 'money'].includes(cleanCommand.toLowerCase())) {
+        // Se for um comando visível (*), oculto (#) ou um de bloco, remove-o do conteúdo principal.
+        if (command.startsWith('*') || command.startsWith('#') || allArgs.includes('#') || ALWAYS_VISIBLE_COMMANDS.includes(cleanCommand.toLowerCase()) || ['hp', 'count', 'money'].includes(cleanCommand.toLowerCase())) {
             return '';
         }
 
@@ -245,6 +253,7 @@ export function parseMainContent(text) {
     return processedText.replace(/\n/g, '<br>').replace(/(<br>\s*){2,}/g, '<br>');
 }
 
+
 /**
  * Recebe um texto e extrai, ordena e renderiza TODOS os shortcodes em um bloco HTML.
  * Ideal para o modal de detalhes e tooltips.
@@ -261,23 +270,63 @@ export function parseAllShortcodes(item, settings = {}) {
         details: []
     };
 
-    // Define a ordem de renderização
     const ORDER = { stat: 1, money: 2, hp: 3, count: 4, default: 99 };
+    const content = item.conteudo;
+
+    // --- START: Logic to identify hidden shortcodes ---
+    const hideRanges = [];
+    const HIDE_BLOCK_REGEX = /\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi;
+    let hideMatch;
+    while ((hideMatch = HIDE_BLOCK_REGEX.exec(content)) !== null) {
+        const [fullMatch, openTag, innerContent, closeTag] = hideMatch;
+        if (openTag.toLowerCase() === closeTag.toLowerCase()) {
+            const startIndex = hideMatch.index + fullMatch.indexOf(innerContent);
+            hideRanges.push({ start: startIndex, end: startIndex + innerContent.length });
+        }
+    }
+
+    const isInHideBlock = (shortcodeIndex) => {
+        return hideRanges.some(range => shortcodeIndex >= range.start && shortcodeIndex < range.end);
+    };
+    // --- END: Logic to identify hidden shortcodes ---
+
+    const allShortcodes = [];
+    const SHORTCODE_REGEX = /\[(.*?)\]/g;
+    let scMatch;
 
     // 1. Extrai todos os shortcodes do texto
-    const allShortcodes = [];
-    item.conteudo.replace(/\[(.*?)\]/g, (originalShortcode, content) => {
-        const allArgs = _parseArguments(content);
-        const command = (allArgs[0] || '').replace('*', '').toLowerCase();
-        const args = allArgs.slice(1);
+    while ((scMatch = SHORTCODE_REGEX.exec(content)) !== null) {
+        const originalShortcode = scMatch[0];
+        const innerContent = scMatch[1];
+        
+        const allArgs = _parseArguments(innerContent);
+        const commandWithPrefix = allArgs[0] || '';
+        
+        const isHiddenByPrefix = commandWithPrefix.startsWith('#');
+        const isHiddenByBlock = isInHideBlock(scMatch.index);
+        const isHiddenByArg = allArgs.includes('#');
+
+        let isHidden = isHiddenByPrefix || isHiddenByBlock || isHiddenByArg;
+
+        const command = commandWithPrefix.replace(/^[#*]+/, '').toLowerCase();
+        let args = allArgs.slice(1);
+
+        if (isHiddenByArg) {
+            args = args.filter(arg => arg !== '#');
+        }
 
         if (['stat', 'hp', 'count', 'money'].includes(command)) {
-            allShortcodes.push({ command, args, originalShortcode });
+            allShortcodes.push({ command, args, originalShortcode, isHidden });
         }
-    });
+    }
 
     // 2. Ordena os shortcodes extraídos
     allShortcodes.sort((a, b) => (ORDER[a.command] || ORDER.default) - (ORDER[b.command] || ORDER.default));
+
+    // Helper para envolver o HTML se estiver oculto
+    const addHiddenWrapper = (html, isHidden) => {
+        return isHidden ? `<div class="is-hidden-from-players">${html}</div>` : html;
+    };
 
     // 3. Renderiza os shortcodes ordenados
     allShortcodes.forEach(sc => {
@@ -290,28 +339,25 @@ export function parseAllShortcodes(item, settings = {}) {
         switch (sc.command) {
             case 'stat':
                 html = _parseStat(sc.args);
-                rendered[position || 'left'].push(html);
+                rendered[position || 'left'].push(addHiddenWrapper(html, sc.isHidden));
                 break;
             case 'hp':
                 html = _parseHp(sc.args, item.id, sc.originalShortcode);
-                rendered[position || 'bottom'].push(html);
+                rendered[position || 'bottom'].push(addHiddenWrapper(html, sc.isHidden));
                 break;
             case 'money':
                 const moneyParams = _parseKeyValueArgs(sc.args);
                 const currentAmount = parseFloat(moneyParams.current) || 0;
 
-                // Procura pela moeda: primeiro como 'currency=', depois como um argumento solto.
                 let currency = moneyParams.currency || '';
                 if (!currency) {
                     const positionKeywords = ['left', 'right', 'bottom'];
-                    // Encontra o primeiro argumento que não é um par chave=valor E não é uma palavra-chave de posição.
                     const currencyArg = sc.args.find(arg => !arg.includes('=') && !positionKeywords.includes(arg));
                     if (currencyArg) {
                         currency = currencyArg;
-                        } else if (settings.defaultCurrency) {
-                            // Se nenhuma moeda foi encontrada, usa a padrão das configurações
-                            currency = settings.defaultCurrency;
-                        }
+                    } else if (settings.defaultCurrency) {
+                        currency = settings.defaultCurrency;
+                    }
                 }
                 const formattedAmount = formatNumber(currentAmount);
 
@@ -321,19 +367,20 @@ export function parseAllShortcodes(item, settings = {}) {
                         <span class="money-value-display">${formattedAmount}</span><input type="text" class="money-value-input is-hidden" value="${currentAmount}"><span class="money-currency">${currency}</span>
                     </div>
                 `.trim().replace(/\s+/g, ' ');
-                rendered[position || 'left'].push(html);
+                rendered[position || 'left'].push(addHiddenWrapper(html, sc.isHidden));
                 break;
             case 'count':
                 const isVisibleOnOverlay = sc.originalShortcode.includes('[*count');
                 const countHtml = _parseCount(sc.args, item.id, sc.originalShortcode);
+                const wrappedCountHtml = addHiddenWrapper(countHtml, sc.isHidden);
+
                 if (isVisibleOnOverlay) {
-                    rendered[position || 'right'].push(countHtml);
+                    rendered[position || 'right'].push(wrappedCountHtml);
                 } else {
-                    // Se tiver override de posição, vai para o grupo. Senão, para detalhes.
                     if (position) {
-                        rendered[position].push(countHtml);
+                        rendered[position].push(wrappedCountHtml);
                     } else {
-                        rendered.details.push(countHtml);
+                        rendered.details.push(wrappedCountHtml);
                     }
                 }
                 break;

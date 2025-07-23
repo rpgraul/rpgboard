@@ -122,11 +122,7 @@ strong,
     box-shadow: 0 0 0 2px var(--dark-blue), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* Estilo para cards ocultos, visível apenas para o narrador */
-.card.is-hidden-from-players {
-    border: 2px solid var(--dark-red);
-    box-shadow: 0 0 12px rgba(143, 44, 44, 0.6);
-}
+
 
 /* Estilo para cards selecionados no modo de edição em massa */
 .card.is-bulk-selected {
@@ -1105,4 +1101,36 @@ body.is-bulk-editing .fab-container {
 .card .card-content .title,
 .card .card-content .content {
     user-select: text;
+}
+
+
+
+/* custom.css */
+
+/* Estilos para conteúdo oculto (visão do Mestre vs. Jogador) */
+.is-hidden-from-players {
+    display: none;
+}
+
+/* Adiciona um feedback visual para o conteúdo que está oculto para os jogadores */
+body.master-view .is-hidden-from-players {
+    display: block;
+    border: 1px dashed rgba(255, 107, 107, 0.7);
+    padding: 0.5em;
+    background-color: rgba(255, 107, 107, 0.07);
+    border-radius: 5px;
+}
+
+body.master-view .info-content .is-hidden-from-players{
+    padding: 0;
+}
+body.master-view .info-content .is-hidden-from-players .shortcode-stat{
+    background-color: rgb(169 23 23);
+}
+
+/* Se um elemento oculto estiver dentro de outro, remove a borda externa para não duplicar */
+body.master-view .is-hidden-from-players .is-hidden-from-players {
+    border: none;
+    padding: 0;
+    background-color: transparent;
 }

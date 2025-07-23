@@ -3,11 +3,9 @@ import * as cardRenderer from './cardRenderer.js';
 import { showConfirmationPopover } from './ui.js';
 import * as cardManager from './cardManager.js';
 
-let filteredItems = [];
 let eventHandlers = {}; // Objeto para armazenar as funções de callback
 
 const boardContainer = document.getElementById('board-view-container');
-let boardSearchInput = null;
 
 /**
  * Inicializa o módulo do board.
@@ -20,14 +18,6 @@ export function initializeBoard(handlers) {
         console.error("Board container not found!");
         return;
     }
-
-    boardSearchInput = document.getElementById('board-search-input');
-    if (boardSearchInput) {
-        boardSearchInput.addEventListener('input', handleSearch);
-    }
-
-    // Subscribe para atualizações dos cards
-    cardManager.subscribe(handleCardsUpdate);
 
     // Delegação de eventos para os botões dos cards no board
     boardContainer.addEventListener('click', (e) => {
@@ -63,30 +53,23 @@ export function initializeBoard(handlers) {
 }
 
 /**
- * Recebe a lista completa de itens e dispara a renderização.
- * @param {Array} items - A lista completa de itens.
- */
-function handleSearch() {
-    const searchTerm = boardSearchInput ? boardSearchInput.value : '';
-    filteredItems = cardManager.filterItems(searchTerm);
-    drawBoard();
-}
-
-function handleCardsUpdate(items) {
-    filteredItems = items;
-    drawBoard();
-}
-
-/**
  * Limpa e desenha todos os itens filtrados no board.
+ * @param {Array} items - A lista de itens a serem exibidos.
  */
-function drawBoard() {
+export function setItems(items) {
     // Limpa apenas os cards, preservando a barra de busca
     const existingCards = boardContainer.querySelectorAll('.card');
     existingCards.forEach(card => card.remove());
 
-    if (filteredItems.length > 0) {
-        const cardElements = filteredItems.map((item, index) => {
+    // Se não houver itens e a busca estiver ativa, mostra uma mensagem.
+    const boardSearchInput = document.getElementById('board-search-input');
+    if (items.length === 0 && boardSearchInput?.value) {
+        // Adiciona um elemento temporário para a mensagem
+        const messageEl = document.createElement('div');
+        messageEl.innerHTML = `<div class="column is-full has-text-centered has-text-white"><p class="is-size-5">Nenhum item encontrado.</p></div>`;
+        boardContainer.appendChild(messageEl);
+    } else if (items.length > 0) {
+        const cardElements = items.map((item, index) => {
             const cardElement = cardRenderer.createCardElement(item);
             cardElement.style.position = 'absolute';
             // Se houver posição salva, usa ela; senão, distribui inicial
@@ -126,7 +109,9 @@ function drawBoard() {
                     // Salva posição no Firebase através do cardManager
                     const x = cardElement.offsetLeft;
                     const y = cardElement.offsetTop;
-                    await cardManager.updateItemPosition(item.id, { x, y });
+                    if (eventHandlers.onPositionChange) {
+                        eventHandlers.onPositionChange(item.id, { x, y });
+                    }
                 }
             });
 
@@ -134,5 +119,4 @@ function drawBoard() {
         });
         boardContainer.append(...cardElements);
     }
-    // Opcional: Adicionar mensagem de "nenhum item encontrado" aqui se desejar.
 }

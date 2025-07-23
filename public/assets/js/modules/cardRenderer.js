@@ -277,16 +277,21 @@ export function renderCardEditMode(cardElement, item, eventHandlers) {
     // Aplica o mesmo handler de salvar para todos os botões save-btn
     const saveButtons = cardElement.querySelectorAll('.save-btn');
     saveButtons.forEach(btn => {
-        btn.onclick = (e) => {
+        btn.onclick = async (e) => { // Tornando o handler assíncrono
             e.preventDefault();
-            // Busca o card, item e container corretos
-            // O handler espera (card, item, container)
             if (eventHandlers?.onSave) {
-                // O cardElement é o próprio card em edição
-                // O item é passado como argumento
-                // O container é o pai do card (pode ser usado para remover classe de edição)
-                const container = cardElement.parentElement;
-                eventHandlers.onSave(cardElement, item, container);
+                try {
+                    // O onSave agora deve ser uma função que retorna uma Promise
+                    // que resolve com o item atualizado.
+                    const updatedItem = await eventHandlers.onSave(cardElement, item);
+                    if (updatedItem) {
+                        // Re-renderiza o card no modo de visualização com os dados atualizados
+                        renderCardViewMode(cardElement, updatedItem);
+                    }
+                } catch (error) {
+                    console.error("Erro ao salvar o card:", error);
+                    // Opcional: Adicionar feedback visual para o usuário sobre o erro
+                }
             }
         };
     });
