@@ -1,7 +1,8 @@
 import { openModal, closeModal } from './modal.js';
 
-const NARRATOR_PASSWORD = 'dimitrinho';
-const STORAGE_KEY = 'isNarrator'; // Alterado para localStorage para persistência
+// Alterado para um array de senhas
+const NARRATOR_PASSWORDS = ['dimitrinho', 'tomatinho']; 
+const STORAGE_KEY = 'isNarrator';
 
 let narratorModal = null;
 let loginBtn = null;
@@ -42,7 +43,8 @@ function logout() {
  */
 function handleLoginAttempt(event) {
     event.preventDefault();
-    if (passwordInput.value === NARRATOR_PASSWORD) {
+    // Verifica se a senha digitada está incluída no array de senhas
+    if (NARRATOR_PASSWORDS.includes(passwordInput.value)) { 
         errorMessage.classList.add('is-hidden');
         login();
     } else {
