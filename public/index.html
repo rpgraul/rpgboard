@@ -265,6 +265,17 @@
                     <pre><code>[stat "Alvo" "Capitão" right]</code></pre>
                     <pre><code>[*count "Sorte" max=1 bottom theme=arrow]</code></pre>
 
+                    <h4>Texto Oculto: <code>[hide]</code> ou <code>[#]</code></h4>
+                    <p>Você pode ocultar partes do texto no conteúdo principal. Este texto ficará visível apenas para o Narrador e poderá ser revelado aos jogadores clicando em um ícone de olho.</p>
+                    <pre><code>[hide]Este texto está oculto para os jogadores.[/hide]</code></pre>
+                    <p>A versão curta <code>[#]...[/#]</code> também funciona.</p>
+                    <pre><code>[#]Este texto também está oculto.[/#]</code></pre>
+
+                    <h4>Ocultar Shortcodes dos Jogadores</h4>
+                    <p>Para que um shortcode seja visível apenas para o Narrador, adicione o símbolo <code>#</code> em qualquer lugar dentro dos colchetes do shortcode. O Narrador verá o shortcode normalmente, mas para os jogadores, ele não será renderizado.</p>
+                    <pre><code>[stat "Segredo do NPC" "Ele é um traidor" #]</code></pre>
+                    <pre><code>[*count "Armadilhas" max=2 #]</code></pre>
+
                     <hr>
 
                     <h4>Modo Narrador</h4>
