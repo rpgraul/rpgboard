@@ -399,7 +399,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             event.stopPropagation();
             const cardNameToFind = cardLink.dataset.cardName;
             if (cardNameToFind) {
-                // Procura o card no cache local, ignorando maiúsculas/minúsculas e espaços.
+                const normalizedCardNameToFind = normalizeString(cardNameToFind);
+                const foundCard = allItems.find(item => normalizeString(item.titulo) === normalizedCardNameToFind);
+                if (foundCard) {
+                    showDetailModal(foundCard);
+                } else {
+                    console.warn(`Card com nome "${cardNameToFind}" não encontrado.`);
+                }
             }
             return;
         }
