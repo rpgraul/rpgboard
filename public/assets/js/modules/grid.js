@@ -51,8 +51,7 @@ export function initializeGrid(handlers) {
         }
     });
 
-    // Inicializa o Muuri. A busca agora será tratada pelo script.js, que chamará filterGrid.
-    initializeMuuri();
+    // O Muuri será inicializado sob demanda pela função show().
 }
 
 /**
@@ -137,6 +136,7 @@ function initializeMuuri() {
         dragEnabled: true,
         dragStartPredicate: function (item, event) {
             const cardElement = item.getElement();
+            console.log(event);
             const clickTarget = event.target; // O elemento exato que foi clicado
 
             // Condições para NUNCA arrastar
@@ -174,16 +174,16 @@ function initializeMuuri() {
         }
     });
 
-    // Evento de reordenação, agora chama o handler passado na inicialização
     muuriGrid.on('dragEnd', () => {
-        const orderedItems = muuriGrid.getItems();
+        const orderedItems = muuriGrid.getItems();        
+        console.log("dragEnd event triggered!");
+        
         const orderedIds = orderedItems.map(item => item.getElement().dataset.id);
-
-        // Notifica o script.js para salvar a ordem, sem conhecer o firebaseService
-        if (eventHandlers.onReorder) {
-            eventHandlers.onReorder(orderedIds);
+                        
+    if (eventHandlers.onReorder) {
+          eventHandlers.onReorder(orderedIds);
         }
-    });
+   });
 }
 
 export function refreshLayout() {
@@ -191,8 +191,19 @@ export function refreshLayout() {
 }
 
 export function hide() {
-    if (muuriGrid) muuriGrid.destroy();
-    muuriGrid = null;
+    if (muuriGrid) {
+        muuriGrid.destroy();
+        muuriGrid = null;
+    }
+}
+
+export function destroy() {
+    if (muuriGrid) {
+        muuriGrid.destroy();
+        muuriGrid = null;
+    }
+    // Potentially remove other event listeners added by this module
+    // if they are not automatically cleaned up by the destroy method.
 }
 
 export function show() {

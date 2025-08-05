@@ -14,6 +14,7 @@ let isInitialized = false;
 export function initialize(handlers) {
     if (isInitialized) {
         return Promise.resolve();
+
     }
     
     return new Promise((resolve) => {

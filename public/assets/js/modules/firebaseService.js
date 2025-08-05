@@ -32,7 +32,7 @@ export async function addItem(itemData, file = null) {
     const newItem = {
         ...itemData,
         createdAt: serverTimestamp(),
-        order: -Date.now()
+        order: itemsCount + 1 // Define a ordem como o número de itens + 1
     };
 
     if (file) {
@@ -73,6 +73,7 @@ export async function deleteItem(item) {
  * @param {File|null} newImageFile - O novo arquivo de imagem, se houver.
  */
 export async function updateItem(item, updatedData, newImageFile = null) {
+    console.log("updateItem called with:", item, updatedData, newImageFile);
     // Se um novo arquivo for fornecido (para adicionar ou trocar imagem)
     if (newImageFile) {
         // 1. Faz o upload da nova imagem
@@ -103,14 +104,25 @@ export async function updateItem(item, updatedData, newImageFile = null) {
  * @param {Array<string>} orderedIds - Um array de IDs de item na nova ordem desejada.
  */
 export async function updateItemsOrder(orderedIds) {
+    const { db, storage } = window.firebaseInstances || {};
+    console.log("updateItemsOrder called with:", orderedIds);
     const batch = writeBatch(db);
 
     orderedIds.forEach((id, index) => {
-        const docRef = doc(db, "rpg-items", id);
+        const docRef = doc(db, 'rpg-items', id);
         batch.update(docRef, { order: index });
     });
 
     await batch.commit();
+}
+
+/**
+ * Conta o número total de itens no banco de dados.
+ * @returns {Promise<number>} O número de itens.
+ */
+export async function getItemsCount() {
+    const snapshot = await getDocs(itemsCollectionRef);
+    return snapshot.size;
 }
 
 /**

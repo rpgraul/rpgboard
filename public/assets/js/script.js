@@ -145,12 +145,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         onSave: handleSaveCard,
         onView: showDetailModal,
         onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
-        onReorder: (orderedIds) => firebaseService.updateItemsOrder(orderedIds).catch(err => {
-            console.error("Falha ao reordenar:", err);
-        }),
         gridContainer: gridViewContainer,
-        boardContainer: boardViewContainer,
+                boardContainer: boardViewContainer
     });
+
+
     
     // Inicializa o módulo de autenticação
     auth.initializeAuth();
@@ -372,6 +371,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         await firebaseService.updateItem({ id: itemId }, { boardPosition: position });
     }
 
+    /**
+     * Lida com a reordenação dos cards no grid.
+     * @param {Array<string>} orderedIds - Array com os IDs dos itens na nova ordem.
+     */
+    async function handleReorder(orderedIds) {
+        try {
+            await firebaseService.updateItemsOrder(orderedIds);
+            console.log("Card order updated successfully.");
+        } catch (error) {
+            console.error("Failed to update card order:", error);
+            alert("Failed to save the new card order.");
+        }
+    }
+
     // Objeto unificado de handlers para os cards
     const cardActionHandlers = {
         onDelete: handleDeleteItem,
@@ -380,6 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         onView: showDetailModal,
         onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
         onPositionChange: handlePositionChange, // Handler para o board
+        onReorder: handleReorder // Handler para o grid
     };
 
     initializeModals();
@@ -421,8 +435,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { itemId, shortcode } = countComponent.dataset;
             if (itemId && shortcode) {
                 const decodedShortcode = decodeURIComponent(shortcode);
-                const maxMatch = decodedShortcode.match(/max=(?:"|')?(\d+)(?:"|')?/);
-                const currentMatch = decodedShortcode.match(/current=(?:"|')?(\d+)(?:"|')?/);
+                const maxMatch = decodedShortcode.match(/max=(?:'|')?(\d+)(?:'|')?/);
+                const currentMatch = decodedShortcode.match(/current=(?:'|')?(\d+)(?:'|')?/);
                 const max = maxMatch ? parseInt(maxMatch[1], 10) : 0;
                 let current = currentMatch ? parseInt(currentMatch[1], 10) : 0;
                 let newCurrent = current;
@@ -659,10 +673,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     break;
                 }
         });
-
-        // Após processar todas as mudanças, reordena o cache local e dispara a atualização da UI
-        allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-        // Dispara o filtro/renderização que usará o `allItems` atualizado
+        
+       // Após processar todas as mudanças, reordena o cache local e dispara a atualização da UI
+        allItems.sort((a, b) => (a.order || 0) - (b.order || 0));        
+        // Dispara o filtro/renderização que usará o `allItems` atualizado        
         applyFilters();
     });
 
@@ -988,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewToggleButton.title = "Mudar para Visualização em Board";
             icon.className = 'fas fa-project-diagram';
             setViewMode('grid');
-            grid.show()
+            grid.show();
         } else {
             // Mudar para a visualização em Board
             document.body.classList.add('body-view-board');
@@ -997,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewToggleButton.title = "Mudar para Visualização em Grade";
             icon.className = 'fas fa-th';
             setViewMode('board');
-            grid.hide();
+            grid.destroy();
             setupBoardZoomAndPan();
         }
     });
@@ -1009,16 +1023,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.body.classList.add('body-view-board');
             viewWrapper.classList.remove('view-grid');
             viewWrapper.classList.add('view-board');
-            viewToggleButton.title = "Mudar para Visualização em Grade";
-            viewToggleButton.querySelector('.icon i').className = 'fas fa-th';
+            if (viewToggleButton) {
+                viewToggleButton.title = "Mudar para Visualização em Grade";
+                const icon = viewToggleButton.querySelector('.icon i');
+                if (icon) icon.className = 'fas fa-th';
+            }
             grid.hide();
             setupBoardZoomAndPan();
         } else {
             document.body.classList.remove('body-view-board');
             viewWrapper.classList.remove('view-board');
             viewWrapper.classList.add('view-grid');
-            viewToggleButton.title = "Mudar para Visualização em Board";
-            viewToggleButton.querySelector('.icon i').className = 'fas fa-project-diagram';
+            if (viewToggleButton) {
+                viewToggleButton.title = "Mudar para Visualização em Board";
+                const icon = viewToggleButton.querySelector('.icon i');
+                if (icon) icon.className = 'fas fa-project-diagram';
+            }
             grid.show();
         }
     }, 0);

@@ -38,6 +38,7 @@ export function initializeBoard(handlers) {
             showConfirmationPopover({
                 targetElement: actionButton,
                 message: 'Deletar este card?',
+                confirmButtonType: 'is-danger',
                 onConfirm: () => eventHandlers.onDelete(item)
             });
         } else if (actionButton.classList.contains('edit-btn')) {
@@ -62,6 +63,7 @@ export function setItems(items) {
     existingCards.forEach(card => card.remove());
 
     // Se não houver itens e a busca estiver ativa, mostra uma mensagem.
+    console.log('SetItems Board', items);
     const boardSearchInput = document.getElementById('board-search-input');
     if (items.length === 0 && boardSearchInput?.value) {
         // Adiciona um elemento temporário para a mensagem
@@ -111,12 +113,15 @@ export function setItems(items) {
                     const y = cardElement.offsetTop;
                     if (eventHandlers.onPositionChange) {
                         eventHandlers.onPositionChange(item.id, { x, y });
+                        console.log("onPositionChange called for item:", item.id, "position:", { x, y });
+
                     }
                 }
             });
 
             return cardElement;
         });
+
         boardContainer.append(...cardElements);
     }
 }
