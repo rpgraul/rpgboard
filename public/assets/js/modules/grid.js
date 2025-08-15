@@ -1,3 +1,15 @@
+/**
+ * Rola a tela até o card com o id especificado
+ * @param {string} cardId - O id do card a focar
+ */
+export function scrollToCard(cardId) {
+    const cardElement = itemsContainer.querySelector(`.card[data-id="${cardId}"]`);
+    if (cardElement) {
+        cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cardElement.classList.add('is-highlighted');
+        setTimeout(() => cardElement.classList.remove('is-highlighted'), 1200);
+    }
+}
 import * as cardRenderer from './cardRenderer.js';
 import { showConfirmationPopover } from './ui.js';
 import * as cardManager from './cardManager.js';
@@ -22,6 +34,12 @@ export function initializeGrid(handlers) {
         const target = e.target;
         const card = target.closest('.card');
         if (!card) return;
+
+        // Se o clique for dentro da camada de informações, não faz nada,
+        // permitindo interações com inputs e outros elementos dentro dela.
+        if (target.closest('.card-info-layer')) {
+            return;
+        }
 
         const actionButton = target.closest('.action-icon');
         const cardImage = target.closest('.card-image');
@@ -63,7 +81,7 @@ export function initializeGrid(handlers) {
  * preservando a posição e o estado durante edições e filtros.
  * @param {Array} itemsToShow - A lista de itens a serem exibidos.
  */
-export function setItems(itemsToShow) {
+export function setItems(itemsToShow, selectedTags = []) {
     if (loadingIndicator) {
         loadingIndicator.style.display = 'none';
     }
@@ -82,7 +100,7 @@ export function setItems(itemsToShow) {
     // 2. Encontra e adiciona os novos itens
     const itemsToAdd = itemsToShow
         .filter(item => !currentIds.has(item.id))
-        .map(item => cardRenderer.createCardElement(item));
+        .map(item => cardRenderer.createCardElement(item, selectedTags));
 
     // 3. Atualiza o conteúdo dos itens existentes
     currentMuuriItems.forEach(muuriItem => {
@@ -90,7 +108,7 @@ export function setItems(itemsToShow) {
         if (newIds.has(element.dataset.id)) {
             const newData = itemsToShow.find(item => item.id === element.dataset.id);
             if (newData && !element.classList.contains('editing')) {
-                cardRenderer.renderCardViewMode(element, newData);
+                cardRenderer.renderCardViewMode(element, newData, selectedTags);
             }
         }
     });

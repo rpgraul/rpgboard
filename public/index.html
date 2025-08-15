@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
     <link rel="stylesheet" href="assets/css/board.css">
+    <link rel="stylesheet" href="assets/css/custom.css">
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
 </head>
 <body>
@@ -16,6 +17,8 @@
             <span class="top-bar-title"></span>
             <div class="top-bar-right">
                 <a href="/converter.html" class="button is-small is-light">Adicionar em Massa</a>
+                <a id="user-login-btn" class="button is-small is-info">Entrar</a>
+                <span id="user-name" class="ml-2 user-name" style="display: none;"></span>
                 <a id="narrator-login-btn" class="button is-small is-dark">Entrar como Narrador</a>
             </div>
         </div>
@@ -74,19 +77,22 @@
 
     <!-- Floating Action Buttons -->
     <div class="fab-container">
-        <button id="fab-settings" class="button is-dark is-rounded fab-button narrator-only is-hidden" title="Configurações">
+        <button id="fab-settings" class="button is-dark is-rounded fab-button narrator-only is-hidden" title="Configurações" type="button">
             <span class="icon"><i class="fas fa-cog"></i></span>
         </button>
-        <button id="fab-bulk-edit" class="button is-info is-rounded fab-button narrator-only is-hidden" title="Edição em Massa">
+        <button id="fab-bulk-edit" class="button is-info is-rounded fab-button narrator-only is-hidden" title="Edição em Massa" type="button">
             <span class="icon"><i class="fas fa-tasks"></i></span>
         </button>
-        <button id="fab-help" class="button is-primary is-rounded fab-button" title="Ajuda">
+        <button id="fab-help" class="button is-primary is-rounded fab-button" title="Ajuda" type="button">
             <span class="icon"><i class="fas fa-question-circle"></i></span>
         </button>
-        <button id="fab-toggle-view" class="button is-warning is-rounded fab-button" title="Mudar para Visualização em Board">
+        <button id="fab-toggle-view" class="button is-warning is-rounded fab-button" title="Mudar para Visualização em Board" type="button">
             <span class="icon"><i class="fas fa-project-diagram"></i></span>
         </button>
-        <button id="fab-add-card" class="button is-link is-rounded fab-button" title="Adicionar Card">
+        <button id="roll-dice-btn" class="button is-success is-rounded fab-button" title="Rolar Dados" type="button">
+            <span class="icon"><i class="fas fa-dice"></i></span>
+        </button>
+        <button id="fab-add-card" class="button is-link is-rounded fab-button" title="Adicionar Card" type="button">
             <span class="icon"><i class="fas fa-plus"></i></span>
         </button>
     </div>
@@ -284,6 +290,70 @@
                         <li><strong>Cards Ocultos:</strong> Você pode criar e editar cards, marcando-os como visíveis ou ocultos para os jogadores. Cards ocultos terão uma borda vermelha destacada.</li>
                         <li><strong>Edição em Massa:</strong> Ative este modo para selecionar vários cards e alterar a visibilidade de todos de uma vez.</li>
                     </ul>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal de Login do Usuário -->
+    <div id="user-login-modal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Identificar Usuário</p>
+                <button class="delete" aria-label="close"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="form-user-login">
+                    <div class="field">
+                        <label class="label">Nome</label>
+                        <div class="control">
+                            <input class="input" id="user-name-input" type="text" placeholder="Digite seu nome" required>
+                        </div>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-info" form="form-user-login" type="submit">Entrar</button>
+                <button class="button modal-cancel" type="button">Cancelar</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Modal de Dados -->
+    <div id="dice-modal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Rolar Dados</p>
+                <button class="delete" aria-label="close"></button>
+            </header>
+            <section class="modal-card-body">
+                <div class="dice-options">
+                    <div class="dice-option" data-dice="d4">
+                        <span class="icon"><i class="fas fa-dice-d4"></i></span>
+                        <span>D4</span>
+                    </div>
+                    <div class="dice-option" data-dice="d6">
+                        <span class="icon"><i class="fas fa-dice-d6"></i></span>
+                        <span>D6</span>
+                    </div>
+                    <div class="dice-option" data-dice="d8">
+                        <span class="icon"><i class="fas fa-dice-d8"></i></span>
+                        <span>D8</span>
+                    </div>
+                    <div class="dice-option" data-dice="d10">
+                        <span class="icon"><i class="fas fa-dice-d10"></i></span>
+                        <span>D10</span>
+                    </div>
+                    <div class="dice-option" data-dice="d12">
+                        <span class="icon"><i class="fas fa-dice-d12"></i></span>
+                        <span>D12</span>
+                    </div>
+                    <div class="dice-option" data-dice="d20">
+                        <span class="icon"><i class="fas fa-dice-d20"></i></span>
+                        <span>D20</span>
+                    </div>
                 </div>
             </section>
         </div>

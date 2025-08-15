@@ -9,6 +9,7 @@ import * as grid from './modules/grid.js';
 import * as board from './modules/board.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
+import * as diceRoller from './modules/diceRoller.js';
 
 
 let allItems = []; // Cache local de todos os itens para a busca
@@ -86,7 +87,38 @@ function injectDragDropStyles() {
 import * as cardManager from './modules/cardManager.js';
 
 
+// Função para gerenciar o estado do usuário
+async function updateUserState(userName) {
+    const loginBtn = document.getElementById('user-login-btn');
+    const userNameSpan = document.getElementById('user-name');
+    
+    if (userName) {
+        localStorage.setItem('rpgboard_user_name', userName);
+        loginBtn.style.display = 'none';
+        userNameSpan.textContent = userName;
+        userNameSpan.style.display = 'inline';
+        
+        // Salva o usuário no Firebase
+        try {
+            await firebaseService.saveUser(userName);
+        } catch (error) {
+            console.error('Erro ao salvar usuário no Firebase:', error);
+            // Continua mesmo se falhar o salvamento no Firebase
+        }
+    } else {
+        localStorage.removeItem('rpgboard_user_name');
+        loginBtn.style.display = 'inline-flex';
+        userNameSpan.style.display = 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // Verificar se já existe um usuário logado
+    const savedUserName = localStorage.getItem('rpgboard_user_name');
+    if (savedUserName) {
+        updateUserState(savedUserName);
+    }
+
     // 1. Obter referências aos elementos principais
     const viewToggleButton = document.getElementById('fab-toggle-view');
     const addCardButton = document.getElementById('fab-add-card');
@@ -110,6 +142,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cardTagsInput = document.getElementById('card-tags');
     const gridViewContainer = document.getElementById('grid-view-container');
     const boardViewContainer = document.getElementById('board-view-container');
+
+    // Elementos de login e dados
+    const userLoginBtn = document.getElementById('user-login-btn');
+    const userLoginModal = document.getElementById('user-login-modal');
+    const formUserLogin = document.getElementById('form-user-login');
+    const userNameInput = document.getElementById('user-name-input');
+    const rollDiceBtn = document.getElementById('roll-dice-btn');
+    const diceModal = document.getElementById('dice-modal');
+    const diceOptions = document.querySelectorAll('.dice-option');
+
+    // Configurar eventos de login
+    userLoginBtn.addEventListener('click', () => {
+        openModal(userLoginModal);
+    });
+
+    formUserLogin.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const userName = userNameInput.value.trim();
+        if (userName) {
+            updateUserState(userName);
+            closeModal(userLoginModal);
+            userNameInput.value = ''; // Limpa o input
+        }
+    });
+
+    // Configurar eventos dos dados
+    rollDiceBtn.addEventListener('click', () => {
+        openModal(diceModal);
+    });
+
+    diceOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            const sides = parseInt(option.dataset.dice.replace('d', ''));
+            const result = diceRoller.rollDice(sides);
+            const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+            diceRoller.showDiceResult(result, userName);
+            closeModal(diceModal);
+        });
+    });
 
     // Injeta os estilos para a alça de arrasto
     injectDragDropStyles();
@@ -282,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let newShortcode;
         if (/current=/.test(decodedShortcode)) {
             // Substitui current=valor ou current="valor" por current="novoValor"
-            newShortcode = decodedShortcode.replace(/current=("?)(\d+)("?)/, `current="${newCurrentValue}"`);
+            newShortcode = decodedShortcode.replace(/current=("|)(\d+)("|)/, `current="${newCurrentValue}"`);
         } else {
             newShortcode = decodedShortcode.replace(/]$/, ` current="${newCurrentValue}"]`);
         }
@@ -407,6 +478,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.addEventListener('click', (event) => {
         const target = event.target;
 
+        // Toggle do input de dinheiro: se clicar fora, esconde o input e mostra o valor
+        const activeMoneyInput = document.querySelector('.money-value-input:not(.is-hidden)');
+        if (activeMoneyInput && !activeMoneyInput.contains(target) && !target.closest('.shortcode-money')) {
+            const moneyComponent = activeMoneyInput.closest('.shortcode-money');
+            const display = moneyComponent.querySelector('.money-value-display');
+            activeMoneyInput.classList.add('is-hidden');
+            display.classList.remove('is-hidden');
+        }
+
         // Prioridade 0: Links de Card.
         const cardLink = target.closest('.card-link');
         if (cardLink) {
@@ -418,7 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (foundCard) {
                     showDetailModal(foundCard);
                 } else {
-                    console.warn(`Card com nome "${cardNameToFind}" não encontrado.`);
+                    console.warn(`Card com nome \"${cardNameToFind}\" não encontrado.`);
                 }
             }
             return;
@@ -495,15 +575,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tagName = clickedTag.textContent.trim();
             const normalizedTagName = normalizeString(tagName);
 
-            // Procura pelo checkbox de filtro que corresponde à tag clicada (comparando o valor normalizado)
-            const filterCheckbox = tagFiltersContainer.querySelector(`input[value="${normalizedTagName}"]`);
+            let filterCheckbox = tagFiltersContainer.querySelector(`input[value="${normalizedTagName}"]`);
 
+            // Se o filtro não existe, cria um dinamicamente
+            if (!filterCheckbox) {
+                const controlDiv = document.createElement('div');
+                controlDiv.className = 'control';
+                controlDiv.innerHTML = `
+                    <label class="checkbox">
+                        <input type="checkbox" value="${normalizedTagName}">
+                        <span>${tagName}</span>
+                    </label>
+                `;
+                const firstNarratorFilter = tagFiltersContainer.querySelector('.narrator-only');
+                tagFiltersContainer.insertBefore(controlDiv, firstNarratorFilter);
+                filterCheckbox = controlDiv.querySelector('input');
+            }
+
+            // Alterna o estado do checkbox (liga/desliga)
             if (filterCheckbox) {
-                if (!filterCheckbox.checked) {
-                    filterCheckbox.checked = true;
-                    // Dispara o evento 'change' manualmente para que a lógica de filtro seja aplicada
-                    filterCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-                }
+                filterCheckbox.checked = !filterCheckbox.checked;
+                // Dispara o evento 'change' para que a lógica de filtro seja aplicada
+                filterCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
             }
             return;
         }
@@ -585,6 +678,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.addEventListener('focusout', (event) => {
         if (event.target.classList.contains('money-value-input')) {
             handleMoneyChange(event.target);
+            // Toggle: esconde o input e mostra o valor ao perder o foco
+            const moneyComponent = event.target.closest('.shortcode-money');
+            const display = moneyComponent.querySelector('.money-value-display');
+            event.target.classList.add('is-hidden');
+            display.classList.remove('is-hidden');
         }
     });
 
@@ -593,19 +691,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (event.target.classList.contains('money-value-input')) {
             if (event.key === 'Enter') {
                 event.preventDefault();
+                // Toggle: esconde o input e mostra o valor ao pressionar Enter
+                const moneyComponent = event.target.closest('.shortcode-money');
+                const display = moneyComponent.querySelector('.money-value-display');
+                event.target.classList.add('is-hidden');
+                display.classList.remove('is-hidden');
                 event.target.blur(); // Aciona o 'focusout' para salvar
             } else if (event.key === 'Escape') {
                 event.preventDefault();
                 const moneyComponent = event.target.closest('.shortcode-money');
                 const display = moneyComponent.querySelector('.money-value-display');
-
                 // Re-parse to get original raw value to avoid issues with formatted display value
                 const { shortcode: encodedShortcode } = moneyComponent.dataset;
                 const decodedShortcode = decodeURIComponent(encodedShortcode);
                 const originalArgs = shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1);
                 const originalParams = shortcodeParser._parseKeyValueArgs(originalArgs);
                 const originalValue = parseFloat(originalParams.current) || 0;
-
                 event.target.classList.add('is-hidden');
                 display.classList.remove('is-hidden');
                 event.target.value = originalValue; // Reseta o valor do input para o valor puro
@@ -743,10 +844,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Delega a renderização para os módulos de visualização ativos
         if (viewWrapper.classList.contains('view-grid')) {
-            grid.setItems(filteredItems);
+            grid.setItems(filteredItems, selectedTags);
         }
         if (viewWrapper.classList.contains('view-board')) {
-            board.setItems(filteredItems);
+            board.setItems(filteredItems, selectedTags);
         }
     }
 
@@ -983,11 +1084,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 itemData.height = dimensions.height;
             }
 
-            await firebaseService.addItem(itemData, file);
-            
+            // Adiciona o card e obtém o ID gerado
+            const newCardId = await firebaseService.addItem(itemData, file);
+
             formAddCard.reset();
             grid.updateFileName(cardFileInput); // Reutiliza a função para resetar o label do arquivo
             closeModal(addCardModal);
+
+            // Aguarda o próximo ciclo do Firebase para garantir que o card foi renderizado
+            const unsubscribe = firebaseService.listenToItems((snapshot) => {
+                if (snapshot.docs.find(doc => doc.id === newCardId)) {
+                    // Aguarda a renderização do DOM
+                    setTimeout(() => {
+                        grid.scrollToCard(newCardId);
+                        unsubscribe(); // Remove o listener depois de encontrar o card
+                    }, 100);
+                }
+            });
         } catch (error) {
             console.error("Erro ao adicionar novo card:", error);
             alert("Falha ao adicionar o novo card.");

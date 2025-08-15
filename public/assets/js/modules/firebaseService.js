@@ -11,6 +11,20 @@ import {
 const { db, storage } = window.firebaseInstances;
 
 const itemsCollectionRef = collection(db, "rpg-items");
+const usersCollectionRef = collection(db, "rpg-users");
+
+/**
+ * Salva ou atualiza um usuário no Firebase
+ * @param {string} userName - Nome do usuário
+ * @returns {Promise<void>}
+ */
+export async function saveUser(userName) {
+    const userDoc = doc(usersCollectionRef, userName.toLowerCase());
+    await setDoc(userDoc, {
+        name: userName,
+        lastSeen: serverTimestamp()
+    }, { merge: true });
+}
 
 /**
  * Escuta por atualizações em tempo real na coleção de itens.
@@ -45,7 +59,8 @@ export async function addItem(itemData, file = null) {
         // As dimensões (width/height) devem ser adicionadas ao `itemData` antes de chamar esta função.
     }
 
-    return addDoc(itemsCollectionRef, newItem);
+    const docRef = await addDoc(itemsCollectionRef, newItem);
+    return docRef.id; // Retorna o ID do documento criado
 }
 
 /**

@@ -5,6 +5,21 @@ import { isNarrator } from './auth.js';
 let appSettings = {};
 
 /**
+ * Normaliza uma string, removendo acentos e convertendo para minúsculas.
+ * @param {string} str A string a ser normalizada.
+ * @returns {string} A string normalizada.
+ */
+function normalizeString(str) {
+    if (!str) return '';
+    return str
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '');
+}
+
+
+/**
  * Inicializa o renderizador de cards com as configurações globais do aplicativo.
  * @param {object} settings - O objeto de configurações carregado.
  */
@@ -15,14 +30,15 @@ export function initializeCardRenderer(settings) {
 /**
  * Cria o elemento base do card e o popula com o conteúdo inicial.
  * @param {object} item - O objeto de dados do item.
+ * @param {string[]} [selectedTags=[]] - Lista de tags de filtro ativas.
  * @returns {HTMLElement} O elemento do card pronto para ser adicionado ao DOM.
  */
-export function createCardElement(item) {
+export function createCardElement(item, selectedTags = []) {
     const cardElement = document.createElement('div');
     cardElement.className = 'card';
     cardElement.dataset.id = item.id;
 
-    renderCardViewMode(cardElement, item); // Popula com o modo de visualização padrão
+    renderCardViewMode(cardElement, item, selectedTags); // Popula com o modo de visualização padrão
 
     return cardElement;
 }
@@ -33,8 +49,9 @@ export function createCardElement(item) {
  * Se for um novo card, renderiza a estrutura completa.
  * @param {HTMLElement} cardElement - O elemento do card a ser populado.
  * @param {object} item - O objeto de dados do item.
+ * @param {string[]} [selectedTags=[]] - Lista de tags de filtro ativas.
  */
-export function renderCardViewMode(cardElement, item) {
+export function renderCardViewMode(cardElement, item, selectedTags = []) {
     const isAlreadyInViewMode = cardElement.querySelector('.card-info-layer');
 
     // Se o card já está no modo de visualização (não está saindo da edição),
@@ -42,7 +59,7 @@ export function renderCardViewMode(cardElement, item) {
     // Se estiver saindo da edição, a estrutura precisa ser totalmente recriada,
     // então pulamos este bloco e executamos a renderização completa abaixo.
     if (isAlreadyInViewMode) {
-        updateCardView(cardElement, item);
+        updateCardView(cardElement, item, selectedTags);
         return;
     }
 
@@ -128,7 +145,12 @@ export function renderCardViewMode(cardElement, item) {
     }
 
     if (item.tags && item.tags.length > 0) {
-        const tagsHTML = item.tags.map(tag => `<span class="tag is-info">${tag}</span>`).join(' ');
+        const tagsHTML = item.tags.map(tag => {
+            const normalizedTag = normalizeString(tag);
+            const isActive = selectedTags.includes(normalizedTag);
+            const tagClass = isActive ? 'is-primary' : 'is-info';
+            return `<span class="tag ${tagClass}">${tag}</span>`;
+        }).join(' ');
         cardContent += `<div class="tags">${tagsHTML}</div>`;
     }
 
@@ -142,8 +164,9 @@ export function renderCardViewMode(cardElement, item) {
  * Esta função é chamada para evitar a re-renderização completa e o "pisca-pisca" da imagem.
  * @param {HTMLElement} cardElement - O elemento do card a ser atualizado.
  * @param {object} item - O objeto de dados atualizado do item.
+ * @param {string[]} [selectedTags=[]] - Lista de tags de filtro ativas.
  */
-function updateCardView(cardElement, item) {
+function updateCardView(cardElement, item, selectedTags = []) {
     cardElement.classList.remove('editing');
     cardElement.classList.remove('has-overlay-content');
     cardElement.classList.remove('is-description-only');
@@ -196,7 +219,13 @@ function updateCardView(cardElement, item) {
             if (mainContentHTML) newContentHTML += `<div class="content">${mainContentHTML}</div>`;
         }
         if (item.tags && item.tags.length > 0) {
-            newContentHTML += `<div class="tags">${item.tags.map(tag => `<span class="tag is-info">${tag}</span>`).join(' ')}</div>`;
+            const tagsHTML = item.tags.map(tag => {
+                const normalizedTag = normalizeString(tag);
+                const isActive = selectedTags.includes(normalizedTag);
+                const tagClass = isActive ? 'is-primary' : 'is-info';
+                return `<span class="tag ${tagClass}">${tag}</span>`;
+            }).join(' ');
+            newContentHTML += `<div class="tags">${tagsHTML}</div>`;
         }
         contentContainer.innerHTML = newContentHTML;
     }
@@ -244,7 +273,7 @@ export function renderCardEditMode(cardElement, item, eventHandlers) {
             <div class="field"><div class="control"><textarea class="textarea edit-conteudo" placeholder="Conteúdo...">${item.conteudo || ''}</textarea></div></div>
             <div class="field"><div class="control"><textarea class="textarea edit-descricao" placeholder="Descrição (visível ao passar o mouse)">${item.descricao || ''}</textarea></div></div>
             <div class="field"><div class="control"><input class="input edit-tags" type="text" value="${item.tags?.join(', ') || ''}" placeholder="Tags"></div></div>
-            ${
+            ${ 
                 isNarrator() ? `
                 <div class="field">
                     <label class="checkbox narrator-control">
