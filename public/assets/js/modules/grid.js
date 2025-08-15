@@ -20,34 +20,37 @@ export function initializeGrid(handlers) {
     // Delegação de eventos para os botões dos cards
     itemsContainer.addEventListener('click', (e) => {
         const target = e.target;
-        const actionButton = target.closest('.action-icon');
         const card = target.closest('.card');
+        if (!card) return;
 
-        if (!actionButton || !card) return;
+        const actionButton = target.closest('.action-icon');
+        const cardImage = target.closest('.card-image');
 
         const id = card.dataset.id;
         const item = cardManager.getItems().find(i => i.id === id);
         if (!item) return;
 
-        if (actionButton.classList.contains('view-btn')) {
-            eventHandlers.onView(item);
-        } else if (actionButton.classList.contains('delete-btn')) {
-            showConfirmationPopover({
-                targetElement: actionButton,
-                message: 'Deletar este card?',
-                onConfirm: () => eventHandlers.onDelete(item)
-            });
-        } else if (actionButton.classList.contains('edit-btn')) {
-            eventHandlers.onEdit(card, item, itemsContainer);
-        } else if (actionButton.classList.contains('save-btn')) {
-            eventHandlers.onSave(card, item, itemsContainer);
-        } else if (actionButton.classList.contains('cancel-btn')) {
-            itemsContainer.classList.remove('is-editing-item');
-            cardRenderer.renderCardViewMode(card, item);
-            if (card._newImageFile) {
-                delete card._newImageFile;
+        if (actionButton) {
+            if (actionButton.classList.contains('delete-btn')) {
+                showConfirmationPopover({
+                    targetElement: actionButton,
+                    message: 'Deletar este card?',
+                    onConfirm: () => eventHandlers.onDelete(item)
+                });
+            } else if (actionButton.classList.contains('edit-btn')) {
+                eventHandlers.onEdit(card, item, itemsContainer);
+            } else if (actionButton.classList.contains('save-btn')) {
+                eventHandlers.onSave(card, item, itemsContainer);
+            } else if (actionButton.classList.contains('cancel-btn')) {
+                itemsContainer.classList.remove('is-editing-item');
+                cardRenderer.renderCardViewMode(card, item);
+                if (card._newImageFile) {
+                    delete card._newImageFile;
+                }
+                muuriGrid?.layout(true);
             }
-            muuriGrid?.layout(true);
+        } else if (cardImage) {
+            eventHandlers.onView(item);
         }
     });
 

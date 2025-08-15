@@ -58,7 +58,6 @@ export function renderCardViewMode(cardElement, item) {
 
     const cardActions = `
         <div class="card-actions-top">
-            <button class="action-icon view-btn"><i class="fas fa-eye"></i></button>
             <button class="action-icon edit-btn"><i class="fas fa-pencil-alt"></i></button>
             <button class="action-icon delete-btn"><i class="fas fa-trash-alt"></i></button>
         </div>
@@ -103,10 +102,6 @@ export function renderCardViewMode(cardElement, item) {
                         </div>
                         ${hasAnyShortcodes && descriptionForTooltip ? `<hr class="tooltip-divider">` : ''}
                         ${descriptionForTooltip ? `<div class="tooltip-description">${descriptionForTooltip}</div>` : ''}
-                    </div>
-                    <div class="info-toggles">
-                        <div class="overlay-item overlay-center toggle-view-icon"><i class="fas fa-info-circle"></i></div>
-                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>
                     </div>
                 </div>`;
         }

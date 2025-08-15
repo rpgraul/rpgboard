@@ -1,7 +1,7 @@
 import { 
     collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, 
     serverTimestamp, query, orderBy, writeBatch,
-    getDoc, setDoc
+    getDoc, setDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { 
     ref, uploadBytes, getDownloadURL, deleteObject 
@@ -29,6 +29,8 @@ export function listenToItems(callback) {
  * @param {File|null} file - O arquivo de imagem, se houver.
  */
 export async function addItem(itemData, file = null) {
+    const snapshot = await getDocs(itemsCollectionRef);
+    const itemsCount = snapshot.size;
     const newItem = {
         ...itemData,
         createdAt: serverTimestamp(),

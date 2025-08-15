@@ -32,7 +32,7 @@ function normalizeString(str) {
         .toString()
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '');
+        .replace(/[̀-ͯ]/g, '');
 }
 
 /**
@@ -475,13 +475,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Prioridade 2: Toggle do Tooltip.
-        const toggleTrigger = target.closest('.toggle-view-icon, .tooltip-close-btn');
-        if (toggleTrigger) {
-            const card = toggleTrigger.closest('.card');
-            if (card) card.classList.toggle('is-details-visible');
-            return; // Encerra após tratar o toggle.
-        }
+        
 
         // Prioridade 3: Seleção de cards no modo de edição em massa
         if (bulkEdit.isBulkEditingActive()) {
@@ -492,6 +486,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 bulkEdit.toggleCardSelection(cardElement);
                 return; // Ação de seleção tratada.
             }
+        }
+
+        // Prioridade 4: Clicar em uma tag de card para ativar o filtro
+        const clickedTag = target.closest('.card .tags .tag');
+        if (clickedTag) {
+            event.stopPropagation(); // Impede que o clique se propague para outras ações do card
+            const tagName = clickedTag.textContent.trim();
+            const normalizedTagName = normalizeString(tagName);
+
+            // Procura pelo checkbox de filtro que corresponde à tag clicada (comparando o valor normalizado)
+            const filterCheckbox = tagFiltersContainer.querySelector(`input[value="${normalizedTagName}"]`);
+
+            if (filterCheckbox) {
+                if (!filterCheckbox.checked) {
+                    filterCheckbox.checked = true;
+                    // Dispara o evento 'change' manualmente para que a lógica de filtro seja aplicada
+                    filterCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+            return;
         }
     });
 
@@ -1070,7 +1084,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     
         if (item.descricao) {
-            textHTML += `<hr><div class="content is-small"><strong>Descrição:</strong><br>${item.descricao.replace(/\n/g, '<br>')}</div>`;
+            textHTML += `<hr><div class="content is-small"><strong>Descrição:</strong><br>${item.descricao.replace(/\n/g, '<br>')}
+</div>`;
         }
     
         // 2. Lida com a imagem e define a classe de layout

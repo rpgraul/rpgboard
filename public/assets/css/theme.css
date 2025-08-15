@@ -1142,3 +1142,8 @@ body.master-view .is-hidden-from-players .is-hidden-from-players {
     padding: 0;
     background-color: transparent;
 }
+
+/* Adiciona o cursor de ponteiro para as tags clicáveis nos cards */
+.card .tags .tag {
+    cursor: pointer;
+}
