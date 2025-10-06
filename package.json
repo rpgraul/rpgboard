@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@tiptap/core": "^3.3.1",
+    "@tiptap/pm": "^3.3.1",
+    "@tiptap/starter-kit": "^3.3.1",
+    "rpg-awesome": "^0.2.0",
+    "tinymce": "^8.0.2"
+  }
+}

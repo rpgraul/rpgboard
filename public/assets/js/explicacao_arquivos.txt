@@ -1,0 +1,42 @@
+script.js
+Arquivo principal do frontend. Inicializa módulos, carrega configurações, gerencia autenticação, busca, filtros, alternância grid/board, modais e integra handlers dos cards.
+grid.js
+Gerencia visualização em grade dos cards usando Muuri. Controla layout, drag & drop, atualização de ordem, eventos de interação e renderização filtrada dos cards.
+board.js
+Gerencia visualização tipo board/mapa mental. Permite arrastar cards livremente, salvar posições, zoom, pan e lógica exclusiva do modo board.
+cardRenderer.js
+Renderiza HTML dos cards em diferentes modos (visualização, edição, detalhes). Gera campos, botões, imagem, tags e integra handlers de ação.
+cardManager.js
+Gerencia estado central dos cards (cache local, atualização, sincronização com Firebase). Métodos para inicializar, carregar, atualizar e notificar visualizadores.
+firebaseService.js
+Abstrai comunicação com Firebase (Firestore/Storage). Métodos para CRUD de cards, atualização de ordem, upload de imagens e carregamento das configurações do site.
+ui.js
+Gerencia popovers de confirmação e interações visuais simples (ex: remover popover ao clicar fora).
+modules/shortcodeParser.js
+Processa e renderiza shortcodes usados nos campos dos cards ([stat], [hp], [count], [money]). Gera HTML dinâmico para status, contadores, dinheiro, etc.
+modal.js
+Gerencia abertura, fechamento e inicialização de modais (detalhes, ajuda, edição, etc).
+auth.js
+Gerencia autenticação do narrador, status de login/logout e permissões exclusivas do narrador.
+modules/narrator.js
+Atualiza UI e permissões específicas do narrador (ex: mostrar controles extras).
+bulkEdit.js
+Gerencia modo de edição em massa dos cards (seleção múltipla, ações em lote, barra de ferramentas).
+modules/settings.js
+Gerencia modal de configurações do site, filtros, tags recomendadas e persistência das configurações.
+converter.js
+Permite conversão em massa de texto para cards. Processa texto de entrada, valida campos obrigatórios, converte para objetos e exibe resultado para upload.
+upload.js
+Gerencia upload de imagens para cards, integração com Firebase Storage e atualização dos cards com URLs das imagens.
+board.css
+Estilos para visualização em modo board. Ajusta layout, responsividade, zoom, pan, barra de ações flutuantes e aparência dos cards no board.
+theme.css
+Tema visual do site. Define cores, estilos globais, aparência de botões, cards, inputs, modais, tipografia e integração visual com Bulma.
+index.html
+Página principal do painel de cards. Exibe grid/board, filtros, busca, botões de ação, modais, e integra todos os módulos JS e CSS.
+converter.html
+Página para conversão de texto em massa para JSON de cards. Traz tutorial, campo de entrada, modelo de formato e integração com upload.
+upload.html
+Página para importar cards via JSON. Permite colar conteúdo, valida formato, exibe notificações e integra com o backend.
+404.html
+Página de erro padrão do site. Exibe mensagem de arquivo não encontrado, instruções para corrigir e layout simples.
