@@ -135,8 +135,4 @@ document.addEventListener('DOMContentLoaded', () => {
             importBtn.classList.remove('is-loading');
         }
     });
-<<<<<<< HEAD
 });
-=======
-});
->>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
