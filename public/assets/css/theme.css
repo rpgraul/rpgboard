@@ -1,4 +1,5 @@
 :root {
+<<<<<<< HEAD
 --background-color: #2c2c2c;
 --text-color: #f5f5f5;
 --card-background-color: #363636;
@@ -36,6 +37,43 @@ width: 100%;
 color: var(--text-color);
 font-weight: 600;
 font-size: 0.9rem;
+=======
+    --dark-bg: #1a202c;
+    --darker-bg: #141821;
+    --light-text: #e2e8f0;
+    --dark-red: #8f2c2c;
+    --dark-red-hover: #7a2525;
+    --dark-blue: #2c5282;
+    --dark-blue-hover: #2a4365;
+    --border-color: #4a5568;
+}
+html {
+    background-color: var(--dark-bg);
+}
+body {
+    color: var(--light-text);
+}
+*{
+    touch-action: pan-y !important;
+}
+.top-bar {
+    background-color: #f5f5f5;
+    padding: 0.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #dbdbdb;
+}
+.top-bar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.top-bar-title {
+    color: #363636;
+    font-weight: 600;
+    font-size: 0.9rem;
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 .shortcode-hp strong,
 .shortcode-count strong,
@@ -49,6 +87,7 @@ strong,
 .content h4,
 .content h5,
 .content h6 {
+<<<<<<< HEAD
 color: var(--text-color) !important;
 }
 .content pre{max-width: 590px;}
@@ -279,10 +318,271 @@ position: absolute;
 display: flex;
 flex-direction: column;
 gap: 12px;
+=======
+    color: #ffffff !important;
+}
+.content pre{max-width: 590px;}
+.label {
+    color: #ffffff;
+}
+.box,
+.card {
+    background-color: var(--darker-bg);
+    color: var(--light-text);
+    border: 1px solid var(--border-color);
+}
+.input,
+.textarea {
+    background-color: var(--dark-bg);
+    border-color: var(--border-color);
+    color: var(--light-text);
+}
+.input::placeholder,
+.textarea::placeholder {
+    color: #a0aec0;
+}
+.button.is-link {
+    background-color: var(--dark-red);
+}
+.button.is-link:hover {
+    background-color: var(--dark-red-hover);
+}
+.button.is-primary {
+    background-color: var(--dark-blue);
+}
+.button.is-primary:hover {
+    background-color: var(--dark-blue-hover);
+}
+.button.is-warning {
+    background-color: #ffdd57;
+    border-color: transparent;
+    color: rgba(0, 0, 0, 0.7);
+}
+.button.is-warning:hover {
+    background-color: #ffdb4a;
+    border-color: transparent;
+    color: rgba(0, 0, 0, 0.7);
+}
+.file.is-boxed .file-cta {
+    background-color: #4a5568;
+    color: var(--light-text);
+}
+.file.is-boxed:hover .file-cta {
+    background-color: #2d3748;
+}
+
+.tags{
+    margin-bottom: 0px !important;
+}
+.box {
+    margin-bottom: 2rem;
+}
+#grid-view-container {
+    position: relative;
+}
+.card {
+    position: absolute;
+    margin: 12px;
+    width: calc(33.3333% - 24px);
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    transition: opacity 0.4s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+.card.editing {
+    z-index: 100;
+    box-shadow: 0 0 0 2px var(--dark-blue), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.top-bar-right{
+    text-align: right;
+}
+
+/* Estilo para cards selecionados no modo de edição em massa */
+.card.is-bulk-selected {
+    box-shadow: 0 0 0 3px var(--dark-blue), 0 8px 24px rgba(0, 0, 0, 0.5);
+    border-color: var(--dark-blue);
+}
+
+@media (max-width: 940px) {
+    .card {
+        width: calc(50% - 24px);
+    }
+}
+@media (max-width: 520px) {
+    .card {
+        width: calc(100% - 24px);
+    }
+    body .fab-container {
+    bottom: 0rem;
+    right: 0rem;
+    display: flex;
+    scale: .8;
+    }
+}
+.card.muuri-item-dragging {
+    z-index: 3;
+}
+.card.muuri-item-releasing {
+    z-index: 2;
+}
+.card .card-content {
+    flex-grow: 1;
+}
+.card .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+.card-image .change-image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+.card.editing .card-image:hover .change-image-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+.card .card-image .image {
+    position: relative;
+    display: block;
+    height: 0;
+    background-color: var(--border-color);
+}
+
+.tooltip-close-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--light-text);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    padding: 0;
+    line-height: 1;
+    z-index: 21; /* Acima do conteúdo do tooltip */
+    /* Começa invisível e não clicável */
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tooltip-close-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.tooltip-divider {
+    background-color: var(--border-color);
+    height: 1px;
+    border: none;
+    margin: 0.75rem 0;
+}
+
+.card-info-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.overlay-item {
+    position: absolute;
+    pointer-events: auto;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); /* Sombra de texto padrão para todos os itens */
+}
+
+.overlay-center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.overlay-left {
+    top: 0.75rem;
+    left: 0.75rem;
+}
+
+.overlay-right {
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+}
+
+.overlay-bottom {
+    bottom: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.toggle-view-icon {
+    font-size: 2rem;
+    color: var(--light-text);
+    opacity: 0; /* Começa invisível */
+    transition: opacity 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+/* Mostra o ícone com opacidade no hover do card */
+.card.has-overlay-content:hover .toggle-view-icon {
+    opacity: 0.25;
+}
+
+/* Aumenta a opacidade no hover do próprio ícone */
+.toggle-view-icon:hover {
+    opacity: 0.75 !important; /* Usa !important para sobrescrever a regra de 0.25 */
+}
+
+/* --- Lógica de Estilos para a Camada de Informação Unificada --- */
+
+.info-content {
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.info-toggles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Permite que cliques "atravessem" esta camada */
+}
+
+/* --- ESTADO PADRÃO (OVERLAY) --- */
+
+/* Posiciona os GRUPOS de overlay de forma absoluta */
+.info-group-left,
+.info-group-right,
+.info-group-bottom {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 .info-group-left { top: 0.75rem; left: 0.75rem; align-items: flex-start; }
 .info-group-right { top: 50%; right: 0.75rem; transform: translateY(-50%); align-items: center; }
 .info-group-bottom { bottom: 0.75rem; left: 50%; transform: translateX(-50%); align-items: center; }
+<<<<<<< HEAD
 .card-info-layer .info-group-details,
 .card-info-layer .tooltip-description,
 .card-info-layer .tooltip-divider {
@@ -318,19 +618,65 @@ display: flex;
 flex-direction: column;
 height: auto;
 }
+=======
+
+/* Esconde tudo que não for item de overlay */
+.card-info-layer .info-group-details,
+.card-info-layer .tooltip-description,
+.card-info-layer .tooltip-divider {
+    display: none;
+}
+
+/* --- ESTADO DE DETALHES (quando .is-details-visible está no .card) --- */
+
+.card.is-details-visible .card-info-layer {
+    pointer-events: auto;
+    user-select: text; /* Permite que o texto seja selecionado e copiado */
+    background-color: rgba(20, 24, 33, 0.95);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    overflow-y: auto;
+    box-sizing: border-box;
+    /* Centraliza e define o tamanho do painel de detalhes */
+    width: 97%;
+    max-height: 97%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.card.is-details-visible .info-content {
+    display: flex;
+    flex-direction: column;
+    height: auto; /* Permite que o conteúdo defina a altura, em vez de esticar */
+}
+
+/* Reseta a posição absoluta e aplica estilos de lista */
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 .card.is-details-visible .info-group-left,
 .card.is-details-visible .info-group-right,
 .card.is-details-visible .info-group-bottom,
 .card.is-details-visible .info-group-details {
+<<<<<<< HEAD
 position: static;
 transform: none;
 gap: 0;
 display: contents;
 }
+=======
+    position: static;
+    transform: none;
+    gap: 0; /* Remove o gap no modo de detalhes */
+    display: contents; /* FAZ A MÁGICA: Os filhos dos grupos fluem como uma lista única */
+}
+
+/* No modo de detalhes, todos os shortcodes se comportam como itens de uma lista limpa */
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 .card.is-details-visible .card-info-layer .shortcode-stat,
 .card.is-details-visible .card-info-layer .shortcode-hp,
 .card.is-details-visible .card-info-layer .shortcode-count,
 .card.is-details-visible .card-info-layer .shortcode-money {
+<<<<<<< HEAD
 display: flex;
 justify-content: start;
 align-items: center;
@@ -1039,4 +1385,795 @@ padding: 0.5rem 1rem 1rem 1rem;
 }
 .shortcode-nota.is-active .nota-icon {
 transform: rotate(45deg);
+=======
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    background-color: transparent;
+    padding: 0.25rem 0; 
+    border-bottom: none; 
+    gap:4px;
+}
+
+/* Garante que o nome e o valor do contador fiquem na mesma linha no modo de detalhes */
+.card.is-details-visible .shortcode-count .count-name {
+    display: inline;
+    margin-bottom: 0;
+}
+
+/* Mostra os itens que estavam escondidos */
+.card.is-details-visible .card-info-layer .info-group-details,
+.card.is-details-visible .card-info-layer .tooltip-description,
+.card.is-details-visible .card-info-layer .tooltip-divider {
+    display: block;
+}
+
+/* Controla a visibilidade dos botões de toggle */
+.card.is-details-visible .toggle-view-icon { display: none; }
+.card.is-details-visible .tooltip-close-btn { opacity: 0.6; pointer-events: auto; }
+
+.is-description-only .info-toggles{
+    display: none !important;
+}
+.is-description-only .card-info-layer {
+    width: 90%;
+    max-height: 2px;
+    min-height: 0px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 15px;
+}
+.is-description-only .card-info-layer{
+    width: auto;
+    height: auto;
+}
+/* Quando o mouse passa sobre um card 'is-description-only', mostra a camada de info */
+.card.is-description-only:hover .card-info-layer {
+    pointer-events: auto;
+    user-select: text;
+    background-color: rgba(20, 24, 33, 0.95);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    width: 90%;
+    height: auto;
+    max-height: 82%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    overflow-y: auto; /* Adiciona a barra de rolagem quando necessário */
+    box-sizing: border-box; /* Garante que o padding não cause overflow */
+}
+
+/* Garante que o conteúdo seja organizado como uma coluna */
+.card.is-description-only:hover .info-content {
+    display: flex;
+    flex-direction: column;
+    height: auto; /* Permite que o conteúdo defina a altura, em vez de esticar */
+}
+
+/* Mostra a descrição e o divisor que estavam escondidos */
+.card.is-description-only:hover .card-info-layer .tooltip-description,
+.card.is-description-only:hover .card-info-layer .tooltip-divider {
+    display: block;
+}
+
+.shortcode-stat {
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto; /* Permite cliques no stat */
+    user-select: text; /* Permite seleção de texto no stat */
+}
+
+.shortcode-money {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto;
+    user-select: text;
+}
+
+.shortcode-money .fa-coins {
+    color: #ffdd57; /* Cor de ouro */
+}
+
+.shortcode-money.is-interactive .money-value-display {
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+    transition: border-bottom-color 0.2s ease;
+}
+.shortcode-money.is-interactive:hover .money-value-display {
+    border-bottom-color: var(--light-text);
+}
+
+.shortcode-money .money-value-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--light-text);
+    color: var(--light-text);
+    font-size: 0.85rem;
+    width: 70px;
+    padding: 0;
+    outline: none;
+}
+
+.shortcode-hp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.35rem 0.6rem;
+    border-radius: 5px;
+    pointer-events: auto; /* Permite cliques no HP */
+    user-select: text; /* Permite seleção de texto no HP */
+}
+
+.shortcode-count.is-interactive {
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto; /* Permite cliques no contador */
+    user-select: text; /* Permite seleção de texto no contador */
+}
+
+/* Estilo para o layout empilhado do contador (ex: Flechas) */
+.shortcode-count .count-name {
+    display: block; /* Força quebra de linha */
+    margin-bottom: 0.25rem;
+}
+/* Centraliza o conteúdo do contador no modo overlay */
+.info-group-right .shortcode-count {
+    text-align: center;
+}
+
+/* Base para todos os temas de checkbox */
+.count-checkboxes-interactive {
+    display: flex;
+    gap: 5px; /* Espaçamento entre os checkboxes */
+    align-items: center;
+}
+
+.count-checkbox {
+    display: inline-flex; /* Usar flex para centralizar ícones */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* --- Tema: Default (caixa de seleção) --- */
+.theme-default .count-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--light-text);
+    border-radius: 3px;
+}
+
+.theme-default .count-checkbox.is-checked {
+    background-color: var(--light-text);
+    /* Borda interna para destacar a marcação */
+    box-shadow: inset 0 0 0 2px var(--darker-bg);
+}
+
+/* --- Temas de Ícone (arrow, potion, custom) --- */
+.theme-arrow .count-checkbox,
+.theme-potion .count-checkbox,
+.theme-custom-icon .count-checkbox {
+    font-size: 1.2rem;
+    color: var(--light-text);
+    opacity: 0.3; /* Ícones não marcados ficam com baixa opacidade */
+}
+
+.theme-arrow .count-checkbox.is-checked,
+.theme-potion .count-checkbox.is-checked,
+.theme-custom-icon .count-checkbox.is-checked {
+    opacity: 1; /* Ícones marcados ficam 100% visíveis */
+    transform: scale(1.1);
+}
+
+.theme-arrow .count-checkbox i {
+    /* Gira o ícone da flecha para um visual mais dinâmico */
+    transform: rotate(30deg);
+}
+
+.hp-input-wrapper {
+    display: flex;
+    align-items: baseline;
+}
+.hp-current-input {
+    background: 0 0;
+    border: none;
+    color: var(--light-text);
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: right;
+    width: 45px;
+    padding: 0;
+    outline: 0;
+    appearance: textfield;
+    -webkit-appearance: textfield;
+    -moz-appearance: textfield;
+}
+.hp-current-input::-webkit-inner-spin-button,
+.hp-current-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.hp-max-value {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-left: 2px;
+}
+.card-actions-top {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    display: flex;
+    gap: 0.75rem;
+
+    /* Por padrão, as ações estão escondidas e não são clicáveis */
+    opacity: 0 !important;
+    pointer-events: none;
+    transform: translateY(5px) !important;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+/* Quando o mouse passa sobre o card, as ações aparecem */
+.card:hover .card-actions-top {
+    opacity: 1 !important;
+    pointer-events: auto;
+    transform: translateY(0) !important;
+}
+
+/* Exceção: Se o card está em modo de edição, as ações ficam sempre visíveis,
+   sobrescrevendo a regra de 'hover' se necessário. */
+.card.editing .card-actions-top {
+    opacity: 1 !important;
+    pointer-events: auto;
+    transform: translateY(0) !important;
+}
+.action-icon {
+    background-color: rgba(240, 240, 240, 0.85);
+    color: var(--dark-bg);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+.action-icon:hover {
+    transform: scale(1.1);
+    background-color: #fff;
+}
+.action-icon.delete-btn:hover {
+    color: #e53e3e;
+}
+.action-icon.edit-btn:hover,
+.action-icon.save-btn:hover {
+    color: #38a169;
+}
+.action-icon.view-btn:hover {
+    color: #3273dc;
+}
+
+/* --- Estilos do Modal de Detalhes --- */
+.modal-content {
+    /* Define a largura do container do modal, permitindo que o .box o preencha */
+    width: 80vw;
+    max-width: 1600px; /* Um limite razoável para telas muito grandes */
+}
+
+.modal-content .box {
+    display: flex;
+    gap: 1.5rem; /* Espaçamento entre imagem e texto */
+    padding: 1.5rem;
+    max-height: 90vh;
+    width: 100%; /* Garante que o box preencha o modal-content */
+    /* A rolagem será definida por layout */
+}
+
+/* Layout Horizontal (padrão e para imagens landscape/quadradas) */
+.modal-content .box.is-layout-horizontal {
+    flex-direction: column;
+    /* A rolagem é aplicada ao container inteiro */
+    overflow-y: auto;
+}
+
+/* Layout Vertical (para imagens portrait) */
+.modal-content .box.is-layout-vertical {
+    flex-direction: row;
+}
+
+.modal-image-container {
+    flex-shrink: 0; /* Impede que o container da imagem encolha */
+}
+
+.is-layout-vertical .modal-image-container {
+    width: 50%; /* Ocupa metade do espaço na visualização em colunas */
+}
+
+.modal-text-container {
+    flex-grow: 1; /* Ocupa todo o espaço restante */
+    min-width: 0; /* Corrige problemas de overflow do flexbox */
+}
+
+/* No layout vertical, apenas o texto deve rolar */
+.is-layout-vertical .modal-text-container {
+    overflow-y: auto;
+}
+
+.modal-image-container img {
+    width: 100%;
+    height: auto; /* Padrão para o layout horizontal */
+    max-height: 70vh; /* Limita a altura no layout horizontal para não ser excessiva */
+    object-fit: contain; /* Garante que a imagem caiba sem distorcer */
+    border-radius: 6px;
+}
+
+/* No layout vertical, a imagem deve ocupar toda a altura disponível */
+.is-layout-vertical .modal-image-container img {
+    height: 100%;
+    max-height: none; /* Remove a restrição de altura máxima para preencher o contêiner */
+}
+
+/* Estilos para os shortcodes dentro do modal, para parecerem uma lista limpa */
+.modal-shortcodes .shortcode-stat,
+.modal-shortcodes .shortcode-hp,
+.modal-shortcodes .shortcode-count {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: transparent;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid rgba(74, 85, 104, 0.2);
+}
+
+.modal-shortcodes > div:last-child {
+    border-bottom: none;
+}
+
+.modal-shortcodes .shortcode-count .count-name {
+    display: inline;
+    margin-bottom: 0;
+}
+
+/* Layout Mobile: sempre em coluna */
+@media (max-width: 768px) {
+    .modal-content .box.is-layout-vertical {
+        flex-direction: column;
+    }
+    .is-layout-vertical .modal-image-container {
+        width: 100%; /* Imagem ocupa a largura total no mobile */
+    }
+}
+
+.modal-content .box {
+    background-color: var(--darker-bg);
+}
+.modal-content .box .title {
+    color: var(--light-text) !important;
+}
+.modal-content .box .content {
+    color: var(--light-text);
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+
+.narrator-control {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    display: block;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.narrator-control input[type="checkbox"] {
+    display: none; /* Esconde o checkbox original */
+}
+
+.narrator-control .switch-track {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background-color: var(--border-color);
+    border-radius: 12px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.narrator-control .switch-track::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.narrator-control input:checked + .switch-track {
+    background-color: var(--dark-blue);
+}
+
+.narrator-control input:checked + .switch-track::before {
+    transform: translateX(20px);
+}
+
+.narrator-control .switch-label-text {
+    user-select: none;
+}
+
+/* Esconde elementos exclusivos do narrador por padrão */
+.narrator-only.is-hidden {
+    display: none;
+}
+
+/* Barra de Ferramentas de Edição em Massa */
+.bulk-edit-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--darker-bg);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem;
+    z-index: 40;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Mostra a barra quando o modo de edição em massa está ativo no body */
+body.is-bulk-editing .bulk-edit-bar {
+    transform: translateY(0);
+}
+
+.bulk-edit-bar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bulk-edit-actions, .bulk-edit-cancel {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Esconde os FABs normais quando em modo de edição em massa */
+body.is-bulk-editing .fab-container {
+    display: none;
+}
+
+/* Estilos para o Modal de Ajuda */
+.modal-card-body .content pre {
+    background-color: transparent;
+    padding: 0.75em 1em;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.modal-card-body .content code {
+    color: burlywood;
+    background-color: transparent;
+}
+
+.modal {
+    z-index: 1000;
+}
+.fab-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1rem;
+    z-index: 30;
+}
+.fab-button {
+    width: 56px;
+    height: 56px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease-in-out;
+}
+.fab-button:hover {
+    transform: scale(1.1);
+}
+.modal-card-foot,
+.modal-card-head {
+    background-color: var(--darker-bg);
+    border-bottom: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+}
+.modal-card-title {
+    color: var(--light-text);
+}
+.modal-card-body {
+    background-color: var(--darker-bg);
+}
+#board-view-container {
+    position: relative;
+    width: 100%;
+    min-height: 80vh;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+.search-bar-board {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: 300px;
+    z-index: 10;
+}
+.view-grid #grid-view-wrapper {
+    display: block;
+}
+.view-grid #board-view-container {
+    display: none;
+}
+.view-board #grid-view-wrapper {
+    display: none;
+}
+.view-board #board-view-container {
+    display: block;
+}
+.card .card-content .content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+#tag-filters .checkbox {
+    display: inline-block;
+    padding: 0.5em 1em;
+    border: 1px solid var(--border-color);
+    background-color: var(--dark-bg);
+    color: var(--light-text);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none;
+}
+#tag-filters .checkbox:hover {
+    background-color: var(--border-color);
+}
+#tag-filters .checkbox input[type="checkbox"] {
+    display: none;
+}
+#tag-filters .checkbox.is-active {
+    background-color: var(--dark-blue);
+    border-color: var(--dark-blue-hover);
+    color: var(--light-text);
+}
+#active-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Estilo para links internos entre cards */
+.card-link {
+    color: #63b3ed; /* Azul claro, bom para temas escuros */
+    text-decoration: none;
+    cursor: pointer;
+    border-bottom: 1px dotted #63b3ed;
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+}
+
+.card-link:hover {
+    color: #90cdf4; /* Azul mais claro no hover */
+    border-bottom-color: #90cdf4;
+}
+
+/* Estilos para os ícones de ajuda nos formulários */
+.label-with-help {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem; /* Espaçamento padrão do label */
+}
+
+.label-with-help .label {
+    margin-bottom: 0 !important; /* Remove a margem padrão do Bulma */
+}
+
+.label-with-help .icon {
+    color: var(--border-color);
+    cursor: help;
+    transition: color 0.2s ease;
+}
+
+.label-with-help .icon:hover {
+    color: var(--light-text);
+}
+
+/* --- Tooltip Implementation --- */
+.has-tooltip {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.5);
+}
+
+.has-tooltip[data-tooltip]::before,
+.has-tooltip[data-tooltip]::after {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s ease-out 0.1s;
+}
+
+.has-tooltip[data-tooltip]:hover::before,
+.has-tooltip[data-tooltip]:hover::after {
+    opacity: 1;
+}
+
+/* Tooltip Content Box */
+.has-tooltip[data-tooltip]::before {
+    content: attr(data-tooltip);
+    background: var(--darker-bg);
+    color: var(--light-text);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    padding: 0.4em 0.8em;
+    white-space: nowrap;
+    bottom: 100%;
+    margin-bottom: 5px; /* Space for the arrow */
+}
+
+/* Tooltip Arrow */
+.has-tooltip[data-tooltip]::after {
+    content: '';
+    border-style: solid;
+    border-width: 5px;
+    border-color: var(--darker-bg) transparent transparent transparent;
+    bottom: 100%;
+}
+
+/* Estilos para o Modal de Configurações */
+#settings-filters {
+    min-height: 120px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre;
+    overflow-wrap: normal;
+}
+
+.tag-suggestions {
+    position: absolute;
+    background-color: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    z-index: 1001;
+    max-height: 150px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+.tag-suggestion-item {
+    padding: 0.5rem 1rem;
+    color: var(--light-text);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.tag-suggestion-item.is-active,
+.tag-suggestion-item:hover {
+    background-color: var(--dark-blue);
+}
+
+/* Popover de Confirmação de Exclusão */
+.confirmation-popover {
+    background-color: var(--dark-bg);
+    border: 1px solid var(--dark-red);
+    border-radius: 6px;
+    padding: 0.75rem;
+    z-index: 11; /* Acima dos .card-actions-top */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 200px;
+}
+
+.confirmation-popover p {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--light-text);
+    text-align: center;
+}
+
+.confirmation-popover .buttons {
+    display: flex;
+    justify-content: space-around;
+    gap: 0.5rem;
+}
+
+/* Feedback visual para cópia de texto */
+.click-feedback {
+    position: absolute;
+    padding: 4px 10px;
+    background-color: var(--dark-blue);
+    color: white;
+    border-radius: 4px;
+    z-index: 9999;
+    pointer-events: none;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: opacity 0.5s ease;
+    white-space: nowrap;
+}
+#active-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Permite a seleção de texto no título e no conteúdo do card */
+.card .card-content .title,
+.card .card-content .content {
+    user-select: text;
+}
+
+
+
+/* custom.css */
+
+/* Estilos para conteúdo oculto (visão do Mestre vs. Jogador) */
+.is-hidden-from-players {
+    display: none;
+}
+
+/* Adiciona um feedback visual para o conteúdo que está oculto para os jogadores */
+body.master-view .is-hidden-from-players {
+    display: block;
+    border: 1px dashed rgba(255, 107, 107, 0.7);
+    padding: 0.5em;
+    background-color: rgba(255, 107, 107, 0.07);
+    border-radius: 5px;
+}
+
+body.master-view .info-content .is-hidden-from-players{
+    padding: 0;
+}
+body.master-view .info-content .is-hidden-from-players .shortcode-stat{
+    background-color: rgb(169 23 23);
+}
+
+/* Se um elemento oculto estiver dentro de outro, remove a borda externa para não duplicar */
+body.master-view .is-hidden-from-players .is-hidden-from-players {
+    border: none;
+    padding: 0;
+    background-color: transparent;
+}
+
+/* Adiciona o cursor de ponteiro para as tags clicáveis nos cards */
+.card .tags .tag {
+    cursor: pointer;
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }

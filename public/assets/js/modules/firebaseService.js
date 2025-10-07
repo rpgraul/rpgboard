@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   collection,
   addDoc,
@@ -20,6 +21,15 @@ import {
   uploadBytes,
   getDownloadURL,
   deleteObject,
+=======
+import { 
+    collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, 
+    serverTimestamp, query, orderBy, writeBatch,
+    getDoc, setDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { 
+    ref, uploadBytes, getDownloadURL, deleteObject 
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
 
 // Lê as instâncias do Firebase que foram injetadas no objeto global 'window' pelo Netlify.
@@ -34,6 +44,7 @@ const usersCollectionRef = collection(db, "rpg-users");
  * @returns {Promise<void>}
  */
 export async function saveUser(userName) {
+<<<<<<< HEAD
   const userDoc = doc(usersCollectionRef, userName.toLowerCase());
   await setDoc(
     userDoc,
@@ -43,6 +54,13 @@ export async function saveUser(userName) {
     },
     { merge: true }
   );
+=======
+    const userDoc = doc(usersCollectionRef, userName.toLowerCase());
+    await setDoc(userDoc, {
+        name: userName,
+        lastSeen: serverTimestamp()
+    }, { merge: true });
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -50,10 +68,17 @@ export async function saveUser(userName) {
  * @param {function} callback - Função a ser chamada com os novos dados.
  */
 export function listenToItems(callback) {
+<<<<<<< HEAD
   // Agora ordena pelo campo 'order'. Itens com menor 'order' vêm primeiro.
   const q = query(itemsCollectionRef, orderBy("order", "asc"));
   // Passa o snapshot inteiro para o callback, para que possamos verificar metadados.
   return onSnapshot(q, callback);
+=======
+    // Agora ordena pelo campo 'order'. Itens com menor 'order' vêm primeiro.
+    const q = query(itemsCollectionRef, orderBy("order", "asc"));
+    // Passa o snapshot inteiro para o callback, para que possamos verificar metadados.
+    return onSnapshot(q, callback);
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -62,6 +87,7 @@ export function listenToItems(callback) {
  * @param {File|null} file - O arquivo de imagem, se houver.
  */
 export async function addItem(itemData, file = null) {
+<<<<<<< HEAD
   const snapshot = await getDocs(itemsCollectionRef);
   const itemsCount = snapshot.size;
   const newItem = {
@@ -80,6 +106,26 @@ export async function addItem(itemData, file = null) {
 
   const docRef = await addDoc(itemsCollectionRef, newItem);
   return docRef.id; // Retorna o ID do documento criado
+=======
+    const snapshot = await getDocs(itemsCollectionRef);
+    const itemsCount = snapshot.size;
+    const newItem = {
+        ...itemData,
+        createdAt: serverTimestamp(),
+        order: itemsCount + 1 // Define a ordem como o número de itens + 1
+    };
+
+    if (file) {
+        const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        newItem.url = await getDownloadURL(storageRef);
+        newItem.storagePath = storageRef.fullPath;
+        // As dimensões (width/height) devem ser adicionadas ao `itemData` antes de chamar esta função.
+    }
+
+    const docRef = await addDoc(itemsCollectionRef, newItem);
+    return docRef.id; // Retorna o ID do documento criado
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -87,6 +133,7 @@ export async function addItem(itemData, file = null) {
  * @param {object} item - O objeto do item a ser deletado.
  */
 export async function deleteItem(item) {
+<<<<<<< HEAD
   // Se o item tiver um caminho no storage, delete o arquivo de imagem.
   if (item.storagePath) {
     const imageRef = ref(storage, item.storagePath);
@@ -149,6 +196,20 @@ export async function deleteItems(itemIds) {
   await Promise.all(deleteImagePromises);
 
   console.log(`${itemIds.length} itens deletados com sucesso.`);
+=======
+    // Se o item tiver um caminho no storage, delete o arquivo de imagem.
+    if (item.storagePath) {
+        const imageRef = ref(storage, item.storagePath);
+        console.log(`Tentando deletar imagem do storage: ${item.storagePath}`);
+        await deleteObject(imageRef).catch(error => {
+            // Loga o erro mas não impede a deleção do documento no Firestore.
+            console.error("Falha ao deletar imagem do storage, mas o item será deletado do banco de dados:", error);
+        });
+    }
+    // Deleta o documento do Firestore.
+    const itemDocRef = doc(db, "rpg-items", item.id);
+    return deleteDoc(itemDocRef);
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -159,6 +220,7 @@ export async function deleteItems(itemIds) {
  * @param {File|null} newImageFile - O novo arquivo de imagem, se houver.
  */
 export async function updateItem(item, updatedData, newImageFile = null) {
+<<<<<<< HEAD
   console.log("updateItem called with:", item, updatedData, newImageFile);
   // Se um novo arquivo for fornecido (para adicionar ou trocar imagem)
   if (newImageFile) {
@@ -222,6 +284,32 @@ export async function removeImageFromItem(item) {
     url: deleteField(),
     storagePath: deleteField(),
   });
+=======
+    console.log("updateItem called with:", item, updatedData, newImageFile);
+    // Se um novo arquivo for fornecido (para adicionar ou trocar imagem)
+    if (newImageFile) {
+        // 1. Faz o upload da nova imagem
+        const newImageRef = ref(storage, `images/${Date.now()}_${newImageFile.name}`);
+        await uploadBytes(newImageRef, newImageFile);
+        
+        // 2. Obtém a nova URL e atualiza os dados
+        updatedData.url = await getDownloadURL(newImageRef);
+        updatedData.storagePath = newImageRef.fullPath;
+
+        // 3. Deleta a imagem antiga para não deixar lixo no storage
+        if (item.storagePath) {
+            const oldImageRef = ref(storage, item.storagePath);
+            console.log(`Tentando deletar imagem antiga do storage: ${item.storagePath}`);
+            // Usamos .catch() para não quebrar a operação de atualização se a imagem antiga não for encontrada
+            await deleteObject(oldImageRef).catch(err => {
+                console.warn("Não foi possível deletar a imagem antiga (pode já ter sido removida ou o caminho é inválido):", err);
+            });
+        }
+    }
+
+    const itemDocRef = doc(db, "rpg-items", item.id);
+    return updateDoc(itemDocRef, updatedData);
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -229,6 +317,7 @@ export async function removeImageFromItem(item) {
  * @param {Array<string>} orderedIds - Um array de IDs de item na nova ordem desejada.
  */
 export async function updateItemsOrder(orderedIds) {
+<<<<<<< HEAD
   const { db, storage } = window.firebaseInstances || {};
   console.log("updateItemsOrder called with:", orderedIds);
   const batch = writeBatch(db);
@@ -239,6 +328,18 @@ export async function updateItemsOrder(orderedIds) {
   });
 
   await batch.commit();
+=======
+    const { db, storage } = window.firebaseInstances || {};
+    console.log("updateItemsOrder called with:", orderedIds);
+    const batch = writeBatch(db);
+
+    orderedIds.forEach((id, index) => {
+        const docRef = doc(db, 'rpg-items', id);
+        batch.update(docRef, { order: index });
+    });
+
+    await batch.commit();
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -246,8 +347,13 @@ export async function updateItemsOrder(orderedIds) {
  * @returns {Promise<number>} O número de itens.
  */
 export async function getItemsCount() {
+<<<<<<< HEAD
   const snapshot = await getDocs(itemsCollectionRef);
   return snapshot.size;
+=======
+    const snapshot = await getDocs(itemsCollectionRef);
+    return snapshot.size;
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -255,6 +361,7 @@ export async function getItemsCount() {
  * @returns {Promise<object|null>} Um objeto com as configurações ou um objeto de fallback.
  */
 export async function getSettings() {
+<<<<<<< HEAD
   const docRef = doc(db, "config", "mainSettings");
   const docSnap = await getDoc(docRef);
 
@@ -271,6 +378,22 @@ export async function getSettings() {
       filters: [{ label: "PJs", value: "pjs" }],
     };
   }
+=======
+    const docRef = doc(db, "config", "mainSettings");
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        return docSnap.data();
+    } else {
+        console.warn("Documento de configurações 'mainSettings' não encontrado. Usando valores padrão.");
+        // Retorna um objeto de fallback para evitar que a aplicação quebre
+        return {
+            siteTitle: "RPG Painel",
+            recommendedTags: ["NPC", "Aliado"],
+            filters: [{ label: "PJs", value: "pjs" }]
+        };
+    }
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -278,9 +401,15 @@ export async function getSettings() {
  * @param {object} settingsData - O objeto com as novas configurações.
  */
 export async function saveSettings(settingsData) {
+<<<<<<< HEAD
   const docRef = doc(db, "config", "mainSettings");
   // Usamos set com merge:true para criar o documento se ele não existir, ou atualizar se existir.
   await setDoc(docRef, settingsData, { merge: true });
+=======
+    const docRef = doc(db, "config", "mainSettings");
+    // Usamos set com merge:true para criar o documento se ele não existir, ou atualizar se existir.
+    await setDoc(docRef, settingsData, { merge: true });
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 /**
@@ -289,6 +418,7 @@ export async function saveSettings(settingsData) {
  * @param {boolean} isVisible - O novo estado de visibilidade.
  */
 export async function updateItemsVisibility(itemIds, isVisible) {
+<<<<<<< HEAD
   const batch = writeBatch(db);
 
   itemIds.forEach((id) => {
@@ -316,4 +446,14 @@ export async function addTagsToItems(itemIds, tagsToAdd) {
   });
 
   return batch.commit();
+=======
+    const batch = writeBatch(db);
+
+    itemIds.forEach(id => {
+        const docRef = doc(db, "rpg-items", id);
+        batch.update(docRef, { isVisibleToPlayers: isVisible });
+    });
+
+    await batch.commit();
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }

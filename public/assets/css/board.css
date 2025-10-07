@@ -1,9 +1,21 @@
+<<<<<<< HEAD
 @media (max-width:768px) {
     body.body-view-board .fab-container {
+=======
+/* Estilos para a visualização em Board */
+
+/* No mobile, quando em modo board, transforma os botões flutuantes (FAB)
+   em uma barra de ações no final da página. */
+@media (max-width: 768px) {
+    /* A classe 'body-view-board' é adicionada via JS para ativar estes estilos */
+    body.body-view-board .fab-container {
+        /* 1. Tira do modo flutuante e posiciona no fluxo normal do documento */
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
         position: relative;
         bottom: auto;
         right: auto;
         z-index: auto;
+<<<<<<< HEAD
         flex-direction: row-reverse;
         justify-content: space-around;
         align-items: center;
@@ -31,10 +43,48 @@
     }
 }
 
+=======
+
+        /* 2. Transforma em uma barra horizontal */
+        flex-direction: row-reverse; /* Inverte a ordem dos botões */
+        justify-content: space-around; /* Distribui os botões uniformemente */
+        align-items: center;
+        gap: 0.5rem; /* Pequeno espaçamento entre os botões */
+        
+        /* 3. Estiliza como uma barra de rodapé */
+        width: 100%;
+        padding: 0.75rem 0;
+        margin-top: 1.5rem; /* Espaçamento acima da barra */
+        background-color: var(--darker-bg);
+        border-top: 1px solid var(--border-color);
+        box-shadow: none; /* Remove a sombra do botão flutuante */
+    }
+
+    /* Ajusta o tamanho dos botões na barra para não serem tão grandes */
+    body.body-view-board .fab-button {
+        width: 48px;
+        height: 48px;
+        box-shadow: none;
+    }
+
+    /* Remove o efeito de escala no hover, que não faz sentido na barra */
+    body.body-view-board .fab-button:hover {
+        transform: none;
+    }
+
+    /* Remove a margem que foi adicionada na solução anterior, garantindo que não haja conflito. */
+    #view-wrapper.view-board #board-view-container {
+        margin-bottom: 0;
+    }
+}
+
+/* Board mode: make board-view-container fill viewport, override container/section */
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 body.body-view-board .container {
     max-width: 100vw !important;
     width: 100vw !important;
     margin: 0 !important;
+<<<<<<< HEAD
     padding: 0 !important
 }
 
@@ -49,6 +99,21 @@ body.body-view-board #board-view-container {
     background: 0 0 !important
 }
 
+=======
+    padding: 0 !important;
+}
+body.body-view-board .section {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+body.body-view-board #board-view-container {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+/* Board Zoom and Pan Wrappers */
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 .view-board #board-view-container {
     width: 100vw;
     height: 100vh;
@@ -58,25 +123,39 @@ body.body-view-board #board-view-container {
     margin: 0;
     padding: 0;
     overflow: hidden;
+<<<<<<< HEAD
     position: relative
 }
 
+=======
+    position: relative;
+}
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 .board-zoom-wrapper {
     width: 100%;
     height: 100%;
     transform-origin: 0 0;
+<<<<<<< HEAD
     transition: transform .2s ease;
     position: absolute;
     top: 0;
     left: 0
 }
 
+=======
+    transition: transform 0.2s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 .board-pan-wrapper {
     width: 100%;
     height: 100%;
     position: absolute;
     top: 0;
     left: 0;
+<<<<<<< HEAD
     cursor: grab
 }
 
@@ -86,4 +165,15 @@ body.body-view-board #board-view-container {
 
 .card.is-details-visible .card-actions-top {
     display: none
+=======
+    cursor: grab;
+}
+.board-pan-wrapper:active {
+    cursor: grabbing;
+}
+
+/* Oculta os botões de ação superiores quando a camada de detalhes está visível */
+.card.is-details-visible .card-actions-top {
+    display: none;
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }

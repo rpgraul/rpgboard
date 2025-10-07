@@ -1386,4 +1386,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!window.firebaseInstances || !window.firebaseInstances.db || !window.firebaseInstances.storage) {
         console.error('As instâncias do Firebase não estão configuradas corretamente. Verifique a configuração do Firebase.');
     }
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616

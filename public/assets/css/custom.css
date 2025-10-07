@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #fab-toggle-view {
     display: none
 }
@@ -7,20 +8,49 @@
     font-weight: 600
 }
 
+=======
+/* Oculta o botão de toggle view */
+#fab-toggle-view {
+    display: none;
+}
+
+/* Estilos para o botão de login */
+.user-name {
+    color: #363636;
+    font-weight: 600;
+}
+
+/* Estilos para o modal de dados */
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 .dice-option {
     cursor: pointer;
     padding: 1rem;
     border-radius: 4px;
+<<<<<<< HEAD
     transition: background-color .2s
 }
 
 .dice-option:hover {
     background-color: #363636
+=======
+    transition: background-color 0.2s;
+}
+
+.dice-option:hover {
+    background-color: var(--dark-bg);
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
 }
 
 .dice-result {
     font-size: 2rem;
+<<<<<<< HEAD
     font-weight: 700;
     text-align: center;
     margin: 1rem 0
 }
+=======
+    font-weight: bold;
+    text-align: center;
+    margin: 1rem 0;
+}
+>>>>>>> 104b23cfc07483eae944d9e675e87949d0da4616
