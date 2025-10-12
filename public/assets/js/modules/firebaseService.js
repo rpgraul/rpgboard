@@ -18,7 +18,25 @@ import {
 
 import { uploadImage } from './imgbbService.js';
 
+// Função para aguardar o Firebase estar pronto
+function waitForFirebase() {
+  return new Promise((resolve) => {
+    if (window.firebaseInstances && window.firebaseInstances.db) {
+      resolve();
+    } else {
+      window.addEventListener('firebaseReady', () => resolve(), { once: true });
+    }
+  });
+}
+
+// Aguarda inicialização antes de prosseguir
+await waitForFirebase();
+
 const { db } = window.firebaseInstances;
+
+if (!db) {
+  throw new Error("Firebase Firestore não está inicializado!");
+}
 
 const itemsCollectionRef = collection(db, "rpg-items");
 const usersCollectionRef = collection(db, "rpg-users");
@@ -52,12 +70,10 @@ export async function addItem(itemData, file = null) {
 
   if (file) {
     try {
-      // Faz upload da imagem para o ImgBB
       const uploadResult = await uploadImage(file);
       
       newItem.url = uploadResult.url;
-      newItem.deleteUrl = uploadResult.deleteUrl; // Armazena a URL de deleção
-      // Removido: newItem.storagePath (não usado mais)
+      newItem.deleteUrl = uploadResult.deleteUrl;
     } catch (error) {
       console.error('Erro ao fazer upload da imagem:', error);
       throw new Error('Falha ao fazer upload da imagem');
@@ -69,10 +85,6 @@ export async function addItem(itemData, file = null) {
 }
 
 export async function deleteItem(item) {
-  // Nota: ImgBB não permite deleção programática de imagens pela API
-  // As imagens podem ser deletadas manualmente usando a deleteUrl
-  // ou configurando expiração no momento do upload
-  
   if (item.deleteUrl) {
     console.log(`Imagem pode ser deletada manualmente em: ${item.deleteUrl}`);
   }
@@ -112,16 +124,12 @@ export async function updateItem(item, updatedData, newImageFile = null) {
 
   if (newImageFile) {
     try {
-      // Faz upload da nova imagem para o ImgBB
       const uploadResult = await uploadImage(newImageFile);
       
       updatedData.url = uploadResult.url;
       updatedData.deleteUrl = uploadResult.deleteUrl;
-      
-      // Remove campos antigos relacionados ao storage
       updatedData.storagePath = deleteField();
 
-      // Log da URL de deleção da imagem antiga (se existir)
       if (item.deleteUrl) {
         console.log(`Imagem antiga pode ser deletada manualmente em: ${item.deleteUrl}`);
       }
@@ -140,7 +148,6 @@ export async function removeImageFromItem(item) {
     throw new Error("É necessário um item válido para remover sua imagem.");
   }
 
-  // Log da URL de deleção (ImgBB não permite deleção programática)
   if (item.deleteUrl) {
     console.log(`Imagem pode ser deletada manualmente em: ${item.deleteUrl}`);
   }
@@ -154,7 +161,6 @@ export async function removeImageFromItem(item) {
 }
 
 export async function updateItemsOrder(orderedIds) {
-  const { db } = window.firebaseInstances || {};
   console.log("updateItemsOrder called with:", orderedIds);
 
   const batch = writeBatch(db);
