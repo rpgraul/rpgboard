@@ -15,7 +15,6 @@ const itemsContainer = document.getElementById("grid-view-container"),
   loadingIndicator = document.getElementById("loading-indicator");
 export function initializeGrid(e) {
   (eventHandlers = e),
-    // MODIFICADO: Adicionamos 'async' para poder usar 'await' dentro do listener
     itemsContainer.addEventListener("click", async (event) => {
       const t = event.target;
       const n = t.closest(".card");
@@ -37,39 +36,28 @@ export function initializeGrid(e) {
           } else if (i.classList.contains("edit-btn")) {
             eventHandlers.onEdit(n, s, itemsContainer);
           } else if (i.classList.contains("save-btn")) {
-            // --- INÍCIO DA CORREÇÃO ---
             const saveButton = n.querySelector('.save-btn');
             if (saveButton) saveButton.classList.add('is-loading');
 
             try {
-              // 1. Esperamos o salvamento ser concluído e pegamos os dados atualizados
               const updatedItem = await eventHandlers.onSave(n, s, itemsContainer);
-              
-              // 2. Removemos o estado de edição e redesenhamos o card
               itemsContainer.classList.remove("is-editing-item");
               cardRenderer.renderCardViewMode(n, updatedItem);
-              
-              // 3. Limpamos o arquivo de imagem temporário
               if (n._newImageFile) delete n._newImageFile;
-
-              // 4. Atualizamos o layout do Muuri caso a imagem tenha mudado de tamanho
               muuriGrid?.layout(true);
-
             } catch (error) {
               console.error("Falha ao salvar e re-renderizar o card:", error);
-              // Se der erro, a UI continua em modo de edição para o usuário tentar novamente.
             } finally {
-               // 5. Garantimos que o estado de loading seja removido, com sucesso ou falha
                if (saveButton) saveButton.classList.remove('is-loading');
             }
-            // --- FIM DA CORREÇÃO ---
           } else if (i.classList.contains("cancel-btn")) {
             itemsContainer.classList.remove("is-editing-item");
             cardRenderer.renderCardViewMode(n, s);
             if (n._newImageFile) delete n._newImageFile;
             muuriGrid?.layout(true);
           }
-        } else if (r && eventHandlers.onView) {
+        // MODIFICADO: Adicionada a verificação "!n.classList.contains('editing')"
+        } else if (r && !n.classList.contains('editing') && eventHandlers.onView) {
           eventHandlers.onView(s);
         }
       }
