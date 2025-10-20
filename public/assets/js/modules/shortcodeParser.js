@@ -65,15 +65,7 @@ function _parseCount(t, e, n) {
     o = t.filter((t) => "checkbox" !== t && !s.includes(t)),
     r = _parseKeyValueArgs(o.filter((t) => t.includes("=")));
   let i = "number";
-  
-  if (r.icon) {
-    i = "custom-icon";
-  } else if (r.theme) {
-    i = r.theme;
-  } else if (a) {
-    i = "default";
-  }
-
+  r.icon ? (i = "custom-icon") : r.theme ? (i = r.theme) : a && (i = "default");
   const c = o.find((t) => !t.includes("=")) || "",
     l = parseInt(r.max, 10) || 0;
   let u = void 0 !== r.current ? parseInt(r.current, 10) : l;
@@ -88,15 +80,7 @@ function _parseCount(t, e, n) {
       if ("arrow" === i) n = '<i class="fas fa-arrow-up"></i>';
       else if ("potion" === i) n = '<i class="fas fa-flask"></i>';
       else if ("custom-icon" === i) {
-        const iconName = r.icon.replace(/["']/g, "");
-        if (iconName.startsWith('ra-')) {
-            n = `<i class="ra ${iconName}"></i>`;
-        } else if (r.theme === 'ra') {
-            n = `<i class="ra ra-${iconName}"></i>`;
-        }
-        else {
-            n = `<i class="fas fa-${iconName}"></i>`;
-        }
+        n = `<i class="fas fa-${r.icon.replace(/["']/g, "")}"></i>`;
       }
       p += `<span class="count-checkbox ${
         e ? "is-checked" : ""
@@ -105,15 +89,7 @@ function _parseCount(t, e, n) {
     p += "</span>";
   } else
     p =
-      `
-<span class="count-value-interactive">
-<button class="count-btn" data-action="decrement" aria-label="Diminuir">-</button>
-<span class="count-current-value">${u}</span>
-<span class="count-separator">/</span>
-<span class="count-max-value">${l}</span>
-<button class="count-btn" data-action="increment" aria-label="Aumentar">+</button>
-</span>
-`
+      `\n<span class="count-value-interactive">\n<button class="count-btn" data-action="decrement" aria-label="Diminuir">-</button>\n<span class="count-current-value">${u}</span>\n<span class="count-separator">/</span>\n<span class="count-max-value">${l}</span>\n<button class="count-btn" data-action="increment" aria-label="Aumentar">+</button>\n</span>\n`
         .trim()
         .replace(/\s+/g, " ");
   return (

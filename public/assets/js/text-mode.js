@@ -21,7 +21,7 @@ import {
   addTagsToItems,
 } from "./modules/firebaseService.js";
 import { isNarrator, initializeAuth } from "./modules/auth.js";
-import { showConfirmationPopover, showToast, showAddTagsPopover } from "./modules/ui.js";
+import { showConfirmationPopover, showToast } from "./modules/ui.js";
 let sideViewSaveTimeout,
   sideViewEditor = null,
   currentSideViewCardId = null;
@@ -29,22 +29,22 @@ function preParseShortcodesForEditor(e) {
   if (!e) return "";
   let t = e;
   (t = t.replace(
-    /\s*\[stat\s+([^\\]+?):\s*([^\\]*?)\s*\]/gi,
+    /[\[]stat\s+([^\\]+?):\s*([^\\]*?)\s*[\]]/gi,
     (e, t, i) =>
       `<span data-node-type="statNode" data-label="${t.trim()}" data-value="${i.trim()}"></span>`
   )),
     (t = t.replace(
-      /\s*\[stat\s+\"([^\"]+)\"\s+\"([^\"]+)\"\s*\]/gi,
+      /[\[]stat\s+\"([^\"]+)\"\s+\"([^\"]+)\"\s*[\]]/gi,
       (e, t, i) =>
         `<span data-node-type="statNode" data-label="${t}" data-value="${i}"></span>`
     )),
     (t = t.replace(
-      /\s*\[hp\s+max=(\\d+)\s+current=(\\d+)\s*\]/gi,
+      /[\[]hp\s+max=(\\\\d+)\s+current=(\\\\d+)\s*[\]]/gi,
       (e, t, i) =>
         `<span data-node-type="hpNode" data-max="${t}" data-current="${i}"></span>`
     )),
     (t = t.replace(
-      /\s*\[money\s+current=([\d.]+)(?:\s+([^\\]*?))?\s*\]/gi,
+      /[\[]money\s+current=([\\d.]+)(?:\s+([^\\]*?))?\s*[\]]/gi,
       (e, t, i = "") => {
         let s = "";
         if (i) {
@@ -57,7 +57,7 @@ function preParseShortcodesForEditor(e) {
     ));
   const i = /\"([^\"]+)\"|\\S+/g;
   return (
-    (t = t.replace(/\s*\[(\*?)count\s+([^\\]+)\]/gi, (e, t, s) => {
+    (t = t.replace(/[\[](\*?)count\s+([^\\]+)[\]]/gi, (e, t, s) => {
       const o = "*" === t,
         a = ((e) => {
           const t = [];
@@ -86,12 +86,6 @@ function preParseShortcodesForEditor(e) {
         `<span data-node-type="countNode" data-label="${r}" data-max="${d}" data-current="${c}" data-theme="${u}" data-icon="${l}" data-is-overlay="${o}"></span>`
       );
     })),
-    (t = t.replace(
-      /\s*\[nota\s+titulo=\"([^\"]*)\"\]\]([\s\S]*?)\[\/nota\]/gi,
-      (e, titulo, content) => {
-        return `<div data-node-type="notaShortcode" class="shortcode-nota"><div class="nota-header"><strong class="nota-title">${titulo}</strong><span class="nota-icon"><i class="fas fa-plus"></i></span></div><div class="nota-content"><div data-content="">${content}</div></div></div>`;
-      }
-    )),
     t
   );
 }
@@ -560,31 +554,24 @@ document.addEventListener("DOMContentLoaded", () => {
           },
         });
     }),
-        E.addEventListener("click", () => {
+    E.addEventListener("click", () => {
       if (0 === I.length) return;
-      showAddTagsPopover({
-        targetElement: E,
-        onAdd: (tagsString) => {
-          if (tagsString) {
-            const tags = tagsString
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean);
-            if (tags.length > 0) {
-              addTagsToItems(I, tags)
-                .then(() => {
-                  showToast(`Tags adicionadas a ${I.length} cards.`, "is-success");
-                  P(); // Refresh card list
-                  if (S) A(S); // Refresh current card details if selected
-                })
-                .catch((e) => {
-                  console.error("Erro ao adicionar tags em massa:", e),
-                    showToast("Erro ao adicionar tags.", "is-danger");
-                });
-            }
-          }
-        },
-      });
+      const e = prompt("Adicionar tags (separadas por vírgula):");
+      if (e) {
+        const t = e
+          .split(",")
+          .map((e) => e.trim())
+          .filter(Boolean);
+        t.length > 0 &&
+          addTagsToItems(I, t)
+            .then(() => {
+              showToast(`Tags adicionadas a ${I.length} cards.`, "is-success");
+            })
+            .catch((e) => {
+              console.error("Erro ao adicionar tags em massa:", e),
+                showToast("Erro ao adicionar tags.", "is-danger");
+            });
+      }
     });
   let H = null;
   function M() {

@@ -1382,20 +1382,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyTransform();
     }
 
-    // Verificação das instâncias do Firebase
-  console.log("Verificando instâncias do Firebase:", window.firebaseInstances);
-  if (!window.firebaseInstances || !window.firebaseInstances.db) {
-    console.error(
-      "❌ As instâncias do Firebase não estão configuradas corretamente. Verifique a configuração do Firebase."
-    );
-  } else {
-    console.log("✅ Firebase Firestore está configurado corretamente!");
-  }
-
-  // Verificação da API Key do ImgBB
-  if (!window.IMGBB_API_KEY) {
-    console.warn("⚠️ ImgBB API Key não encontrada. Uploads de imagem não funcionarão.");
-  } else {
-    console.log("✅ ImgBB API Key configurada!");
-  }
+    console.log('Verificando instâncias do Firebase:', window.firebaseInstances);
+    if (!window.firebaseInstances || !window.firebaseInstances.db || !window.firebaseInstances.storage) {
+        console.error('As instâncias do Firebase não estão configuradas corretamente. Verifique a configuração do Firebase.');
+    }
 });

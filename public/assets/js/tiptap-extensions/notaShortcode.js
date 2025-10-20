@@ -8,15 +8,14 @@ export default Node.create({
   parseHTML: () => [
     {
       tag: 'div[data-node-type="notaShortcode"]',
-      getAttrs: (t) => ({ titulo: t.querySelector(".nota-title")?.textContent || "Nota" }),
+      getAttrs: (t) => ({ titulo: t.getAttribute("data-titulo") }),
       contentElement: "div[data-content]",
     },
   ],
-  renderHTML: ({ HTMLAttributes: t }) => [
+  renderHTML: ({ HTMLAttributes: t, node: e }) => [
     "div",
-    mergeAttributes(t, { "data-node-type": "notaShortcode", class: "shortcode-nota" }),
-    ["div", { class: "nota-header" }, ["strong", { class: "nota-title" }, t.titulo], ["span", { class: "nota-icon" }, ["i", { class: "fas fa-plus" }]]],
-    ["div", { class: "nota-content" }, ["div", { "data-content": "" }]],
+    mergeAttributes(t, { "data-node-type": "notaShortcode" }),
+    ["div", { "data-titulo": t.titulo, "data-content": "" }, 0],
   ],
   addNodeView() {
     return ({ node: t, getPos: e, editor: a }) => {
@@ -34,7 +33,7 @@ export default Node.create({
         o.append(d, s),
         n.appendChild(o);
       const i = document.createElement("div");
-      i.className = "nota-content";
+      (i.className = "nota-content"), (i.style.display = "none");
       const l = document.createElement("div");
       return (
         l.setAttribute("data-content", ""),
@@ -43,14 +42,17 @@ export default Node.create({
         o.addEventListener("click", () => {
           n.classList.toggle("is-active");
           const t = n.classList.contains("is-active");
-          c.className = t ? "fas fa-minus" : "fas fa-plus";
+          (i.style.display = t ? "block" : "none"),
+            (c.className = t ? "fas fa-minus" : "fas fa-plus");
         }),
         {
           dom: n,
           contentDOM: l,
-          update: (updatedNode) => {
-            return t.eq(updatedNode);
-          },
+          update: (e) =>
+            e.type.name === this.name &&
+            (e.attrs.titulo !== t.attrs.titulo &&
+              (d.textContent = e.attrs.titulo),
+            !0),
         }
       );
     };

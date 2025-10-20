@@ -144,16 +144,11 @@ export function renderCardEditMode(s, t, e) {
       i);
   const o = s.querySelector(".edit-tags");
   o && e?.onTagInputInit && e.onTagInputInit(o);
-  s.querySelectorAll(".save-btn").forEach((button) => {
-    button.onclick = async (event) => {
-      event.preventDefault();
-      if (e?.onSave) {
-        try {
-          const updatedItem = await e.onSave(s, t);
-          renderCardViewMode(s, updatedItem);
-        } catch (error) {
-          console.error("Failed to save and re-render card:", error);
-        }
+  s.querySelectorAll(".save-btn").forEach((i) => {
+    i.onclick = (i) => {
+      if ((i.preventDefault(), e?.onSave)) {
+        const i = s.parentElement;
+        e.onSave(s, t, i);
       }
     };
   });
