@@ -13,53 +13,76 @@ import {
   setDoc,
   getDocs,
   arrayUnion,
-  deleteField, 
+  deleteField,
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
 
-// Lê as instâncias do Firebase que foram injetadas no objeto global 'window' pelo Netlify.
-const { db, storage } = window.firebaseInstances;
+// --- INÍCIO DA MODIFICAÇÃO PARA IMGBB ---
+
+// Não precisamos mais das funções do Firebase Storage, então elas foram removidas.
+// O objeto 'storage' também não é mais necessário.
+const { db } = window.firebaseInstances;
+
+/**
+ * Função auxiliar para fazer upload de uma imagem para o ImgBB.
+ * @param {File} file - O arquivo de imagem a ser enviado.
+ * @returns {Promise<{url: string}>} - Um objeto contendo a URL da imagem no ImgBB.
+ */
+async function uploadImageToImgBB(file) {
+  const apiKey = window.IMGBB_API_KEY;
+  if (!apiKey) {
+    console.error("Chave da API do ImgBB não foi encontrada em window.IMGBB_API_KEY");
+    throw new Error("Chave da API do ImgBB não configurada.");
+  }
+
+  const formData = new FormData();
+  formData.append("image", file);
+
+  try {
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Erro da API do ImgBB:", errorData);
+      throw new Error(`Falha no upload para o ImgBB: ${errorData.error.message}`);
+    }
+
+    const jsonResponse = await response.json();
+
+    // Verificação de segurança para garantir que a resposta tem o formato esperado
+    if (jsonResponse && jsonResponse.data && jsonResponse.data.url) {
+      return { url: jsonResponse.data.url };
+    } else {
+      console.error("Resposta inesperada do ImgBB:", jsonResponse);
+      throw new Error("Formato de resposta inesperado do ImgBB.");
+    }
+  } catch (error) {
+    console.error("Erro crítico ao fazer upload da imagem para o ImgBB:", error);
+    // Propaga o erro para que a função que chamou possa tratá-lo
+    throw error;
+  }
+}
+
+// --- FIM DA MODIFICAÇÃO PARA IMGBB ---
+
 
 const itemsCollectionRef = collection(db, "rpg-items");
 const usersCollectionRef = collection(db, "rpg-users");
 
-/**
- * Salva ou atualiza um usuário no Firebase
- * @param {string} userName - Nome do usuário
- * @returns {Promise<void>}
- */
 export async function saveUser(userName) {
   const userDoc = doc(usersCollectionRef, userName.toLowerCase());
-  await setDoc(
-    userDoc,
-    {
-      name: userName,
-      lastSeen: serverTimestamp(),
-    },
-    { merge: true }
-  );
+  await setDoc(userDoc, { name: userName, lastSeen: serverTimestamp() }, { merge: true });
 }
 
-/**
- * Escuta por atualizações em tempo real na coleção de itens.
- * @param {function} callback - Função a ser chamada com os novos dados.
- */
 export function listenToItems(callback) {
-  // Agora ordena pelo campo 'order'. Itens com menor 'order' vêm primeiro.
   const q = query(itemsCollectionRef, orderBy("order", "asc"));
-  // Passa o snapshot inteiro para o callback, para que possamos verificar metadados.
   return onSnapshot(q, callback);
 }
 
 /**
- * Adiciona um novo item ao Firestore. Pode opcionalmente incluir uma imagem.
- * @param {object} itemData - Objeto com os dados do item (titulo, conteudo, etc.).
- * @param {File|null} file - O arquivo de imagem, se houver.
+ * Adiciona um novo item ao Firestore. Se um arquivo for fornecido, faz o upload para o ImgBB.
  */
 export async function addItem(itemData, file = null) {
   const snapshot = await getDocs(itemsCollectionRef);
@@ -67,125 +90,66 @@ export async function addItem(itemData, file = null) {
   const newItem = {
     ...itemData,
     createdAt: serverTimestamp(),
-    order: itemsCount + 1, // Define a ordem como o número de itens + 1
+    order: itemsCount + 1,
   };
 
   if (file) {
-    const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    newItem.url = await getDownloadURL(storageRef);
-    newItem.storagePath = storageRef.fullPath;
-    // As dimensões (width/height) devem ser adicionadas ao `itemData` antes de chamar esta função.
+    // MODIFICADO: Usa a função de upload do ImgBB
+    const imageData = await uploadImageToImgBB(file);
+    newItem.url = imageData.url;
+    // O campo 'storagePath' não é mais necessário com o ImgBB
   }
 
   const docRef = await addDoc(itemsCollectionRef, newItem);
-  return docRef.id; // Retorna o ID do documento criado
+  return docRef.id;
 }
 
 /**
- * Deleta um item do Firestore e, se for imagem, do Storage.
- * @param {object} item - O objeto do item a ser deletado.
+ * Deleta um item do Firestore.
+ * A imagem no ImgBB não pode ser deletada via API gratuita, então ela permanecerá lá.
  */
 export async function deleteItem(item) {
-  // Se o item tiver um caminho no storage, delete o arquivo de imagem.
-  if (item.storagePath) {
-    const imageRef = ref(storage, item.storagePath);
-    console.log(`Tentando deletar imagem do storage: ${item.storagePath}`);
-    await deleteObject(imageRef).catch((error) => {
-      // Loga o erro mas não impede a deleção do documento no Firestore.
-      console.error(
-        "Falha ao deletar imagem do storage, mas o item será deletado do banco de dados:",
-        error
-      );
-    });
-  }
-  // Deleta o documento do Firestore.
+  // MODIFICADO: Lógica de deleção de imagem do Firebase Storage foi removida.
   const itemDocRef = doc(db, "rpg-items", item.id);
   return deleteDoc(itemDocRef);
 }
 
 /**
- * Deleta múltiplos itens em massa do Firestore e suas imagens associadas do Storage.
- * @param {string[]} itemIds - Array de IDs dos itens a serem deletados.
+ * Deleta múltiplos itens em massa do Firestore.
+ * As imagens no ImgBB não podem ser deletadas.
  */
 export async function deleteItems(itemIds) {
   const batch = writeBatch(db);
-  
-  // Para deletar imagens do storage, precisamos primeiro ler os documentos
-  // para obter seus `storagePath`.
-  const deleteImagePromises = [];
 
   for (const id of itemIds) {
     const docRef = doc(db, "rpg-items", id);
-    try {
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const item = docSnap.data();
-        // Se o item tiver uma imagem, agende a deleção dela no Storage.
-        if (item.storagePath) {
-          const imageRef = ref(storage, item.storagePath);
-          // Adicionamos a promessa de deleção a um array.
-          // Usamos .catch() para que um erro na deleção de uma imagem não pare todo o processo.
-          deleteImagePromises.push(
-            deleteObject(imageRef).catch(err => 
-              console.error(`Falha ao deletar imagem ${item.storagePath}:`, err)
-            )
-          );
-        }
-      }
-    } catch (error) {
-        console.error(`Erro ao buscar o item ${id} para deleção:`, error);
-        // Continua para o próximo item mesmo se um falhar
-    }
-    
-    // Adiciona a operação de deleção do documento do Firestore ao batch.
     batch.delete(docRef);
   }
-
-  // Executa a deleção de todos os documentos no Firestore.
-  await batch.commit();
   
-  // Espera que todas as deleções de imagem no Storage terminem.
-  await Promise.all(deleteImagePromises);
+  // MODIFICADO: Lógica de deleção de imagens do Firebase Storage foi removida.
+  await batch.commit();
 
-  console.log(`${itemIds.length} itens deletados com sucesso.`);
+  console.log(`${itemIds.length} itens deletados com sucesso do Firestore.`);
 }
 
 /**
- * Atualiza um item no Firestore. Se um novo arquivo de imagem for fornecido,
- * ele faz o upload da nova imagem, deleta a antiga e atualiza a URL.
- * @param {object} item - O objeto do item original (necessário para o storagePath antigo).
- * @param {object} updatedData - Os novos dados de texto a serem salvos.
- * @param {File|null} newImageFile - O novo arquivo de imagem, se houver.
+ * Atualiza um item no Firestore. Se uma nova imagem for fornecida,
+ * faz o upload para o ImgBB e substitui a URL antiga.
  */
 export async function updateItem(item, updatedData, newImageFile = null) {
-  console.log("updateItem called with:", item, updatedData, newImageFile);
-  // Se um novo arquivo for fornecido (para adicionar ou trocar imagem)
+  console.log("updateItem (usando ImgBB) chamado com:", item, updatedData, newImageFile);
+  
   if (newImageFile) {
-    // 1. Faz o upload da nova imagem
-    const newImageRef = ref(
-      storage,
-      `images/${Date.now()}_${newImageFile.name}`
-    );
-    await uploadBytes(newImageRef, newImageFile);
-
-    // 2. Obtém a nova URL e atualiza os dados
-    updatedData.url = await getDownloadURL(newImageRef);
-    updatedData.storagePath = newImageRef.fullPath;
-
-    // 3. Deleta a imagem antiga para não deixar lixo no storage
-    if (item.storagePath) {
-      const oldImageRef = ref(storage, item.storagePath);
-      console.log(
-        `Tentando deletar imagem antiga do storage: ${item.storagePath}`
-      );
-      // Usamos .catch() para não quebrar a operação de atualização se a imagem antiga não for encontrada
-      await deleteObject(oldImageRef).catch((err) => {
-        console.warn(
-          "Não foi possível deletar a imagem antiga (pode já ter sido removida ou o caminho é inválido):",
-          err
-        );
-      });
+    try {
+      // MODIFICADO: Substitui o upload do Firebase pelo do ImgBB
+      const imageData = await uploadImageToImgBB(newImageFile);
+      updatedData.url = imageData.url;
+      // Remove o campo 'storagePath' caso ele exista de um item antigo
+      updatedData.storagePath = deleteField(); 
+    } catch (error) {
+      console.error("Erro ao fazer upload da nova imagem para o ImgBB:", error);
+      // Lança um erro para que a interface do usuário possa mostrá-lo.
+      throw new Error("Falha ao fazer upload da imagem");
     }
   }
 
@@ -194,43 +158,23 @@ export async function updateItem(item, updatedData, newImageFile = null) {
 }
 
 /**
- * Remove a imagem de um item, deletando-a do Storage e removendo as referências no Firestore.
- * @param {object} item - O objeto do item que terá a imagem removida.
+ * Remove a referência da imagem de um item no Firestore.
+ * A imagem no ImgBB não pode ser deletada.
  */
 export async function removeImageFromItem(item) {
   if (!item || !item.id) {
     throw new Error("É necessário um item válido para remover sua imagem.");
   }
-
-  // 1. Deleta a imagem do Firebase Storage, se ela existir.
-  if (item.storagePath) {
-    const imageRef = ref(storage, item.storagePath);
-    try {
-      await deleteObject(imageRef);
-      console.log(`Imagem em '${item.storagePath}' deletada do Storage.`);
-    } catch (error) {
-      // Se o arquivo não for encontrado, não há problema. Logamos outros erros.
-      if (error.code !== "storage/object-not-found") {
-        console.error("Erro ao deletar imagem do Storage:", error);
-      }
-    }
-  }
-
-  // 2. Atualiza o documento no Firestore para remover os campos da imagem.
+  
+  // MODIFICADO: Lógica de deleção de imagem do Firebase Storage foi removida.
   const itemDocRef = doc(db, "rpg-items", item.id);
   await updateDoc(itemDocRef, {
     url: deleteField(),
-    storagePath: deleteField(),
+    storagePath: deleteField(), // Remove também o storagePath se existir
   });
 }
 
-/**
- * Atualiza a ordem de múltiplos itens usando um batch write para eficiência.
- * @param {Array<string>} orderedIds - Um array de IDs de item na nova ordem desejada.
- */
 export async function updateItemsOrder(orderedIds) {
-  const { db, storage } = window.firebaseInstances || {};
-  console.log("updateItemsOrder called with:", orderedIds);
   const batch = writeBatch(db);
 
   orderedIds.forEach((id, index) => {
@@ -241,19 +185,11 @@ export async function updateItemsOrder(orderedIds) {
   await batch.commit();
 }
 
-/**
- * Conta o número total de itens no banco de dados.
- * @returns {Promise<number>} O número de itens.
- */
 export async function getItemsCount() {
   const snapshot = await getDocs(itemsCollectionRef);
   return snapshot.size;
 }
 
-/**
- * Busca as configurações principais do site no Firestore.
- * @returns {Promise<object|null>} Um objeto com as configurações ou um objeto de fallback.
- */
 export async function getSettings() {
   const docRef = doc(db, "config", "mainSettings");
   const docSnap = await getDoc(docRef);
@@ -261,33 +197,20 @@ export async function getSettings() {
   if (docSnap.exists()) {
     return docSnap.data();
   } else {
-    console.warn(
-      "Documento de configurações 'mainSettings' não encontrado. Usando valores padrão."
-    );
-    // Retorna um objeto de fallback para evitar que a aplicação quebre
+    console.warn("Documento de configurações 'mainSettings' não encontrado. Usando valores padrão.");
     return {
       siteTitle: "RPG Painel",
       recommendedTags: ["NPC", "Aliado"],
-      filters: [{ label: "PJs", value: "pjs" }],
+      filters: [{ label: "PJs", value: "pj" }],
     };
   }
 }
 
-/**
- * Salva as configurações principais do site no Firestore.
- * @param {object} settingsData - O objeto com as novas configurações.
- */
 export async function saveSettings(settingsData) {
   const docRef = doc(db, "config", "mainSettings");
-  // Usamos set com merge:true para criar o documento se ele não existir, ou atualizar se existir.
   await setDoc(docRef, settingsData, { merge: true });
 }
 
-/**
- * Atualiza a visibilidade de múltiplos itens em massa.
- * @param {string[]} itemIds - Array de IDs dos itens a serem atualizados.
- * @param {boolean} isVisible - O novo estado de visibilidade.
- */
 export async function updateItemsVisibility(itemIds, isVisible) {
   const batch = writeBatch(db);
 
@@ -298,18 +221,12 @@ export async function updateItemsVisibility(itemIds, isVisible) {
 
   await batch.commit();
 }
-/**
- * Adiciona tags a múltiplos itens em massa, sem criar duplicatas.
- * @param {string[]} itemIds - Array de IDs dos itens a serem atualizados.
- * @param {string[]} tagsToAdd - Array de tags a serem adicionadas.
- */
+
 export async function addTagsToItems(itemIds, tagsToAdd) {
   const batch = writeBatch(db);
 
   itemIds.forEach((id) => {
     const docRef = doc(db, "rpg-items", id);
-    // arrayUnion adiciona os elementos ao array 'tags' apenas se eles ainda não existirem.
-    // O operador '...' (spread) é importante para passar cada tag como um argumento separado.
     batch.update(docRef, {
       tags: arrayUnion(...tagsToAdd),
     });
