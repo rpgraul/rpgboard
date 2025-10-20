@@ -6,31 +6,56 @@ const boardContainer = document.getElementById("board-view-container");
 export function initializeBoard(e) {
   (eventHandlers = e),
     boardContainer
-      ? boardContainer.addEventListener("click", (e) => {
-          const n = e.target,
-            t = n.closest(".action-icon"),
-            o = n.closest(".card");
+      ? // MODIFICADO: Adicionamos 'async' aqui também
+        boardContainer.addEventListener("click", async (event) => {
+          const n = event.target;
+          const t = n.closest(".action-icon");
+          const o = n.closest(".card");
           if (!t || !o) return;
-          const s = o.dataset.id,
-            a = cardManager.getItems().find((e) => e.id === s);
-          a &&
-            (t.classList.contains("view-btn")
-              ? eventHandlers.onView(a)
-              : t.classList.contains("delete-btn")
-              ? showConfirmationPopover({
-                  targetElement: t,
-                  message: "Deletar este card?",
-                  confirmButtonType: "is-danger",
-                  onConfirm: () => eventHandlers.onDelete(a),
-                })
-              : t.classList.contains("edit-btn")
-              ? eventHandlers.onEdit(o, a, boardContainer)
-              : t.classList.contains("save-btn")
-              ? eventHandlers.onSave(o, a, boardContainer)
-              : t.classList.contains("cancel-btn") &&
-                (boardContainer.classList.remove("is-editing-item"),
-                cardRenderer.renderCardViewMode(o, a),
-                o._newImageFile && delete o._newImageFile));
+          const s = o.dataset.id;
+          const a = cardManager.getItems().find((item) => item.id === s);
+          
+          if (a) {
+            if (t.classList.contains("view-btn")) {
+              eventHandlers.onView(a);
+            } else if (t.classList.contains("delete-btn")) {
+              showConfirmationPopover({
+                targetElement: t,
+                message: "Deletar este card?",
+                confirmButtonType: "is-danger",
+                onConfirm: () => eventHandlers.onDelete(a),
+              });
+            } else if (t.classList.contains("edit-btn")) {
+              eventHandlers.onEdit(o, a, boardContainer);
+            } else if (t.classList.contains("save-btn")) {
+              // --- INÍCIO DA CORREÇÃO ---
+              const saveButton = o.querySelector('.save-btn');
+              if (saveButton) saveButton.classList.add('is-loading');
+
+              try {
+                // 1. Esperamos o salvamento ser concluído
+                const updatedItem = await eventHandlers.onSave(o, a, boardContainer);
+
+                // 2. Redesenhamos o card no modo de visualização
+                boardContainer.classList.remove("is-editing-item"); // Opcional, mas bom para consistência
+                cardRenderer.renderCardViewMode(o, updatedItem);
+                
+                // 3. Limpamos o arquivo temporário
+                if (o._newImageFile) delete o._newImageFile;
+
+              } catch(error) {
+                console.error("Falha ao salvar o card no modo board:", error);
+              } finally {
+                // 4. Removemos o estado de loading
+                if (saveButton) saveButton.classList.remove('is-loading');
+              }
+              // --- FIM DA CORREÇÃO ---
+            } else if (t.classList.contains("cancel-btn")) {
+              boardContainer.classList.remove("is-editing-item");
+              cardRenderer.renderCardViewMode(o, a);
+              if (o._newImageFile) delete o._newImageFile;
+            }
+          }
         })
       : console.error("Board container not found!");
 }

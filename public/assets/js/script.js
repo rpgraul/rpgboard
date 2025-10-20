@@ -287,38 +287,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function handleSaveCard(cardElement, item) {
-        const saveButton = cardElement.querySelector('.save-btn');
-        saveButton.classList.add('is-loading');
-
+        // A manipulação do botão de loading será feita por quem chama a função.
         const updatedData = cardRenderer.getCardFormData(cardElement);
         const newImageFile = cardElement._newImageFile || null;
 
         try {
-            // Se houver uma nova imagem, obtém suas dimensões antes de salvar
             if (newImageFile) {
                 const dimensions = await cardRenderer.getImageDimensions(newImageFile);
                 updatedData.width = dimensions.width;
                 updatedData.height = dimensions.height;
             }
 
-            // Envia a atualização para o Firebase
+            // Esta chamada agora usa o firebaseService.js modificado para ImgBB
             await firebaseService.updateItem(item, updatedData, newImageFile);
 
-            // Limpa o arquivo de imagem temporário, se houver
             if (cardElement._newImageFile) {
                 delete cardElement._newImageFile;
             }
 
-            // Retorna o item atualizado para que o cardRenderer possa re-renderizar o card
-            // O listener do Firebase também atualizará o cache local, mas retornar o item aqui
-            // permite uma atualização visual imediata sem esperar o round-trip do listener.
+            // Retorna o item com os dados atualizados para que a UI possa ser redesenhada
             return { ...item, ...updatedData };
-
         } catch (error) {
             console.error("Falha ao salvar as alterações:", error);
             alert("Falha ao salvar as alterações.");
-            saveButton.classList.remove('is-loading');
-            // Rejeita a promessa para que o chamador (cardRenderer) saiba que algo deu errado
+            // Propaga o erro para que o chamador saiba que falhou.
             throw error;
         }
     }
