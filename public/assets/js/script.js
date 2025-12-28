@@ -6,7 +6,6 @@ import * as narrator from './modules/narrator.js';
 import * as bulkEdit from './modules/bulkEdit.js';
 import * as settings from './modules/settings.js';
 import * as grid from './modules/grid.js'; 
-import * as board from './modules/board.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as diceRoller from './modules/diceRoller.js';
@@ -120,13 +119,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 1. Obter referências aos elementos principais
-    const viewToggleButton = document.getElementById('fab-toggle-view');
     const addCardButton = document.getElementById('fab-add-card');
     const fabHelp = document.getElementById('fab-help');
     const fabBulkEdit = document.getElementById('fab-bulk-edit');
     const searchInput = document.getElementById('search-input');
     const activeFiltersContainer = document.getElementById('active-filters-container');
-    const boardSearchInput = document.getElementById('board-search-input');
     const clearFiltersBtn = document.getElementById('clear-filters-btn');
     const tagFiltersContainer = document.getElementById('tag-filters');
     const viewWrapper = document.getElementById('view-wrapper');
@@ -141,7 +138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cardFileInput = document.getElementById('card-arquivo');
     const cardTagsInput = document.getElementById('card-tags');
     const gridViewContainer = document.getElementById('grid-view-container');
-    const boardViewContainer = document.getElementById('board-view-container');
 
     // Elementos de login e dados
     const userLoginBtn = document.getElementById('user-login-btn');
@@ -215,7 +211,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         onView: showDetailModal,
         onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
         gridContainer: gridViewContainer,
-                boardContainer: boardViewContainer
     });
 
 
@@ -459,7 +454,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeModals();
     // Passa os handlers para ambos os módulos de visualização
     grid.initializeGrid(cardActionHandlers);
-    board.initializeBoard(cardActionHandlers);
 
     // --- Manipulador de Cliques Unificado e Inteligente ---
     // Um único listener no body para gerenciar todas as interações,
@@ -835,9 +829,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (viewWrapper.classList.contains('view-grid')) {
             grid.setItems(filteredItems, selectedTags);
         }
-        if (viewWrapper.classList.contains('view-board')) {
-            board.setItems(filteredItems, selectedTags);
-        }
     }
 
     /**
@@ -870,9 +861,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     searchInput.addEventListener('input', () => {
         applyFilters();
         updateClearButtonVisibility();
-    });
-    boardSearchInput.addEventListener('input', () => {
-        applyFilters();
     });
 
     tagFiltersContainer.addEventListener('change', (event) => {
@@ -1086,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Aguarda a renderização do DOM
                     setTimeout(() => {
                         grid.scrollToCard(newCardId);
-                        unsubscribe(); // Remove o listener depois de encontrar o card
+unsubscribe(); // Remove o listener depois de encontrar o card
                     }, 100);
                 }
             });
