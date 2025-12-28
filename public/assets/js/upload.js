@@ -20,7 +20,7 @@ async function processImageFromUrl(imageUrl) {
 
         const blob = await response.blob();
         if (!blob.type.startsWith('image/')) {
-            console.warn(`URL não aponta para uma imagem válida: ${imageUrl}`);
+            // URL não aponta para uma imagem válida
             return null;
         }
 

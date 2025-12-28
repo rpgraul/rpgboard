@@ -109,7 +109,7 @@ function initializeMuuri() {
         dragEnabled: !0,
         dragStartPredicate: function (e, t) {
           const n = e.getElement();
-          console.log(t);
+          
           const i = t.target;
           if (
             document.body.classList.contains("is-bulk-editing") ||
@@ -139,11 +139,11 @@ function initializeMuuri() {
       })),
       muuriGrid.on("dragEnd", () => {
         const e = muuriGrid.getItems();
-        console.log("dragEnd event triggered!");
+        
         const t = e.map((e) => e.getElement().dataset.id);
         eventHandlers.onReorder && eventHandlers.onReorder(t);
       }))
-    : console.error("O contêiner do grid não foi encontrado.");
+    : undefined;
 }
 export function refreshLayout() {
   muuriGrid?.layout(!0);

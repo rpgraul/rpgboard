@@ -128,7 +128,6 @@ function saveSideViewCard() {
   ) &&
     updateItem({ id: currentSideViewCardId }, i)
       .then(() => {
-        console.log(`Card da aba lateral '${i.titulo}' salvo.`);
         const e = allCards.find((e) => e.id === currentSideViewCardId);
         e && Object.assign(e, i);
       })
@@ -187,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
         t.isVisibleToPlayers !== (!1 !== e.isVisibleToPlayers))) &&
       updateItem({ id: S }, t)
         .then(() => {
-          console.log(`Card '${t.titulo}' salvo.`);
           const e = L.find((e) => e.id === S);
           e && Object.assign(e, t);
         })

@@ -60,8 +60,8 @@ export function initializeBoard(e) {
       : console.error("Board container not found!");
 }
 export function setItems(e) {
-  boardContainer.querySelectorAll(".card").forEach((e) => e.remove()),
-    console.log("SetItems Board", e);
+  boardContainer.querySelectorAll(".card").forEach((e) => e.remove());
+  // SetItems Board
   const n = document.getElementById("board-search-input");
   if (0 === e.length && n?.value) {
     const e = document.createElement("div");
@@ -108,14 +108,9 @@ export function setItems(e) {
               (document.body.style.userSelect = "");
             const n = t.offsetLeft,
               s = t.offsetTop;
-            eventHandlers.onPositionChange &&
-              (eventHandlers.onPositionChange(e.id, { x: n, y: s }),
-              console.log(
-                "onPositionChange called for item:",
-                e.id,
-                "position:",
-                { x: n, y: s }
-              ));
+            if (eventHandlers.onPositionChange) {
+              eventHandlers.onPositionChange(e.id, { x: n, y: s });
+            }
           }
         }),
         t

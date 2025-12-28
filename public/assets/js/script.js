@@ -186,10 +186,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     injectDragDropStyles();
 
     // Carrega e aplica as configurações do site
-    console.log('Iniciando carregamento das configurações do site...');
     try {
-        appSettings = await firebaseService.getSettings();
-        console.log('Configurações carregadas:', appSettings);
+    appSettings = await firebaseService.getSettings();
         if (topBarTitle) topBarTitle.textContent = appSettings.siteTitle;
         document.title = `${appSettings.siteTitle} - GameBoard`;
         cardRenderer.initializeCardRenderer(appSettings); // Inicializa o renderizador com as configurações
@@ -441,7 +439,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function handleReorder(orderedIds) {
         try {
             await firebaseService.updateItemsOrder(orderedIds);
-            console.log("Card order updated successfully.");
         } catch (error) {
             console.error("Failed to update card order:", error);
             alert("Failed to save the new card order.");
@@ -490,7 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (foundCard) {
                     showDetailModal(foundCard);
                 } else {
-                    console.warn(`Card com nome \"${cardNameToFind}\" não encontrado.`);
+                    // card not found
                 }
             }
             return;
@@ -1374,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyTransform();
     }
 
-    console.log('Verificando instâncias do Firebase:', window.firebaseInstances);
+    // Verificando instâncias do Firebase
     if (!window.firebaseInstances || !window.firebaseInstances.db || !window.firebaseInstances.storage) {
         console.error('As instâncias do Firebase não estão configuradas corretamente. Verifique a configuração do Firebase.');
     }

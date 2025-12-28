@@ -1,0 +1,332 @@
+[debug] [2025-07-07T14:24:44.354Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2025-07-07T14:25:07.585Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-07T14:25:07.586Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-07T14:25:07.586Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-07T14:25:07.588Z] Checked if tokens are valid: false, expires at: 1751646261893
+[debug] [2025-07-07T14:25:07.589Z] Checked if tokens are valid: false, expires at: 1751646261893
+[debug] [2025-07-07T14:25:07.589Z] > refreshing access token with scopes: []
+[debug] [2025-07-07T14:25:07.590Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-07T14:25:07.590Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-07T14:25:07.601Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[info] [Firebase Plugin] Starting Data Connect toolkit (version 2.8.0) on port 50001
+[info] i  dataconnect: downloading dataconnect-emulator-2.8.0.exe... {"metadata":{"emulator":{"name":"dataconnect"},"message":"downloading dataconnect-emulator-2.8.0.exe..."}}
+[debug] [2025-07-07T14:25:07.898Z] >>> [apiv2][query] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v2.8.0 
+[debug] [2025-07-07T14:25:08.109Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-07T14:25:08.110Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-07T14:25:08.260Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-07T14:25:08.261Z] Checked if tokens are valid: true, expires at: 1751901907110
+[debug] [2025-07-07T14:25:08.261Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-07T14:25:08.333Z] <<< [apiv2][status] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v2.8.0 200
+[debug] [2025-07-07T14:25:08.333Z] <<< [apiv2][body] GET https://storage.googleapis.com/firemat-preview-drop/emulator/dataconnect-emulator-windows-v2.8.0 [stream]
+[debug] [2025-07-07T14:25:09.014Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-07T14:25:09.014Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-07-07T14:25:18.599Z] 'fdc build' failed with error: Unable to build your Data Connect schema and connectors (exit code 1): E0707 11:25:17.971996   10336 cmd.go:43] Error loading data connect config: could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"'fdc build' failed with error: Unable to build your Data Connect schema and connectors (exit code 1): E0707 11:25:17.971996   10336 cmd.go:43] Error loading data connect config: could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:25:18.932Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-07-07T14:25:18.933Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-07-07T14:25:18.933Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\rpgra\\.cache\\firebase\\emulators\\dataconnect-emulator-2.8.0.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=e:\\siterpg\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\rpgra\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-2.8.0.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=e:\\\\siterpg\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-07-07T14:25:18.979Z] E0707 11:25:18.949614    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+E0707 11:25:18.956799    3724 watch.go:76] watchAllDir unable to walk dir `e:\siterpg\dataconnect`: on path "e:\\siterpg\\dataconnect" (DirEntry: <nil>): CreateFile e:\siterpg\dataconnect: The system cannot find the file specified.
+I0707 11:25:18.961463    3724 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:25:18.949614    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\nE0707 11:25:18.956799    3724 watch.go:76] watchAllDir unable to walk dir `e:\\siterpg\\dataconnect`: on path \"e:\\\\siterpg\\\\dataconnect\" (DirEntry: <nil>): CreateFile e:\\siterpg\\dataconnect: The system cannot find the file specified.\nI0707 11:25:18.961463    3724 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
+[error] [Firebase Plugin] error:  {}
+[debug] [2025-07-07T14:25:28.956Z] E0707 11:25:28.957163    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:25:28.957163    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:25:29.182Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2025-07-07T14:25:29.182Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-07T14:25:29.182Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-07T14:25:29.183Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-07T14:25:29.183Z] Checked if tokens are valid: true, expires at: 1751901907110
+[debug] [2025-07-07T14:25:29.183Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-07T14:25:29.183Z] Checked if tokens are valid: true, expires at: 1751901907110
+[debug] [2025-07-07T14:25:29.184Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-07T14:25:29.203Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2025-07-07T14:25:29.203Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-07T14:25:29.204Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-07T14:25:29.204Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-07T14:25:29.204Z] Checked if tokens are valid: true, expires at: 1751901907110
+[debug] [2025-07-07T14:25:29.204Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-07T14:25:29.205Z] Checked if tokens are valid: true, expires at: 1751901907110
+[debug] [2025-07-07T14:25:29.205Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-07T14:25:29.926Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-07T14:25:29.926Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-07-07T14:25:30.544Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-07T14:25:30.544Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-07-07T14:25:38.956Z] E0707 11:25:38.957124    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:25:38.957124    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:25:48.956Z] E0707 11:25:48.957314    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:25:48.957314    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:25:58.956Z] E0707 11:25:58.956998    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:25:58.956998    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:26:08.957Z] E0707 11:26:08.957218    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:26:08.957218    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:26:18.957Z] E0707 11:26:18.957224    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:26:18.957224    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:26:28.957Z] E0707 11:26:28.957301    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:26:28.957301    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:26:38.957Z] E0707 11:26:38.957364    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:26:38.957364    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:26:48.957Z] E0707 11:26:48.957307    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:26:48.957307    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:26:58.957Z] E0707 11:26:58.957232    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:26:58.957232    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:27:08.957Z] E0707 11:27:08.957168    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:27:08.957168    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:27:18.957Z] E0707 11:27:18.957353    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+E0707 11:27:18.957353    3724 watch.go:76] watchAllDir unable to walk dir `e:\siterpg\dataconnect`: on path "e:\\siterpg\\dataconnect" (DirEntry: <nil>): CreateFile e:\siterpg\dataconnect: The system cannot find the file specified.
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:27:18.957353    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\nE0707 11:27:18.957353    3724 watch.go:76] watchAllDir unable to walk dir `e:\\siterpg\\dataconnect`: on path \"e:\\\\siterpg\\\\dataconnect\" (DirEntry: <nil>): CreateFile e:\\siterpg\\dataconnect: The system cannot find the file specified.\n"}}
+[debug] [2025-07-07T14:27:28.957Z] E0707 11:27:28.957248    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:27:28.957248    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:27:38.957Z] E0707 11:27:38.956951    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:27:38.956951    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:27:48.957Z] E0707 11:27:48.956959    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:27:48.956959    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:27:58.957Z] E0707 11:27:58.957122    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:27:58.957122    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:28:08.957Z] E0707 11:28:08.957207    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:28:08.957207    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:28:18.956Z] E0707 11:28:18.956850    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:28:18.956850    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:28:28.957Z] E0707 11:28:28.957313    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:28:28.957313    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:28:38.956Z] E0707 11:28:38.956865    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:28:38.956865    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:28:48.957Z] E0707 11:28:48.957333    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:28:48.957333    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:28:58.957Z] E0707 11:28:58.956914    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:28:58.956914    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:29:08.957Z] E0707 11:29:08.957274    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:29:08.957274    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:29:18.957Z] E0707 11:29:18.956850    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+E0707 11:29:18.956850    3724 watch.go:76] watchAllDir unable to walk dir `e:\siterpg\dataconnect`: on path "e:\\siterpg\\dataconnect" (DirEntry: <nil>): CreateFile e:\siterpg\dataconnect: The system cannot find the file specified.
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:29:18.956850    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\nE0707 11:29:18.956850    3724 watch.go:76] watchAllDir unable to walk dir `e:\\siterpg\\dataconnect`: on path \"e:\\\\siterpg\\\\dataconnect\" (DirEntry: <nil>): CreateFile e:\\siterpg\\dataconnect: The system cannot find the file specified.\n"}}
+[debug] [2025-07-07T14:29:28.957Z] E0707 11:29:28.957066    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:29:28.957066    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:29:38.957Z] E0707 11:29:38.957763    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:29:38.957763    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:29:48.956Z] E0707 11:29:48.956865    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:29:48.956865    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:29:58.957Z] E0707 11:29:58.957361    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:29:58.957361    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:30:08.957Z] E0707 11:30:08.957346    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:30:08.957346    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:30:18.957Z] E0707 11:30:18.957372    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:30:18.957372    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:30:28.957Z] E0707 11:30:28.957017    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:30:28.957017    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:30:38.957Z] E0707 11:30:38.957266    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:30:38.957266    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:30:48.957Z] E0707 11:30:48.957700    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:30:48.957700    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:30:58.957Z] E0707 11:30:58.957416    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:30:58.957416    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:31:08.957Z] E0707 11:31:08.957081    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:31:08.957081    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:31:18.957Z] E0707 11:31:18.957394    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+E0707 11:31:18.957394    3724 watch.go:76] watchAllDir unable to walk dir `e:\siterpg\dataconnect`: on path "e:\\siterpg\\dataconnect" (DirEntry: <nil>): CreateFile e:\siterpg\dataconnect: The system cannot find the file specified.
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:31:18.957394    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\nE0707 11:31:18.957394    3724 watch.go:76] watchAllDir unable to walk dir `e:\\siterpg\\dataconnect`: on path \"e:\\\\siterpg\\\\dataconnect\" (DirEntry: <nil>): CreateFile e:\\siterpg\\dataconnect: The system cannot find the file specified.\n"}}
+[debug] [2025-07-07T14:31:28.957Z] E0707 11:31:28.957178    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:31:28.957178    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:31:38.957Z] E0707 11:31:38.957458    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:31:38.957458    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:31:48.957Z] E0707 11:31:48.957320    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:31:48.957320    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:31:58.956Z] E0707 11:31:58.956879    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:31:58.956879    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:32:08.956Z] E0707 11:32:08.957171    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:32:08.957171    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:32:18.956Z] E0707 11:32:18.957289    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:32:18.957289    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:32:28.956Z] E0707 11:32:28.957370    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:32:28.957370    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:32:38.956Z] E0707 11:32:38.956862    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:32:38.956862    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:32:48.956Z] E0707 11:32:48.956943    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:32:48.956943    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:32:58.956Z] E0707 11:32:58.957201    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:32:58.957201    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:33:08.956Z] E0707 11:33:08.956995    3724 load.go:23] Could not load config from "e:\\siterpg\\dataconnect": could not find dataconnect.yaml in `e:\siterpg\dataconnect`
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"E0707 11:33:08.956995    3724 load.go:23] Could not load config from \"e:\\\\siterpg\\\\dataconnect\": could not find dataconnect.yaml in `e:\\siterpg\\dataconnect`\n"}}
+[debug] [2025-07-07T14:33:18.958Z] I0707 11:33:18.957887    3724 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0707 11:33:18.957887    3724 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-07-07T14:33:18.972Z] I0707 11:33:18.972473    3724 control.go:84] [/emulator/siterpg c757] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\mutations.gql [1233B] connector\queries.gql [1802B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0707 11:33:18.972473    3724 control.go:84] [/emulator/siterpg c757] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\mutations.gql [1233B] connector\\queries.gql [1802B] \n"}}
+[debug] [2025-07-07T14:33:18.987Z] I0707 11:33:18.987358    3724 collector.go:107] schema extensions wrote into "e:\\siterpg\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [71203B] 
+I0707 11:33:18.987358    3724 load.go:115] Finished reloading
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0707 11:33:18.987358    3724 collector.go:107] schema extensions wrote into \"e:\\\\siterpg\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [71203B] \nI0707 11:33:18.987358    3724 load.go:115] Finished reloading\n"}}
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[warn] !  Data Connect Emulator has exited upon receiving signal: SIGKILL 
+[debug] [2025-07-08T13:03:33.491Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2025-07-08T13:04:30.417Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-08T13:04:30.418Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-08T13:04:30.418Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-08T13:04:30.421Z] Checked if tokens are valid: false, expires at: 1751920350293
+[debug] [2025-07-08T13:04:30.421Z] Checked if tokens are valid: false, expires at: 1751920350293
+[debug] [2025-07-08T13:04:30.422Z] > refreshing access token with scopes: []
+[debug] [2025-07-08T13:04:30.423Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-08T13:04:30.423Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T13:04:30.431Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[info] [Firebase Plugin] Starting Data Connect toolkit (version 2.8.0) on port 50001
+[debug] [2025-07-08T13:04:32.984Z] I0708 10:04:32.967015   27476 control.go:84] [/emulator/siterpg 57e1] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\mutations.gql [1233B] connector\queries.gql [1802B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:32.967015   27476 control.go:84] [/emulator/siterpg 57e1] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\mutations.gql [1233B] connector\\queries.gql [1802B] \n"}}
+[debug] [2025-07-08T13:04:32.985Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-07-08T13:04:32.985Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-07-08T13:04:32.985Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\rpgra\\.cache\\firebase\\emulators\\dataconnect-emulator-2.8.0.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=e:\\siterpg\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\rpgra\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-2.8.0.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=e:\\\\siterpg\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-07-08T13:04:33.018Z] I0708 10:04:33.002575   10296 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:33.002575   10296 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-07-08T13:04:33.025Z] I0708 10:04:33.024781   10296 control.go:84] [/emulator/siterpg 95f2] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\mutations.gql [1233B] connector\queries.gql [1802B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:33.024781   10296 control.go:84] [/emulator/siterpg 95f2] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\mutations.gql [1233B] connector\\queries.gql [1802B] \n"}}
+[debug] [2025-07-08T13:04:33.039Z] I0708 10:04:33.038384   10296 collector.go:107] schema extensions wrote into "e:\\siterpg\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [71203B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:33.038384   10296 collector.go:107] schema extensions wrote into \"e:\\\\siterpg\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [71203B] \n"}}
+[debug] [2025-07-08T13:04:33.039Z] I0708 10:04:33.039382   10296 load.go:115] Finished reloading
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:33.039382   10296 load.go:115] Finished reloading\n"}}
+[debug] [2025-07-08T13:04:33.045Z] I0708 10:04:33.044908   10296 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:33.044908   10296 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
+[debug] [2025-07-08T13:04:33.203Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-08T13:04:33.203Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T13:04:33.209Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-08T13:04:33.210Z] Checked if tokens are valid: true, expires at: 1751983472203
+[debug] [2025-07-08T13:04:33.210Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-08T13:04:33.214Z] I0708 10:04:33.208486   10296 engine.go:170] [/emulator/siterpg 95f2] ExecuteGraphqlRead IntrospectionQuery: succeeded. 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 10:04:33.208486   10296 engine.go:170] [/emulator/siterpg 95f2] ExecuteGraphqlRead IntrospectionQuery: succeeded. \n"}}
+[debug] [2025-07-08T13:04:33.946Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-08T13:04:33.946Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[warn] !  Data Connect Emulator has exited upon receiving signal: SIGKILL 
+[debug] [2025-07-08T14:28:45.578Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2025-07-08T14:29:16.945Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-08T14:29:16.946Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-08T14:29:16.946Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-08T14:29:16.949Z] Checked if tokens are valid: false, expires at: 1751983472203
+[debug] [2025-07-08T14:29:16.949Z] Checked if tokens are valid: false, expires at: 1751983472203
+[debug] [2025-07-08T14:29:16.949Z] > refreshing access token with scopes: []
+[debug] [2025-07-08T14:29:16.950Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-08T14:29:16.950Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T14:29:16.957Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[info] [Firebase Plugin] Starting Data Connect toolkit (version 2.8.0) on port 50001
+[debug] [2025-07-08T14:29:17.270Z] I0708 11:29:17.253078    5572 control.go:84] [/emulator/siterpg d158] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\mutations.gql [1233B] connector\queries.gql [1802B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 11:29:17.253078    5572 control.go:84] [/emulator/siterpg d158] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\mutations.gql [1233B] connector\\queries.gql [1802B] \n"}}
+[debug] [2025-07-08T14:29:17.271Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-07-08T14:29:17.271Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-07-08T14:29:17.271Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\rpgra\\.cache\\firebase\\emulators\\dataconnect-emulator-2.8.0.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=e:\\siterpg\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\rpgra\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-2.8.0.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=e:\\\\siterpg\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-07-08T14:29:17.305Z] I0708 11:29:17.288473   14464 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 11:29:17.288473   14464 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-07-08T14:29:17.314Z] I0708 11:29:17.311162   14464 control.go:84] [/emulator/siterpg d53a] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\queries.gql [1802B] connector\mutations.gql [1233B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 11:29:17.311162   14464 control.go:84] [/emulator/siterpg d53a] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\queries.gql [1802B] connector\\mutations.gql [1233B] \n"}}
+[debug] [2025-07-08T14:29:17.339Z] I0708 11:29:17.325351   14464 collector.go:107] schema extensions wrote into "e:\\siterpg\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [71203B] 
+I0708 11:29:17.325862   14464 load.go:115] Finished reloading
+I0708 11:29:17.330932   14464 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 11:29:17.325351   14464 collector.go:107] schema extensions wrote into \"e:\\\\siterpg\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [71203B] \nI0708 11:29:17.325862   14464 load.go:115] Finished reloading\nI0708 11:29:17.330932   14464 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
+[debug] [2025-07-08T14:29:17.495Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-08T14:29:17.495Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T14:29:17.500Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-08T14:29:17.501Z] Checked if tokens are valid: true, expires at: 1751988556495
+[debug] [2025-07-08T14:29:17.502Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-08T14:29:17.544Z] I0708 11:29:17.543452   14464 engine.go:170] [/emulator/siterpg d53a] ExecuteGraphqlRead IntrospectionQuery: succeeded. 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0708 11:29:17.543452   14464 engine.go:170] [/emulator/siterpg d53a] ExecuteGraphqlRead IntrospectionQuery: succeeded. \n"}}
+[debug] [2025-07-08T14:29:18.260Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-08T14:29:18.260Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-07-08T19:37:45.939Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2025-07-08T19:37:45.939Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-08T19:37:45.959Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-08T19:37:45.959Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-08T19:37:45.960Z] Checked if tokens are valid: false, expires at: 1751988556495
+[debug] [2025-07-08T19:37:45.960Z] Checked if tokens are valid: false, expires at: 1751988556495
+[debug] [2025-07-08T19:37:45.960Z] > refreshing access token with scopes: []
+[debug] [2025-07-08T19:37:45.961Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-08T19:37:45.961Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T19:37:45.981Z] [Firebase Plugin] Value of process.env.MONOSPACE_ENV: undefined
+[debug] [2025-07-08T19:37:45.981Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-08T19:37:45.981Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-08T19:37:45.982Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-08T19:37:45.982Z] Checked if tokens are valid: false, expires at: 1751988556495
+[debug] [2025-07-08T19:37:45.982Z] Checked if tokens are valid: false, expires at: 1751988556495
+[debug] [2025-07-08T19:37:45.982Z] > refreshing access token with scopes: []
+[debug] [2025-07-08T19:37:45.982Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-08T19:37:45.982Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T19:37:46.244Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-08T19:37:46.245Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T19:37:47.393Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-08T19:37:47.394Z] Checked if tokens are valid: true, expires at: 1752007065245
+[debug] [2025-07-08T19:37:47.394Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-08T19:37:47.414Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-08T19:37:47.415Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-08T19:37:48.509Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-08T19:37:48.510Z] Checked if tokens are valid: true, expires at: 1752007066415
+[debug] [2025-07-08T19:37:48.510Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-08T19:37:49.264Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-08T19:37:49.264Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[debug] [2025-07-08T19:37:49.809Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-08T19:37:49.809Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[warn] !  Data Connect Emulator has exited upon receiving signal: SIGKILL 
+[debug] [2025-07-09T13:22:43.510Z] [Firebase Plugin] Activating Firebase extension.
+[info] [Firebase Plugin] Checked firebase-tools, is up to date!
+[debug] [2025-07-09T13:23:17.343Z] [Firebase Plugin] requireAuthWrapper
+[debug] [2025-07-09T13:23:17.344Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-09T13:23:17.344Z] > authorizing via signed-in user (rpgraul@gmail.com)
+[debug] [2025-07-09T13:23:17.346Z] Checked if tokens are valid: false, expires at: 1752007066415
+[debug] [2025-07-09T13:23:17.347Z] Checked if tokens are valid: false, expires at: 1752007066415
+[debug] [2025-07-09T13:23:17.347Z] > refreshing access token with scopes: []
+[debug] [2025-07-09T13:23:17.348Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-07-09T13:23:17.348Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-09T13:23:17.355Z] [Firebase Plugin] VSCode notification server listening on port 40001
+[info] [Firebase Plugin] Starting Data Connect toolkit (version 2.8.0) on port 50001
+[debug] [2025-07-09T13:23:18.951Z] I0709 10:23:18.924221   26628 control.go:84] [/emulator/siterpg 8e41] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\mutations.gql [1233B] connector\queries.gql [1802B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0709 10:23:18.924221   26628 control.go:84] [/emulator/siterpg 8e41] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\mutations.gql [1233B] connector\\queries.gql [1802B] \n"}}
+[debug] [2025-07-09T13:23:18.958Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2025-07-09T13:23:18.958Z] Ignoring unsupported arg: port {"metadata":{"emulator":{"name":"dataconnect"},"message":"Ignoring unsupported arg: port"}}
+[debug] [2025-07-09T13:23:18.977Z] Starting Data Connect Emulator with command {"binary":"C:\\Users\\rpgra\\.cache\\firebase\\emulators\\dataconnect-emulator-2.8.0.exe","args":["--logtostderr","-v=2","dev","--listen=localhost:50001","--config_dir=e:\\siterpg\\dataconnect","--enable_output_schema_extensions=true","--enable_output_generated_sdk=true"],"optionalArgs":["listen","config_dir","enable_output_schema_extensions","enable_output_generated_sdk"],"joinArgs":true,"shell":false,"port":9399} {"metadata":{"emulator":{"name":"dataconnect"},"message":"Starting Data Connect Emulator with command {\"binary\":\"C:\\\\Users\\\\rpgra\\\\.cache\\\\firebase\\\\emulators\\\\dataconnect-emulator-2.8.0.exe\",\"args\":[\"--logtostderr\",\"-v=2\",\"dev\",\"--listen=localhost:50001\",\"--config_dir=e:\\\\siterpg\\\\dataconnect\",\"--enable_output_schema_extensions=true\",\"--enable_output_generated_sdk=true\"],\"optionalArgs\":[\"listen\",\"config_dir\",\"enable_output_schema_extensions\",\"enable_output_generated_sdk\"],\"joinArgs\":true,\"shell\":false,\"port\":9399}"}}
+[info] i  dataconnect: Data Connect Emulator logging to dataconnect-debug.log {"metadata":{"emulator":{"name":"dataconnect"},"message":"Data Connect Emulator logging to \u001b[1mdataconnect-debug.log\u001b[22m"}}
+[debug] [2025-07-09T13:23:19.094Z] I0709 10:23:19.075913    2144 load.go:37] Reloading schema and connectors...
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0709 10:23:19.075913    2144 load.go:37] Reloading schema and connectors...\n"}}
+[debug] [2025-07-09T13:23:19.103Z] I0709 10:23:19.103288    2144 control.go:84] [/emulator/siterpg 6432] UpdateResources(): done
+Schema: sources: schema\schema.gql [2088B] 
+Connector "default": sources: connector\mutations.gql [1233B] connector\queries.gql [1802B] 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0709 10:23:19.103288    2144 control.go:84] [/emulator/siterpg 6432] UpdateResources(): done\nSchema: sources: schema\\schema.gql [2088B] \nConnector \"default\": sources: connector\\mutations.gql [1233B] connector\\queries.gql [1802B] \n"}}
+[debug] [2025-07-09T13:23:19.122Z] I0709 10:23:19.121517    2144 collector.go:107] schema extensions wrote into "e:\\siterpg\\dataconnect\\.dataconnect\\schema"
+Generated sources: prelude.gql [71203B] 
+I0709 10:23:19.121517    2144 load.go:115] Finished reloading
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0709 10:23:19.121517    2144 collector.go:107] schema extensions wrote into \"e:\\\\siterpg\\\\dataconnect\\\\.dataconnect\\\\schema\"\nGenerated sources: prelude.gql [71203B] \nI0709 10:23:19.121517    2144 load.go:115] Finished reloading\n"}}
+[debug] [2025-07-09T13:23:19.130Z] I0709 10:23:19.130512    2144 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0709 10:23:19.130512    2144 dev.go:95] Listening on address (HTTP + gRPC): 127.0.0.1:50001\n"}}
+[debug] [2025-07-09T13:23:19.292Z] I0709 10:23:19.291995    2144 engine.go:170] [/emulator/siterpg 6432] ExecuteGraphqlRead IntrospectionQuery: succeeded. 
+ {"metadata":{"emulator":{"name":"dataconnect"},"message":"I0709 10:23:19.291995    2144 engine.go:170] [/emulator/siterpg 6432] ExecuteGraphqlRead IntrospectionQuery: succeeded. \n"}}
+[debug] [2025-07-09T13:23:19.451Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-07-09T13:23:19.451Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-07-09T13:23:19.652Z] [Firebase Plugin] User found:  rpgraul@gmail.com
+[info] [Firebase Plugin] (Core:Project) New user detected, fetching projects
+[debug] [2025-07-09T13:23:19.653Z] Checked if tokens are valid: true, expires at: 1752070998451
+[debug] [2025-07-09T13:23:19.653Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2025-07-09T13:23:20.388Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects 200
+[debug] [2025-07-09T13:23:20.388Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects [omitted]
+[info] [Firebase Plugin] Stopping Data Connect toolkit
+[warn] !  Data Connect Emulator has exited upon receiving signal: SIGKILL 

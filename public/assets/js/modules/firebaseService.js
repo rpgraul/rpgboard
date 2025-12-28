@@ -128,8 +128,6 @@ export async function deleteItems(itemIds) {
   
   // MODIFICADO: Lógica de deleção de imagens do Firebase Storage foi removida.
   await batch.commit();
-
-  console.log(`${itemIds.length} itens deletados com sucesso do Firestore.`);
 }
 
 /**
@@ -137,7 +135,7 @@ export async function deleteItems(itemIds) {
  * faz o upload para o ImgBB e substitui a URL antiga.
  */
 export async function updateItem(item, updatedData, newImageFile = null) {
-  console.log("updateItem (usando ImgBB) chamado com:", item, updatedData, newImageFile);
+  // updateItem called
   
   if (newImageFile) {
     try {
@@ -197,7 +195,7 @@ export async function getSettings() {
   if (docSnap.exists()) {
     return docSnap.data();
   } else {
-    console.warn("Documento de configurações 'mainSettings' não encontrado. Usando valores padrão.");
+  // Documento de configurações 'mainSettings' não encontrado. Usando valores padrão.
     return {
       siteTitle: "RPG Painel",
       recommendedTags: ["NPC", "Aliado"],
