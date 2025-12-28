@@ -1,8 +1,7 @@
 /* Chat sidebar and message styles */
 #app-wrapper {
     display: flex;
-    height: calc(100vh - 52px);
-    overflow: hidden;
+    flex-direction: column;
 }
 
 #main-content {
@@ -13,12 +12,16 @@
 }
 
 #chat-sidebar {
+    position: fixed;
+    right: 0;
+    top: 52px;
     width: 320px;
+    height: calc(100vh - 52px);
     background-color: #1a1a1a;
     border-left: 1px solid #333;
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease, opacity 0.3s ease;
+    transition: width 0.3s ease, opacity 0.3s ease, right 0.3s ease;
     z-index: 100;
 }
 
@@ -26,6 +29,7 @@
     width: 0;
     opacity: 0;
     overflow: hidden;
+    right: -320px;
 }
 
 .chat-header {
