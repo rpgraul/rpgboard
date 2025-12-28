@@ -43,13 +43,7 @@ export function filterItems(e) {
       })
     : items;
 }
-export async function updateItemPosition(e, i) {
-  items.find((i) => i.id === e) &&
-    window.firebaseService &&
-    window.firebaseService.updateItem &&
-    (await window.firebaseService.updateItem({ id: e }, { boardPosition: i }),
-    notifySubscribers());
-}
+
 export function subscribe(e) {
   subscribers.push(e);
 }

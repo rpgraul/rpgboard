@@ -18,4 +18,10 @@ export function showDiceResult(e, t) {
     setTimeout(() => {
       document.body.contains(o) && o.remove();
     }, 5e3);
+    // Tenta enviar uma mensagem de sistema para o chat (não bloqueante)
+    try {
+      import('./chat.js').then(mod => {
+        if (mod && mod.logSystemMessage) mod.logSystemMessage(`${t || 'Alguém'} rolou: ${e}`);
+      }).catch(() => {});
+    } catch (err) {}
 }

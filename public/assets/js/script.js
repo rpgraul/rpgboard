@@ -9,7 +9,23 @@ import * as grid from './modules/grid.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as diceRoller from './modules/diceRoller.js';
+import * as chat from './modules/chat.js';
 
+// Busca um nome aleatório de fantasia a partir de um Gist público (lista de monstros SRD 5e).
+async function fetchRandomFantasyName() {
+    try {
+        // Lista de Monstros D&D 5e (Gist público do GitHub)
+        const response = await fetch('https://gist.githubusercontent.com/tkfu/9819e4ac6d529e225e9fc58b358c3479/raw/srd_5e_monsters.json');
+        if (!response.ok) throw new Error('Falha ao buscar nomes');
+        const data = await response.json();
+        const randomMonster = data[Math.floor(Math.random() * data.length)];
+        return randomMonster.name; // Ex: "Aboleth", "Goblin", "Tarrasque"
+    } catch (error) {
+        console.warn('Usando nome de fallback:', error);
+        const fallbacks = ["Viajante Desconhecido", "Aventureiro Solitário", "Herói Esquecido", "Bardo Anônimo"];
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
+}
 
 let allItems = []; // Cache local de todos os itens para a busca
 let tagSuggestionsContainer = null; // Container único para as sugestões de tags
@@ -112,18 +128,22 @@ async function updateUserState(userName) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Verificar se já existe um usuário logado
-    const savedUserName = localStorage.getItem('rpgboard_user_name');
-    if (savedUserName) {
-        updateUserState(savedUserName);
+    // Verificar se já existe um usuário logado; se não, cria um nome aleatório
+    let savedUserName = localStorage.getItem('rpgboard_user_name');
+    if (!savedUserName) {
+        savedUserName = await fetchRandomFantasyName();
+        localStorage.setItem('rpgboard_user_name', savedUserName);
     }
+    updateUserState(savedUserName);
 
     // 1. Obter referências aos elementos principais
+    
     const addCardButton = document.getElementById('fab-add-card');
     const fabHelp = document.getElementById('fab-help');
     const fabBulkEdit = document.getElementById('fab-bulk-edit');
     const searchInput = document.getElementById('search-input');
     const activeFiltersContainer = document.getElementById('active-filters-container');
+    
     const clearFiltersBtn = document.getElementById('clear-filters-btn');
     const tagFiltersContainer = document.getElementById('tag-filters');
     const viewWrapper = document.getElementById('view-wrapper');
@@ -138,6 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cardFileInput = document.getElementById('card-arquivo');
     const cardTagsInput = document.getElementById('card-tags');
     const gridViewContainer = document.getElementById('grid-view-container');
+    
 
     // Elementos de login e dados
     const userLoginBtn = document.getElementById('user-login-btn');
@@ -204,14 +225,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     await auth.initializeAuth();
 
     // Inicializa o gerenciador de cards depois da autenticação
-    await cardManager.initialize({
+        await cardManager.initialize({
         onDelete: handleDeleteItem,
         onEdit: handleEditCard,
         onSave: handleSaveCard,
         onView: showDetailModal,
         onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
         gridContainer: gridViewContainer,
+    
     });
+    // Inicializa o chat (se presente)
+    try { chat.initializeChat(); } catch (e) { /* ignore if not available */ }
 
 
     
@@ -297,6 +321,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (cardElement._newImageFile) {
                 delete cardElement._newImageFile;
             }
+
+            // Log de sistema no chat
+            try {
+                const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+                chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
+            } catch (e) {}
 
             // Retorna o item com os dados atualizados para que a UI possa ser redesenhada
             return { ...item, ...updatedData };
@@ -454,6 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeModals();
     // Passa os handlers para ambos os módulos de visualização
     grid.initializeGrid(cardActionHandlers);
+    
 
     // --- Manipulador de Cliques Unificado e Inteligente ---
     // Um único listener no body para gerenciar todas as interações,
@@ -829,6 +860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (viewWrapper.classList.contains('view-grid')) {
             grid.setItems(filteredItems, selectedTags);
         }
+    
     }
 
     /**
@@ -862,6 +894,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilters();
         updateClearButtonVisibility();
     });
+    
 
     tagFiltersContainer.addEventListener('change', (event) => {
         // Garante que o evento veio de um checkbox
@@ -1068,13 +1101,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             grid.updateFileName(cardFileInput); // Reutiliza a função para resetar o label do arquivo
             closeModal(addCardModal);
 
+            // Log de sistema no chat sobre novo card
+            try {
+                const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+                chat.logSystemMessage(`${userName} criou o card "${itemData.titulo}"`);
+            } catch (e) {}
+
             // Aguarda o próximo ciclo do Firebase para garantir que o card foi renderizado
             const unsubscribe = firebaseService.listenToItems((snapshot) => {
                 if (snapshot.docs.find(doc => doc.id === newCardId)) {
                     // Aguarda a renderização do DOM
                     setTimeout(() => {
                         grid.scrollToCard(newCardId);
-unsubscribe(); // Remove o listener depois de encontrar o card
+                        unsubscribe(); // Remove o listener depois de encontrar o card
                     }, 100);
                 }
             });
@@ -1087,65 +1126,10 @@ unsubscribe(); // Remove o listener depois de encontrar o card
     });
     cardFileInput.addEventListener('change', () => grid.updateFileName(cardFileInput));
 
-    // Persistência do modo de visualização no localStorage
-    function setViewMode(mode) {
-        localStorage.setItem('rpgboard_view_mode', mode);
-    }
-    function getViewMode() {
-        return localStorage.getItem('rpgboard_view_mode') || 'grid';
-    }
-
-    // Troca de modo com persistência
-    viewToggleButton.addEventListener('click', () => {
-        const icon = viewToggleButton.querySelector('.icon i');
-        if (viewWrapper.classList.contains('view-board')) {
-            // Mudar para a visualização em Grade
-            document.body.classList.remove('body-view-board');
-            viewWrapper.classList.remove('view-board');
-            viewWrapper.classList.add('view-grid');
-            viewToggleButton.title = "Mudar para Visualização em Board";
-            icon.className = 'fas fa-project-diagram';
-            setViewMode('grid');
-            grid.show();
-        } else {
-            // Mudar para a visualização em Board
-            document.body.classList.add('body-view-board');
-            viewWrapper.classList.remove('view-grid');
-            viewWrapper.classList.add('view-board');
-            viewToggleButton.title = "Mudar para Visualização em Grade";
-            icon.className = 'fas fa-th';
-            setViewMode('board');
-            grid.destroy();
-            setupBoardZoomAndPan();
-        }
-    });
-
-    // Ao carregar, restaura o modo salvo
-    setTimeout(() => {
-        const mode = getViewMode();
-        if (mode === 'board') {
-            document.body.classList.add('body-view-board');
-            viewWrapper.classList.remove('view-grid');
-            viewWrapper.classList.add('view-board');
-            if (viewToggleButton) {
-                viewToggleButton.title = "Mudar para Visualização em Grade";
-                const icon = viewToggleButton.querySelector('.icon i');
-                if (icon) icon.className = 'fas fa-th';
-            }
-            grid.hide();
-            setupBoardZoomAndPan();
-        } else {
-            document.body.classList.remove('body-view-board');
-            viewWrapper.classList.remove('view-board');
-            viewWrapper.classList.add('view-grid');
-            if (viewToggleButton) {
-                viewToggleButton.title = "Mudar para Visualização em Board";
-                const icon = viewToggleButton.querySelector('.icon i');
-                if (icon) icon.className = 'fas fa-project-diagram';
-            }
-            grid.show();
-        }
-    }, 0);
+    // Mantém a visualização fixa em grade e mostra a grid
+    viewWrapper.classList.remove('view-board');
+    viewWrapper.classList.add('view-grid');
+    grid.show();
 
     // 5. Funções de callback para a UI
     function showDetailModal(item) {
@@ -1202,7 +1186,12 @@ unsubscribe(); // Remove o listener depois de encontrar o card
         // Abordagem Reativa: Apenas envia o comando de exclusão para o Firebase.
         // O listener 'listenToItems' detectará a mudança 'removed' e atualizará a UI
         // de forma consistente, garantindo que a UI sempre reflita o estado do banco de dados.
-        firebaseService.deleteItem(item).catch(err => {
+        firebaseService.deleteItem(item).then(() => {
+            try {
+                const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+                chat.logSystemMessage(`${userName} deletou o card "${item.titulo || item.id}"`);
+            } catch (e) {}
+        }).catch(err => {
             console.error("Falha ao deletar item no backend:", err);
             alert("Ocorreu um erro ao deletar o item.");
         });
@@ -1247,117 +1236,7 @@ unsubscribe(); // Remove o listener depois de encontrar o card
         }
     });
 
-    function setupBoardZoomAndPan() {
-        const boardContainer = document.getElementById('board-view-container');
-        if (!boardContainer) return;
-
-        // Avoid duplicate wrappers
-        if (boardContainer.querySelector('.board-zoom-wrapper')) return;
-
-        // Wrap all board content
-        const zoomWrapper = document.createElement('div');
-        zoomWrapper.className = 'board-zoom-wrapper';
-        const panWrapper = document.createElement('div');
-        panWrapper.className = 'board-pan-wrapper';
-
-        // Move all children into panWrapper
-        while (boardContainer.firstChild) {
-            panWrapper.appendChild(boardContainer.firstChild);
-        }
-        zoomWrapper.appendChild(panWrapper);
-        boardContainer.appendChild(zoomWrapper);
-
-        // State
-        let scale = 1;
-        let panX = 0;
-        let panY = 0;
-        let isPanning = false;
-        let startX, startY;
-
-        // Zoom controls
-        function applyTransform() {
-            zoomWrapper.style.transform = `scale(${scale}) translate(${panX/scale}px, ${panY/scale}px)`;
-        }
-        function zoomIn() {
-            scale = Math.min(scale + 0.1, 2);
-            applyTransform();
-        }
-        function zoomOut() {
-            scale = Math.max(scale - 0.1, 0.5);
-            applyTransform();
-        }
-        // Add zoom buttons if not present
-        if (!document.getElementById('board-zoom-in')) {
-            const zoomInBtn = document.createElement('button');
-            zoomInBtn.id = 'board-zoom-in';
-            zoomInBtn.textContent = '+';
-            zoomInBtn.style.position = 'absolute';
-            zoomInBtn.style.top = '10px';
-            zoomInBtn.style.right = '60px';
-            zoomInBtn.style.zIndex = '20';
-            zoomInBtn.className = 'button is-link';
-            zoomInBtn.onclick = zoomIn;
-            boardContainer.appendChild(zoomInBtn);
-        }
-        if (!document.getElementById('board-zoom-out')) {
-            const zoomOutBtn = document.createElement('button');
-            zoomOutBtn.id = 'board-zoom-out';
-            zoomOutBtn.textContent = '-';
-            zoomOutBtn.style.position = 'absolute';
-            zoomOutBtn.style.top = '10px';
-            zoomOutBtn.style.right = '10px';
-            zoomOutBtn.style.zIndex = '20';
-            zoomOutBtn.className = 'button is-link';
-            zoomOutBtn.onclick = zoomOut;
-            boardContainer.appendChild(zoomOutBtn);
-        }
-        // Mouse/touch drag
-        panWrapper.addEventListener('mousedown', (e) => {
-            isPanning = true;
-            startX = e.clientX - panX;
-            startY = e.clientY - panY;
-            panWrapper.style.cursor = 'grabbing';
-        });
-        document.addEventListener('mousemove', (e) => {
-            if (!isPanning) return;
-            panX = e.clientX - startX;
-            panY = e.clientY - startY;
-            applyTransform();
-        });
-        document.addEventListener('mouseup', () => {
-            isPanning = false;
-            panWrapper.style.cursor = 'grab';
-        });
-        // Touch drag
-        panWrapper.addEventListener('touchstart', (e) => {
-            if (e.touches.length !== 1) return;
-            isPanning = true;
-            startX = e.touches[0].clientX - panX;
-            startY = e.touches[0].clientY - panY;
-        });
-        document.addEventListener('touchmove', (e) => {
-            if (!isPanning || e.touches.length !== 1) return;
-            panX = e.touches[0].clientX - startX;
-            panY = e.touches[0].clientY - startY;
-            applyTransform();
-        });
-        document.addEventListener('touchend', () => {
-            isPanning = false;
-        });
-        // WASD keys
-        document.addEventListener('keydown', (e) => {
-            const step = 40;
-            if (document.body.classList.contains('body-view-board')) {
-                if (e.key === 'w') panY -= step;
-                if (e.key === 's') panY += step;
-                if (e.key === 'a') panX -= step;
-                if (e.key === 'd') panX += step;
-                applyTransform();
-            }
-        });
-        // Initial transform
-        applyTransform();
-    }
+    
 
     // Verificando instâncias do Firebase
     if (!window.firebaseInstances || !window.firebaseInstances.db || !window.firebaseInstances.storage) {

@@ -232,3 +232,24 @@ export async function addTagsToItems(itemIds, tagsToAdd) {
 
   return batch.commit();
 }
+
+// Chat: adiciona uma mensagem ao canal de chat 'rpg-chat'
+const chatCollectionRef = collection(db, "rpg-chat");
+
+export async function addChatMessage(text, type = 'user', senderName = 'Anônimo') {
+  if (!text) return null;
+  const newMsg = {
+    text,
+    type,
+    sender: senderName,
+    createdAt: serverTimestamp(),
+  };
+
+  const docRef = await addDoc(chatCollectionRef, newMsg);
+  return docRef.id;
+}
+
+export function listenToChat(callback) {
+  const q = query(chatCollectionRef, orderBy('createdAt', 'asc'));
+  return onSnapshot(q, callback);
+}

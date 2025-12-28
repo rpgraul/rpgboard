@@ -118,7 +118,6 @@ function initializeMuuri() {
             i.closest(".shortcode-hp") ||
             i.closest(".shortcode-count") ||
             i.closest(".shortcode-stat") ||
-            i.closest(".toggle-view-icon") ||
             i.closest(".card-actions-top") ||
             i.closest(".card-content .title") ||
             i.closest(".card-content .content")

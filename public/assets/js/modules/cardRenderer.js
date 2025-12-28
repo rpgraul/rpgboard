@@ -12,56 +12,38 @@ export function createCardElement(s) {
 }
 export function renderCardViewMode(s, t) {
   if (s.querySelector(".card-info-layer")) return void updateCardView(s, t);
-  s.classList.remove("editing"),
-    s.classList.remove("has-overlay-content"),
-    s.classList.remove("is-description-only"),
-    s.classList.remove("is-hidden-from-players"),
-    isNarrator() &&
-      !1 === t.isVisibleToPlayers &&
-      s.classList.add("is-hidden-from-players");
+  s.classList.remove("editing");
+  s.classList.remove("has-overlay-content");
+  s.classList.remove("is-description-only");
+  s.classList.remove("is-hidden-from-players");
+  if (isNarrator() && t && t.isVisibleToPlayers === false) s.classList.add("is-hidden-from-players");
+
   let e = "";
-  if (t.url) {
-    const i = `padding-bottom: ${
-        t.width && t.height ? (t.height / t.width) * 100 : 75
-      }%;`,
-      a = t.conteudo ? shortcodeParser.parseAllShortcodes(t, appSettings) : {},
-      n = t.descricao ? t.descricao.replace(/\n/g, "<br>") : "";
+  if (t && t.url) {
+    const i = `padding-bottom: ${t.width && t.height ? (t.height / t.width) * 100 : 75}%`; 
+    const a = t.conteudo ? shortcodeParser.parseAllShortcodes(t, appSettings) : {};
+    const n = t.descricao ? t.descricao.replace(/\n/g, "<br>") : "";
     let o = "";
-    const l = Object.values(a).some((s) => s);
-    (l || n) &&
-      (l && s.classList.add("has-overlay-content"),
-      n && !l && s.classList.add("is-description-only"),
-      (o = `\n                <div class="card-info-layer">\n                    <div class="info-content">\n                        <div class="info-group-left">${
-        a.left || ""
-      }</div>\n                        <div class="info-group-right">${
-        a.right || ""
-      }</div>\n                        <div class="info-group-bottom">${
-        a.bottom || ""
-      }</div>\n                        <div class="info-group-details">\n                            ${
-        a.details || ""
-      }\n                        </div>\n                        ${
-        l && n ? '<hr class="tooltip-divider">' : ""
-      }\n                        ${
-        n ? `<div class="tooltip-description">${n}</div>` : ""
-      }\n                    </div>\n                    <div class="info-toggles">\n                        <div class="overlay-item overlay-center toggle-view-icon"><i class="fas fa-info-circle"></i></div>\n                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>\n                    </div>\n                </div>`)),
-      (e += `\n            <div class="card-image">\n                <figure class="image" style="${i}">\n                    <img src="${t.url}" alt="${t.titulo}">\n                    ${o}\n                </figure>\n            </div>\n        `);
+    const hasShortcodes = Object.values(a).some((v) => v);
+    if (hasShortcodes || n) {
+      if (hasShortcodes) s.classList.add("has-overlay-content");
+      if (n && !hasShortcodes) s.classList.add("is-description-only");
+      o = `\n                <div class="card-info-layer">\n                    <div class="info-content">\n                        <div class="info-group-left">${a.left || ""}</div>\n                        <div class="info-group-right">${a.right || ""}</div>\n                        <div class="info-group-bottom">${a.bottom || ""}</div>\n                        <div class="info-group-details">${a.details || ""}</div>\n                        ${hasShortcodes && n ? '<hr class="tooltip-divider">' : ""}\n                        ${n ? `<div class="tooltip-description">${n}</div>` : ""}\n                    </div>\n                    <div class="info-toggles">\n                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>\n                    </div>\n                </div>`;
+    }
+    e += `\n            <div class="card-image">\n                <figure class="image" style="${i}">\n                    <img src="${t.url}" alt="${t.titulo}">\n                    ${o}\n                </figure>\n            </div>\n        `;
   }
-  if (
-    ((e += `<div class="card-content">\n        <p class="title is-4">${t.titulo}</p>`),
-    t.conteudo)
-  ) {
-    const s = shortcodeParser.parseMainContent(t.conteudo);
-    s && (e += `<div class="content">${s}</div>`);
+
+  e += `<div class="card-content">\n        <p class="title is-4">${t.titulo}</p>`;
+  if (t.conteudo) {
+    const main = shortcodeParser.parseMainContent(t.conteudo);
+    if (main) e += `<div class="content">${main}</div>`;
   }
   if (t.tags && t.tags.length > 0) {
-    e += `<div class="tags">${t.tags
-      .map((s) => `<span class="tag is-info">${s}</span>`)
-      .join(" ")}</div>`;
+    e += `<div class="tags">${t.tags.map((tag) => `<span class="tag is-info">${tag}</span>`).join(" ")}</div>`;
   }
-  (e += "</div>"),
-    (s.innerHTML =
-      '\n        <div class="card-actions-top">\n            <button class="action-icon view-btn"><i class="fas fa-eye"></i></button>\n            <button class="action-icon edit-btn"><i class="fas fa-pencil-alt"></i></button>\n            <button class="action-icon delete-btn"><i class="fas fa-trash-alt"></i></button>\n        </div>\n    ' +
-      e);
+
+  e += "</div>";
+  s.innerHTML = `\n        <div class="card-actions-top">\n            <button class="action-icon edit-btn"><i class="fas fa-pencil-alt"></i></button>\n            <button class="action-icon delete-btn"><i class="fas fa-trash-alt"></i></button>\n        </div>\n    ` + e;
 }
 function updateCardView(s, t) {
   s.classList.remove("editing"),

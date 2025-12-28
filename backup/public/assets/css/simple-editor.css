@@ -1,0 +1,38 @@
+#tiptap-container {
+border: 1px solid #4a4a4a;
+border-radius: 6px;
+margin-top: 1.5rem;
+}
+#toolbar {
+background-color: #272B30;
+padding: 0.5rem;
+border-bottom: 1px solid #4a4a4a;
+}
+#toolbar button {
+background: transparent;
+border: none;
+color: #dbdbdb;
+padding: 0.25rem 0.5rem;
+margin-right: 0.25rem;
+border-radius: 4px;
+cursor: pointer;
+}
+#toolbar button:hover {
+background-color: #363636;
+}
+#toolbar button.is-active {
+background-color: #3273e2;
+color: #fff;
+}
+#toolbar i { pointer-events: none; }
+.ProseMirror {
+min-height: 300px;
+padding: 1rem;
+outline: none;
+}
+.ProseMirror:focus { outline: none; }
+.ProseMirror > * + * { margin-top: 0.75em; }
+.ProseMirror h1, .ProseMirror h2 { font-weight: 600; color: #fff; }
+.ProseMirror h1 { font-size: 2rem; }
+.ProseMirror h2 { font-size: 1.75rem; }
+.ProseMirror a { color: #55b2de; }
