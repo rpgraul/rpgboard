@@ -24,6 +24,11 @@
 import { renderHeader } from "./components/header.js";
 import { renderOverlays } from "./components/commonHTML.js";
 import { renderFab } from "./components/fab.js";
+import { toggleChat } from './chat.js';
+import { processRoll } from './diceLogic.js';
+import { getCurrentUserName } from './auth.js';
+import { openModal } from './modal.js';
+import { addChatMessage } from './firebaseService.js';
 
 /**
  * Initializes the complete layout structure for a GameBoard page.
@@ -176,6 +181,35 @@ export async function initializeLayout(config = {}) {
     diceMainBtn: document.getElementById('dice-main-btn'),
     diceFabWrapper: document.getElementById('dice-fab-wrapper')
   };
+
+  // Step 5: Setup global event listeners
+  console.log('[Layout] Step 5: Setting up global event listeners...');
+
+  // Chat:
+  layoutReferences.toggleChatBtn?.addEventListener('click', toggleChat);
+
+  // Dice:
+  layoutReferences.diceMainBtn?.addEventListener('click', () => {
+    layoutReferences.diceFabWrapper?.classList.toggle('is-active');
+  });
+
+  // Help:
+  layoutReferences.fabHelp?.addEventListener('click', () => {
+    openModal(layoutReferences.helpModal);
+  });
+
+  // Settings & Bulk Edit (if buttons exist and modals are present in layoutReferences)
+  const fabSettingsBtn = document.getElementById('fab-settings-btn');
+  const settingsModal = document.getElementById('settings-modal'); // Assuming this ID
+  if (fabSettingsBtn && settingsModal) {
+    fabSettingsBtn.addEventListener('click', () => openModal(settingsModal));
+  }
+
+  const fabBulkEditBtn = document.getElementById('fab-bulk-edit-btn');
+  const bulkEditModal = document.getElementById('bulk-edit-modal'); // Assuming this ID
+  if (fabBulkEditBtn && bulkEditModal) {
+    fabBulkEditBtn.addEventListener('click', () => openModal(bulkEditModal));
+  }
 
   // Validate critical elements
   const criticalElements = [
