@@ -1,0 +1,41 @@
+/* Notification, toast and dice container styles moved to layout.css */
+
+/* Dice roll and label styles */
+
+
+/* Player Sheet Styles */
+#player-sheet-container.player-sheet {
+	position: fixed;
+	inset: 60px 20px 20px 20px;
+	background: #fff;
+	box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+	z-index: 9999;
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+}
+.player-sheet-header{
+	display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #eee;
+}
+.player-sheet-main{display:flex;flex:1;gap:12px;padding:12px;overflow:auto}
+.ps-col{background:transparent}
+.ps-col-1{width:220px;flex-shrink:0}
+.ps-col-2{width:260px;flex-shrink:0}
+.ps-col-3{flex:1;min-width:300px}
+.ps-avatar img{width:100%;height:auto;border-radius:6px;display:block}
+.vitality-wrap{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.economy-wrap{margin-bottom:10px}
+.stats-list .shortcode-stat{margin-bottom:6px}
+.editor-wrap{height:100%}
+.player-sheet-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #eee}
+.player-sheet-footer .dice-buttons{display:flex;gap:8px}
+.player-sheet-footer .quick-chat{display:flex;gap:8px;align-items:center}
+
+/* Selection modal tweaks */
+.player-select-modal .pj-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+
+@media (max-width: 900px){
+	#player-sheet-container.player-sheet{inset:50px 10px 10px 10px}
+	.ps-col-1,.ps-col-2{display:none}
+	.ps-col-3{min-width:0}
+}

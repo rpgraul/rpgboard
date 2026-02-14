@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MVP Whiteboard - Draw & Drop</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
+    <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
+    
+    <style>
+        body, html { height: 100%; overflow: hidden; background: #2c2f33; display: flex; flex-direction: column; }
+        .app-container { display: flex; flex: 1; height: 100%; overflow: hidden; }
+        
+        /* Sidebar Assets */
+        .assets-sidebar {
+            width: 120px; background: #23272a; border-right: 1px solid #444;
+            display: flex; flex-direction: column; padding: 10px; overflow-y: auto; z-index: 20;
+        }
+        .asset-item {
+            width: 100%; margin-bottom: 10px; cursor: grab;
+            border: 2px solid transparent; border-radius: 4px;
+            background: white; object-fit: contain; height: 80px;
+        }
+        .asset-item:hover { border-color: #3e8ed0; }
+        
+        /* Canvas Scroll */
+        .canvas-scroll-area {
+            flex: 1; overflow: auto; background: #4a4a4a;
+            position: relative; display: flex; justify-content: center; align-items: center;
+        }
+        .canvas-container { margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+
+        /* Toolbar */
+        .toolbar {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            background: #23272a; padding: 8px; border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 30; display: flex; gap: 8px; align-items: center;
+        }
+        
+        /* Board Manager */
+        .board-manager {
+            position: absolute; top: 10px; right: 20px;
+            background: #23272a; padding: 10px; border-radius: 8px; z-index: 30;
+            width: 200px;
+        }
+
+        .tool-btn.is-active { background-color: #3e8ed0; color: white; border-color: #3e8ed0; }
+        
+        /* Dropdown customizado para formas */
+        .shape-dropdown { position: relative; display: inline-block; }
+        .shape-dropdown-content {
+            display: none; position: absolute; top: 100%; left: 0;
+            background-color: #23272a; min-width: 120px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 40;
+            border-radius: 4px; padding: 5px; border: 1px solid #444;
+        }
+        .shape-dropdown:hover .shape-dropdown-content { display: block; }
+        .shape-option {
+            display: block; width: 100%; padding: 8px; text-align: left;
+            background: none; border: none; color: white; cursor: pointer;
+        }
+        .shape-option:hover { background-color: #3e8ed0; }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button class="button is-small tool-btn is-active" id="btn-select" title="Selecionar (V)">
+            <span class="icon"><i class="fas fa-mouse-pointer"></i></span>
+        </button>
+        
+        <button class="button is-small tool-btn" id="btn-draw" title="Pincel (P)">
+            <span class="icon"><i class="fas fa-pencil-alt"></i></span>
+        </button>
+
+        <button class="button is-small tool-btn" id="btn-text" title="Texto (T)">
+            <span class="icon"><i class="fas fa-font"></i></span>
+        </button>
+
+        <!-- Menu de Formas -->
+        <div class="shape-dropdown">
+            <button class="button is-small tool-btn" id="btn-shape-group" title="Formas">
+                <span class="icon"><i id="current-shape-icon" class="fas fa-shapes"></i></span>
+                <span class="icon is-small"><i class="fas fa-caret-down"></i></span>
+            </button>
+            <div class="shape-dropdown-content">
+                <button class="shape-option" onclick="setShapeType('rect')"><i class="fas fa-square"></i> Quadrado</button>
+                <button class="shape-option" onclick="setShapeType('circle')"><i class="fas fa-circle"></i> Círculo</button>
+                <button class="shape-option" onclick="setShapeType('triangle')"><i class="fas fa-play" style="transform: rotate(-90deg);"></i> Triângulo</button>
+                <button class="shape-option" onclick="setShapeType('arrow')"><i class="fas fa-long-arrow-alt-right"></i> Seta</button>
+            </div>
+        </div>
+
+        <div class="field mb-0" style="width: 50px;">
+            <input type="color" class="input is-small p-0" id="color-picker" value="#000000" style="height: 30px;">
+        </div>
+        <div class="field mb-0" style="width: 60px;">
+            <input type="number" class="input is-small" id="width-picker" value="3" min="1" max="50" title="Espessura">
+        </div>
+
+        <div style="width: 1px; height: 20px; background: #555; margin: 0 5px;"></div>
+
+        <button class="button is-small is-danger is-light" id="btn-clear" title="Limpar Tudo">
+            <span class="icon"><i class="fas fa-eraser"></i></span>
+        </button>
+        <button class="button is-small is-success" id="btn-export-jpg" title="Baixar JPG">
+            <span class="icon"><i class="fas fa-file-download"></i></span>
+        </button>
+    </div>
+
+    <!-- Board Manager -->
+    <div class="board-manager">
+        <div class="field has-addons">
+            <div class="control is-expanded">
+                <div class="select is-fullwidth is-small">
+                    <select id="board-select"></select>
+                </div>
+            </div>
+            <div class="control">
+                <button id="btn-add-board" class="button is-success is-small"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="control">
+                <button id="btn-del-board" class="button is-danger is-small"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Assets -->
+        <div class="assets-sidebar">
+            <h6 class="title is-6 has-text-white has-text-centered is-size-7 mb-2">Assets</h6>
+            <img src="img/asset1.jpg" class="asset-item" alt="Asset 1" draggable="true">
+            <img src="img/asset2.jpg" class="asset-item" alt="Asset 2" draggable="true">
+            <img src="https://via.placeholder.com/150/FF0000/FFFFFF?text=Asset+Teste" class="asset-item" alt="Online" draggable="true">
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-scroll-area" id="scroll-area">
+            <canvas id="c"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÕES
+        const BOARD_W = 3000;
+        const BOARD_H = 3000;
+
+        // ESTADO GLOBAL
+        let currentMode = 'select'; // select, draw, shape, text
+        let currentShape = 'rect'; // rect, circle, triangle, arrow
+        let isDrawingShape = false;
+        let shapeOrigX = 0;
+        let shapeOrigY = 0;
+        let activeShapeObject = null;
+
+        // INICIALIZAÇÃO FABRIC
+        const canvas = new fabric.Canvas('c', {
+            width: BOARD_W, height: BOARD_H, backgroundColor: '#ffffff', isDrawingMode: false
+        });
+
+        // Scroll Center
+        const scrollArea = document.getElementById('scroll-area');
+        scrollArea.scrollTop = (BOARD_H - scrollArea.clientHeight) / 2;
+        scrollArea.scrollLeft = (BOARD_W - scrollArea.clientWidth) / 2;
+
+        // --- SISTEMA DE FERRAMENTAS ---
+        const colorPicker = document.getElementById('color-picker');
+        const widthPicker = document.getElementById('width-picker');
+
+        function setMode(mode) {
+            currentMode = mode;
+            canvas.isDrawingMode = (mode === 'draw');
+            canvas.selection = (mode === 'select');
+            
+            // UI
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('is-active'));
+            if(mode === 'shape') document.getElementById('btn-shape-group').classList.add('is-active');
+            else {
+                const btn = document.getElementById(`btn-${mode}`);
+                if(btn) btn.classList.add('is-active');
+            }
+
+            // Config Pincel
+            if (mode === 'draw') {
+                canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+                canvas.freeDrawingBrush.color = colorPicker.value;
+                canvas.freeDrawingBrush.width = parseInt(widthPicker.value, 10);
+            }
+            
+            // Cursor
+            if (mode === 'text') canvas.defaultCursor = 'text';
+            else if (mode === 'shape') canvas.defaultCursor = 'crosshair';
+            else canvas.defaultCursor = 'default';
+
+            // Limpar seleção ao mudar ferramenta
+            canvas.discardActiveObject();
+            canvas.requestRenderAll();
+        }
+
+        window.setShapeType = function(type) {
+            currentShape = type;
+            // Atualizar ícone do botão
+            const iconMap = { 
+                'rect': 'fa-square', 
+                'circle': 'fa-circle', 
+                'triangle': 'fa-play',
+                'arrow': 'fa-long-arrow-alt-right'
+            };
+            document.getElementById('current-shape-icon').className = `fas ${iconMap[type]}`;
+            if (type === 'triangle') document.getElementById('current-shape-icon').style.transform = 'rotate(-90deg)';
+            else document.getElementById('current-shape-icon').style.transform = '';
+            
+            setMode('shape');
+        };
+
+        // --- EVENTOS DO MOUSE (Lógica Draw-to-Create) ---
+        canvas.on('mouse:down', (o) => {
+            const pointer = canvas.getPointer(o.e);
+            
+            // 1. MODO TEXTO (Clique para criar)
+            if (currentMode === 'text') {
+                const text = new fabric.IText('Texto', {
+                    left: pointer.x,
+                    top: pointer.y,
+                    fill: colorPicker.value,
+                    fontSize: 24,
+                    fontFamily: 'Arial'
+                });
+                canvas.add(text);
+                canvas.setActiveObject(text);
+                text.enterEditing();
+                text.selectAll();
+                setMode('select'); // Volta para select após criar
+                return;
+            }
+
+            // 2. MODO FORMA (Arrastar para criar)
+            if (currentMode === 'shape') {
+                isDrawingShape = true;
+                shapeOrigX = pointer.x;
+                shapeOrigY = pointer.y;
+                const color = colorPicker.value;
+                const width = parseInt(widthPicker.value, 10);
+
+                if (currentShape === 'rect') {
+                    activeShapeObject = new fabric.Rect({
+                        left: shapeOrigX, top: shapeOrigY, width: 0, height: 0,
+                        fill: 'transparent', stroke: color, strokeWidth: width
+                    });
+                } else if (currentShape === 'circle') {
+                    activeShapeObject = new fabric.Circle({
+                        left: shapeOrigX, top: shapeOrigY, radius: 0,
+                        fill: 'transparent', stroke: color, strokeWidth: width,
+                        originX: 'center', originY: 'center' // Cresce do centro
+                    });
+                } else if (currentShape === 'triangle') {
+                    activeShapeObject = new fabric.Triangle({
+                        left: shapeOrigX, top: shapeOrigY, width: 0, height: 0,
+                        fill: 'transparent', stroke: color, strokeWidth: width
+                    });
+                } else if (currentShape === 'arrow') {
+                    // Seta é complexa, usamos um Path inicial
+                    activeShapeObject = new fabric.Line([shapeOrigX, shapeOrigY, shapeOrigX, shapeOrigY], {
+                        stroke: color, strokeWidth: width, selectable: false, evented: false
+                    });
+                    // Adicionar uma cabeça de seta separada seria ideal, mas para MVP vamos usar um grupo depois
+                    // Para simplificar o MVP visual, desenhamos a linha primeiro
+                }
+
+                if(activeShapeObject) canvas.add(activeShapeObject);
+            }
+        });
+
+        canvas.on('mouse:move', (o) => {
+            if (!isDrawingShape || !activeShapeObject) return;
+            const pointer = canvas.getPointer(o.e);
+
+            if (currentShape === 'arrow') {
+                // Atualiza o ponto final da linha
+                activeShapeObject.set({ x2: pointer.x, y2: pointer.y });
+            } else if (currentShape === 'circle') {
+                // Raio baseado na distância
+                const dist = Math.sqrt(Math.pow(pointer.x - shapeOrigX, 2) + Math.pow(pointer.y - shapeOrigY, 2));
+                activeShapeObject.set({ radius: dist / 2 });
+            } else {
+                // Retangulo e Triangulo
+                if(shapeOrigX > pointer.x){
+                    activeShapeObject.set({ left: pointer.x });
+                }
+                if(shapeOrigY > pointer.y){
+                    activeShapeObject.set({ top: pointer.y });
+                }
+                activeShapeObject.set({
+                    width: Math.abs(shapeOrigX - pointer.x),
+                    height: Math.abs(shapeOrigY - pointer.y)
+                });
+            }
+            canvas.renderAll();
+        });
+
+        canvas.on('mouse:up', () => {
+            if (isDrawingShape) {
+                isDrawingShape = false;
+                
+                // Tratamento especial para Seta (adicionar cabeça)
+                if (currentShape === 'arrow' && activeShapeObject) {
+                    const line = activeShapeObject;
+                    canvas.remove(line);
+                    
+                    // Calcular angulo
+                    const dx = line.x2 - line.x1;
+                    const dy = line.y2 - line.y1;
+                    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    const headLen = 15 + parseInt(widthPicker.value);
+
+                    const arrowHead = new fabric.Triangle({
+                        left: line.x2, top: line.y2,
+                        originX: 'center', originY: 'center',
+                        angle: angle + 90, width: headLen, height: headLen,
+                        fill: colorPicker.value
+                    });
+
+                    const arrowLine = new fabric.Line([line.x1, line.y1, line.x2, line.y2], {
+                        stroke: colorPicker.value, strokeWidth: parseInt(widthPicker.value),
+                        originX: 'center', originY: 'center'
+                    });
+
+                    const group = new fabric.Group([arrowLine, arrowHead], {
+                        selectable: true
+                    });
+                    
+                    canvas.add(group);
+                    canvas.setActiveObject(group);
+                } else if (activeShapeObject) {
+                    // Selecionar o objeto criado
+                    activeShapeObject.setCoords();
+                    canvas.setActiveObject(activeShapeObject);
+                }
+                
+                activeShapeObject = null;
+                saveState(); // Auto save
+                // Opcional: Voltar para Select ou manter na forma? Manter na forma é bom para desenhar varios
+            }
+        });
+
+        // --- ASSETS DRAG & DROP ---
+        scrollArea.addEventListener('dragover', (e) => e.preventDefault());
+        document.querySelectorAll('.asset-item').forEach(img => {
+            img.addEventListener('dragstart', (e) => e.dataTransfer.setData('imgUrl', img.src));
+        });
+        scrollArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const imgUrl = e.dataTransfer.getData('imgUrl');
+            const rect = canvas.upperCanvasEl.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if(imgUrl) {
+                fabric.Image.fromURL(imgUrl, (img) => {
+                    img.set({ left: x, top: y, originX: 'center', originY: 'center' });
+                    if (img.width > 300) img.scaleToWidth(300);
+                    canvas.add(img);
+                    canvas.setActiveObject(img);
+                    setMode('select');
+                    saveState();
+                });
+            }
+        });
+
+        // --- SISTEMA DE BOARDS & SAVE ---
+        let boards = JSON.parse(localStorage.getItem('mvp_boards')) || { 'board-1': { name: 'Board Principal', json: null } };
+        let currentBoardId = localStorage.getItem('mvp_current_board') || 'board-1';
+        const boardSelect = document.getElementById('board-select');
+
+        function updateBoardSelect() {
+            boardSelect.innerHTML = '';
+            Object.keys(boards).forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = boards[id].name;
+                if (id === currentBoardId) option.selected = true;
+                boardSelect.appendChild(option);
+            });
+        }
+
+        function saveState() {
+            boards[currentBoardId].json = JSON.stringify(canvas.toJSON());
+            localStorage.setItem('mvp_boards', JSON.stringify(boards));
+        }
+
+        function loadBoard(id) {
+            saveState();
+            currentBoardId = id;
+            localStorage.setItem('mvp_current_board', id);
+            canvas.clear();
+            canvas.setBackgroundColor('#ffffff', () => canvas.renderAll());
+            if (boards[id].json) canvas.loadFromJSON(boards[id].json, () => canvas.renderAll());
+            updateBoardSelect();
+        }
+
+        document.getElementById('btn-add-board').onclick = () => {
+            const name = prompt("Nome:", "Novo Board");
+            if (name) {
+                const id = 'board-' + Date.now();
+                boards[id] = { name, json: null };
+                loadBoard(id);
+            }
+        };
+
+        document.getElementById('btn-del-board').onclick = () => {
+            if(Object.keys(boards).length <= 1) return alert("Mínimo de 1 board.");
+            if(confirm("Deletar?")) {
+                delete boards[currentBoardId];
+                loadBoard(Object.keys(boards)[0]);
+            }
+        };
+
+        boardSelect.onchange = (e) => loadBoard(e.target.value);
+        
+        // Export JPG
+        document.getElementById('btn-export-jpg').onclick = () => {
+            canvas.discardActiveObject(); canvas.renderAll();
+            const objs = canvas.getObjects();
+            if(!objs.length) return alert("Vazio");
+            
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            objs.forEach(o => {
+                const b = o.getBoundingRect();
+                if(b.left < minX) minX = b.left;
+                if(b.top < minY) minY = b.top;
+                if(b.left+b.width > maxX) maxX = b.left+b.width;
+                if(b.top+b.height > maxY) maxY = b.top+b.height;
+            });
+            
+            const pad = 50;
+            const link = document.createElement('a');
+            link.download = `board-${boards[currentBoardId].name}.jpg`;
+            link.href = canvas.toDataURL({
+                format: 'jpeg', quality: 0.9, left: Math.max(0, minX-pad), top: Math.max(0, minY-pad),
+                width: (maxX-minX)+(pad*2), height: (maxY-minY)+(pad*2)
+            });
+            link.click();
+        };
+
+        // Listeners UI
+        document.getElementById('btn-select').onclick = () => setMode('select');
+        document.getElementById('btn-draw').onclick = () => setMode('draw');
+        document.getElementById('btn-text').onclick = () => setMode('text');
+        document.getElementById('btn-clear').onclick = () => { if(confirm('Limpar?')) { canvas.clear(); canvas.setBackgroundColor('#ffffff'); saveState(); }};
+
+        // Eventos Globais
+        window.addEventListener('keydown', (e) => {
+            if((e.key === 'Delete' || e.key === 'Backspace') && canvas.getActiveObject() && !canvas.getActiveObject().isEditing) {
+                canvas.remove(...canvas.getActiveObjects());
+                canvas.discardActiveObject();
+                saveState();
+            }
+        });
+
+        // Property updates
+        colorPicker.oninput = () => {
+            const val = colorPicker.value;
+            canvas.freeDrawingBrush.color = val;
+            const active = canvas.getActiveObject();
+            if(active) {
+                if(active.type === 'i-text') active.set('fill', val);
+                else if(active.set) { 
+                    if(active.stroke) active.set('stroke', val); 
+                    if(active.fill && active.fill !== 'transparent') active.set('fill', val);
+                    // Arrow group handling
+                    if(active.type === 'group') {
+                        active.getObjects().forEach(o => {
+                            if(o.type === 'triangle') o.set('fill', val);
+                            else o.set('stroke', val);
+                        });
+                    }
+                }
+                canvas.requestRenderAll();
+                saveState();
+            }
+        };
+        
+        widthPicker.oninput = () => {
+            canvas.freeDrawingBrush.width = parseInt(widthPicker.value);
+            // Poderia atualizar strokeWidth de objetos ativos aqui se quisesse
+        };
+
+        // Start
+        if (boards['board-1'].json) loadBoard('board-1');
+        else updateBoardSelect();
+
+    </script>
+</body>
+</html>

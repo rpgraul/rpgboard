@@ -4,23 +4,35 @@ export default Node.create({
   group: "block",
   content: "block+",
   defining: !0,
-  addAttributes: () => ({ titulo: { default: "Nota" } }),
+  addAttributes: () => ({
+    titulo: { default: "Nota" },
+    isHidden: { default: !1 },
+  }),
   parseHTML: () => [
     {
       tag: 'div[data-node-type="notaShortcode"]',
-      getAttrs: (t) => ({ titulo: t.getAttribute("data-titulo") }),
+      getAttrs: (t) => ({
+        titulo: t.getAttribute("data-titulo"),
+        isHidden: "true" === t.getAttribute("data-is-hidden"),
+      }),
       contentElement: "div[data-content]",
     },
   ],
   renderHTML: ({ HTMLAttributes: t, node: e }) => [
     "div",
-    mergeAttributes(t, { "data-node-type": "notaShortcode" }),
-    ["div", { "data-titulo": t.titulo, "data-content": "" }, 0],
+    mergeAttributes(t, {
+      "data-node-type": "notaShortcode",
+      "data-titulo": e.attrs.titulo,
+      "data-is-hidden": e.attrs.isHidden,
+    }),
+    ["div", { "data-content": "" }, 0],
   ],
   addNodeView() {
     return ({ node: t, getPos: e, editor: a }) => {
       const n = document.createElement("div");
-      (n.className = "shortcode-nota"), (n.contentEditable = "false");
+      (n.className = "shortcode-nota"),
+        t.attrs.isHidden && n.classList.add("is-hidden-preview"),
+        (n.contentEditable = "false");
       const o = document.createElement("div");
       o.className = "nota-header";
       const d = document.createElement("strong");
@@ -44,6 +56,14 @@ export default Node.create({
           const t = n.classList.contains("is-active");
           (i.style.display = t ? "block" : "none"),
             (c.className = t ? "fas fa-minus" : "fas fa-plus");
+        }),
+        o.addEventListener("dblclick", (a) => {
+          a.stopPropagation(),
+            document.dispatchEvent(
+              new CustomEvent("edit-shortcode", {
+                detail: { type: this.name, attrs: t.attrs, pos: e() },
+              })
+            );
         }),
         {
           dom: n,

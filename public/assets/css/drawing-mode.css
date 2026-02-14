@@ -1,0 +1,167 @@
+html, body { 
+    height: 100%; 
+    overflow: hidden !important; /* Trava o scroll do navegador, deixa só o interno */
+}
+
+.whiteboard-layout { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100vh; 
+    padding-top: 50px; 
+    background: #2c2f33; 
+    position: relative; 
+}
+
+.wb-toolbar {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    background: #23272a; padding: 8px 12px; border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 30; display: flex; gap: 8px; align-items: center;
+}
+
+.wb-board-manager {
+    position: absolute; top: 60px; right: 20px;
+    background: #23272a; padding: 8px; border-radius: 8px; z-index: 30;
+    display: flex; gap: 5px;
+}
+
+.wb-container { 
+    display: flex; 
+    flex: 1; 
+    height: 100%; 
+    overflow: hidden; 
+    width: 100%; /* Garante largura total */
+}
+
+.wb-sidebar {
+    width: 140px; 
+    background: #23272a; 
+    border-right: 1px solid #444;
+    display: flex; 
+    flex-direction: column; 
+    padding: 10px; 
+    z-index: 20;
+    flex-shrink: 0; /* Impede que a sidebar encolha */
+}
+
+.assets-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.asset-item {
+    width: 100%; height: 80px; object-fit: contain; background: white;
+    border-radius: 4px; cursor: grab; border: 2px solid transparent;
+}
+.asset-item:hover { border-color: #3e8ed0; }
+
+.wb-scroll-area {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+    background: #4a4a4a;
+    display: block;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+canvas {
+    outline: none;
+}
+
+/*Cursor*/
+.cursor-grab { cursor: grab !important; }
+.cursor-grabbing { cursor: grabbing !important; }
+.cursor-text { cursor: text !important; }
+.cursor-crosshair { cursor: crosshair !important; }
+.canvas-container {
+    cursor: default;
+}
+
+/* Centraliza o board se a tela for MAIOR que 4000px (raro), 
+   mas permite scroll se for MENOR */
+.canvas-container { 
+    background-color: white; 
+    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+}
+
+.tool-btn.is-active { background-color: #3e8ed0; color: white; border-color: #3e8ed0; }
+.separator { width: 1px; height: 20px; background: #555; margin: 0 5px; }
+
+.color-picker { width: 30px; height: 30px; padding: 0; border: none; background: none; cursor: pointer; }
+.width-picker { width: 60px; }
+
+/* Dropdown */
+.shape-dropdown { position: relative; }
+.shape-dropdown-content {
+    display: none; position: absolute; top: 100%; left: 0;
+    background-color: #23272a; min-width: 140px; margin-top: 5px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.4); z-index: 40;
+    border-radius: 4px; border: 1px solid #444;
+}
+.shape-dropdown:hover .shape-dropdown-content { display: block; }
+.shape-option {
+    display: block; width: 100%; padding: 8px; text-align: left;
+    background: none; border: none; color: white; cursor: pointer;
+}
+.shape-option:hover { background-color: #3e8ed0; }
+
+/* Painel Inferior de Ações */
+.wb-actions-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: #23272a;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 100;
+}
+
+.wb-action-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.wb-action-btn {
+    background: transparent;
+    border: none;
+    color: #b9bbbe;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.wb-action-btn:hover:not(:disabled) {
+    background: #4f545c;
+    color: white;
+}
+
+.wb-action-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.wb-action-btn.zoom-display {
+    width: auto;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.wb-separator-vertical {
+    width: 1px;
+    height: 20px;
+    background: #444;
+}
+
+.canvas-container, canvas {
+    cursor: inherit !important;
+}

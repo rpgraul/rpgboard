@@ -1,0 +1,362 @@
+body, html {
+    height: 100%;
+    overflow: hidden;
+    background-color: #111;
+}
+
+#app-wrapper {
+    height: calc(100vh - 50px - 60px); /* Altura total - Header - Footer */
+    padding: 0 1rem;
+}
+
+.sheet-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    gap: 1rem;
+    height: 100%;
+}
+
+@media (max-width: 1024px) {
+    .sheet-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        overflow-y: auto;
+        padding-bottom: 70px;
+    }
+}
+
+/* Colunas e Containers */
+.sheet-column {
+    height: 100%;
+    overflow: hidden; /* Remove scroll da coluna, deixa pro box */
+    display: flex;
+    flex-direction: column;
+}
+
+.box.is-full-height {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    overflow-y: auto; /* Scroll apenas se necessário */
+    padding: 1.25rem;
+}
+
+/* Scrollbar estilizada */
+.box.is-full-height::-webkit-scrollbar {
+    width: 8px;
+}
+.box.is-full-height::-webkit-scrollbar-track {
+    background: #111;
+}
+.box.is-full-height::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+.box.is-full-height::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Coluna 1: Visual */
+.char-image-container {
+    width: 100%;
+    min-height: 250px;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.char-image-container img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* Botão para trocar imagem no canto superior direito */
+.char-image-container {
+    position: relative;
+}
+
+.image-change-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 1px solid #555;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 16px;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    z-index: 10;
+}
+
+.char-image-container:hover .image-change-btn {
+    opacity: 1;
+}
+
+.image-change-btn:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+#char-name {
+    text-align: left;
+    font-size: 22px;
+    margin-bottom: 1rem;
+    color: #fff;
+    font-weight: bold;
+}
+
+/* Estilo unificado para os Editores (Conteúdo, Descrição e Notas) */
+.raw-editor, .player-notes-area {
+    background-color: #262626;
+    color: #fff; /* Texto branco */
+    font-size: 16px; /* Tamanho legível */
+    font-family: 'Roboto', Helvetica, Arial, sans-serif; /* Fonte limpa */
+    border: 1px solid #444;
+    border-radius: 4px;
+    resize: none;
+    padding: 10px;
+    line-height: 1.5;
+    width: 100%;
+}
+
+.raw-editor:focus, .player-notes-area:focus {
+    border-color: #3273dc;
+    outline: none;
+}
+
+/* Coluna 2: Editores Raw */
+.column-raw-editor .field {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Ocupar espaço disponível */
+}
+
+.column-raw-editor .control {
+    height: 100%;
+}
+
+#raw-content-editor {
+    min-height: 300px;
+}
+
+/* Tiptap Editor para Descrição */
+#desc-tiptap-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0; /* Permitir que shrink funcione */
+}
+
+.tiptap-editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tiptap-toolbar {
+    flex-shrink: 0;
+}
+
+#desc-editor.tiptap-editor-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+#desc-editor.tiptap-editor-content .ProseMirror {
+    min-height: 100%;
+    padding: 1rem;
+}
+
+/* Coluna 3: Notas */
+.column-notes .field {
+    height: 100%;
+}
+
+.column-notes .control {
+    height: 100%;
+}
+
+#player-notes-editor {
+    height: 100%; /* Ocupa 100% da altura do container pai */
+    /* Removemos o estilo de "papel amarelo" antigo para padronizar */
+}
+
+/* Footer Fixo */
+.sheet-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: #0f0f0f;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    z-index: 20;
+    justify-content: space-between;
+}
+
+.dice-bar {
+    display: flex;
+    gap: 5px;
+}
+
+.macro-bar {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    max-width: 40%;
+    margin-right: 10px;
+}
+
+.macro-bar::-webkit-scrollbar {
+    height: 4px;
+}
+.macro-bar::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 2px;
+}
+
+.macro-btn {
+    white-space: nowrap;
+    background-color: #3e8ed0;
+    border: none;
+    color: white;
+}
+
+.chat-input-wrapper {
+    flex-grow: 1;
+    margin-left: 10px;
+    max-width: 400px;
+}
+
+/* Ajustes visuais dos Shortcodes na Coluna 1 */
+.shortcode-stat, .shortcode-money, .shortcode-count {
+    display: block;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #2c2c2c;
+    border-radius: 4px;
+    border-left: 3px solid #3e8ed0;
+}
+
+.fab-container {
+    bottom: 80px;
+}
+
+/* Titles */
+h3.title.is-6 {
+    margin-bottom: 0.5rem;
+    color: #aaa;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+/* Notificação Flutuante de Chat */
+
+/* Macro Bar no Footer */
+.macro-bar {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    max-width: 400px;
+    padding-right: 10px;
+    border-right: 1px solid #333;
+    margin-right: 10px;
+}
+
+#dice-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* Permite clicar através dele */
+    z-index: 9999; /* Garante que fique acima de TUDO (modais, chat, footer) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centraliza verticalmente */
+    align-items: center;     /* Centraliza horizontalmente */
+    overflow: hidden;
+}
+
+/* Garante que os dados individuais tenham espaço */
+.dice-roll-wrapper {
+    position: relative;
+    pointer-events: auto; /* Permite interagir com o dado se necessário */
+    margin: 10px;
+}
+
+.dice-label {
+    margin-top: 5px;
+    background: rgba(0,0,0,0.8);
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 80px;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dice-user-name {
+    color: #fff;
+    font-weight: bold;
+    font-size: 13px;
+    text-shadow: 0 1px 2px black;
+}
+
+.dice-info-text {
+    color: #ffd700;
+    font-size: 12px;
+    font-weight: normal;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    padding-top: 2px;
+}
+
+/* Modal de Edição de Conteúdo */
+#content-editor-modal .modal-card {
+    margin: auto;
+}
+
+#content-editor-modal .modal-card-body {
+    background-color: #1a1a1a;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#content-tiptap-wrapper {
+    display: flex;
+    flex-direction: column;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#content-editor.tiptap-editor-content .ProseMirror {
+    background-color: #262626;
+    color: #f2f2f2;
+}

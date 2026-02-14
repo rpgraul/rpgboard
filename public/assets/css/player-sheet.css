@@ -1,0 +1,155 @@
+/* ---------------------------------- */
+/* CHARACTER SHEET MODE               */
+/* ---------------------------------- */
+
+/* Overlay principal */
+.sheet-mode-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a; /* Fundo cinza profundo/preto */
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Esconde o modo ficha por padrão */
+.sheet-mode-overlay.is-hidden {
+    display: none;
+}
+
+/* Barra Superior Adaptada */
+.sheet-top-bar {
+    flex-shrink: 0;
+    background-color: #222;
+    border-bottom: 1px solid #444;
+}
+
+.sheet-top-bar .top-bar-center {
+    flex-grow: 1;
+    text-align: center;
+}
+
+#sheet-char-name {
+    color: #fff;
+    font-weight: bold;
+    font-family: 'Arial', sans-serif; /* Fonte mais elegante */
+}
+
+/* Container principal do conteúdo da ficha */
+.sheet-container {
+    width: 100%;
+    max-width: 800px; /* Limita a largura para melhor leitura */
+    margin: 0 auto; /* Centraliza o container */
+    height: 100%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    align-items: center; /* Centraliza o avatar e título */
+}
+
+.sheet-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    border: 4px solid #555;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+}
+
+#sheet-char-title {
+    margin-top: 15px;
+    margin-bottom: 25px;
+}
+
+#sheet-content-wrapper {
+    width: 100%;
+    background-color: #252525;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Garante que os shortcodes dentro do wrapper se comportem bem */
+#sheet-content-wrapper .shortcode-stat,
+#sheet-content-wrapper .shortcode-hp,
+#sheet-content-wrapper .shortcode-count,
+#sheet-content-wrapper .shortcode-money,
+#sheet-content-wrapper .shortcode-nota {
+    margin-bottom: 1rem;
+}
+
+.tiptap-editor-container {
+    width: 100%;
+    margin-top: 1rem;
+}
+
+#sheet-notes-editor {
+    background-color: #2c2c2c;
+    border-radius: 5px;
+    padding: 10px;
+    min-height: 200px;
+    border: 1px solid #444;
+}
+
+/* Rodapé Fixo */
+.sheet-footer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #222;
+    border-top: 1px solid #444;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1010; /* Acima do conteúdo */
+}
+
+.sheet-dice-controls .dice-button {
+    margin-right: 5px;
+}
+
+.sheet-chat-input-area {
+    flex-grow: 1;
+    margin-left: 20px;
+}
+
+/* Novo FAB no Modo Ficha */
+#sheet-fab-container {
+    position: fixed;
+    bottom: 80px; /* Acima da barra de rodapé */
+    right: 20px;
+    z-index: 1020; /* Acima de tudo */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#sheet-fab-container.is-hidden {
+    display: none;
+}
+
+/* Responsividade */
+@media screen and (max-width: 768px) {
+    .sheet-columns {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .sheet-col {
+        min-height: 200px; /* Altura mínima para colunas empilhadas */
+    }
+
+    #sheet-fab-container {
+        bottom: 100px; /* Ajuste para telas menores */
+    }
+}

@@ -1,230 +1,324 @@
-export function _parseArguments(t) {
-  const e = /"([^"]+)"|\S+/g,
-    n = [];
-  let s;
-  for (; null !== (s = e.exec(t)); ) n.push(s[1] || s[0]);
-  return n;
-}
-export function _parseKeyValueArgs(t) {
-  const e = {};
-  return (
-    t.forEach((t) => {
-      const n = t.split("=");
-      2 === n.length && (e[n[0].toLowerCase()] = n[1].replace(/^"|"$/g, ""));
-    }),
-    e
-  );
-}
-function formatNumber(t) {
-  return "number" != typeof t && "string" != typeof t
-    ? t
-    : t.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-function _parseStat(t) {
-  const e = ["left", "right", "bottom"],
-    n = t.filter((t) => !e.includes(t));
-  if (0 === n.length) return "";
-  const s = (t) => {
-    const e = t.match(/(.*?)\s*\((.*?)\)/);
-    if (e) {
-      const t = e[1].trim();
-      return `<span class="has-tooltip" data-tooltip="${e[2].trim()}">${t}</span>`;
+export function _parseArguments(str) {
+    const regex = /"([^"]+)"|\S+/g;
+    const args = [];
+    let match;
+    while ((match = regex.exec(str)) !== null) {
+        args.push(match[1] || match[0]);
     }
-    return t || "";
-  };
-  if (1 === n.length || "null" === n[0].toLowerCase()) {
-    return `<div class="shortcode-stat">${s(
-      1 === n.length ? n[0] : n.slice(1).join(" ")
-    )}</div>`;
-  }
-  const a = n[n.length - 1];
-  return `<div class="shortcode-stat"><strong>${n
-    .slice(0, -1)
-    .join(" ")}:</strong> ${s(a)}</div>`;
+    return args;
 }
-function _parseHp(t, e, n) {
-  const s = _parseKeyValueArgs(t),
-    a = parseInt(s.max, 10) || 100,
-    o = void 0 !== s.current ? parseInt(s.current, 10) : a,
-    r = Math.max(0, Math.min(o, a));
-  return `<div class="shortcode-hp" data-item-id="${e}" data-shortcode="${encodeURIComponent(
-    n
-  )}" data-max-hp="${a}"><strong class="hp-label">PV</strong><div class="hp-input-wrapper"><input type="number" class="hp-current-input" value="${r}" max="${a}" min="0"><span class="hp-max-value">/ ${a}</span></div></div>`;
-}
-export function parseHpShortcode(t) {
-  if (!t || !t.conteudo) return "";
-  const e = t.conteudo.match(/\b[hp]\s+(.*?)[\\]/);
-  if (e) {
-    return _parseHp(_parseArguments(e[1]), t.id, e[0]);
-  }
-  return "";
-}
-function _parseCount(t, e, n) {
-  const s = ["left", "right", "bottom"],
-    a = t.includes("checkbox"),
-    o = t.filter((t) => "checkbox" !== t && !s.includes(t)),
-    r = _parseKeyValueArgs(o.filter((t) => t.includes("=")));
-  let i = "number";
-  r.icon ? (i = "custom-icon") : r.theme ? (i = r.theme) : a && (i = "default");
-  const c = o.find((t) => !t.includes("=")) || "",
-    l = parseInt(r.max, 10) || 0;
-  let u = void 0 !== r.current ? parseInt(r.current, 10) : l;
-  if (((u = Math.max(0, Math.min(u, l))), !c && 0 === l)) return "";
-  const d = `data-item-id="${e}" data-shortcode="${encodeURIComponent(n)}"`;
-  let p = "";
-  if (["default", "arrow", "potion", "custom-icon"].includes(i) && l > 0) {
-    p = `<span class="count-checkboxes-interactive theme-${i}">`;
-    for (let t = 1; t <= l; t++) {
-      const e = t <= u;
-      let n = "";
-      if ("arrow" === i) n = '<i class="fas fa-arrow-up"></i>';
-      else if ("potion" === i) n = '<i class="fas fa-flask"></i>';
-      else if ("custom-icon" === i) {
-        n = `<i class="fas fa-${r.icon.replace(/["']/g, "")}"></i>`;
-      }
-      p += `<span class="count-checkbox ${
-        e ? "is-checked" : ""
-      }" data-value="${t}" role="button" tabindex="0">${n}</span>`;
-    }
-    p += "</span>";
-  } else
-    p =
-      `\n<span class="count-value-interactive">\n<button class="count-btn" data-action="decrement" aria-label="Diminuir">-</button>\n<span class="count-current-value">${u}</span>\n<span class="count-separator">/</span>\n<span class="count-max-value">${l}</span>\n<button class="count-btn" data-action="increment" aria-label="Aumentar">+</button>\n</span>\n`
-        .trim()
-        .replace(/\s+/g, " ");
-  return (
-    (p = `<div class="count-representation">${p}</div>`),
-    `<div class="shortcode-count is-interactive" ${d}>${
-      c ? `<strong class="count-name">${c}:</strong> ` : ""
-    }${p}</div>`
-  );
-}
-export function parseMainContent(t) {
-  if (!t) return "";
-  let e = t;
-  return (
-    (e = e.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, "$1")),
-    (e = e.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, "$1")),
-    (e = e.replace(
-      /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi,
-      (t, e, n, s) =>
-        `\n            <div class="shortcode-nota ${
-          n ? "is-hidden-from-players" : ""
-        }">\n                <div class="nota-header" role="button" tabindex="0">\n                    <span class="nota-title">${e}</span>\n                    <span class="nota-icon"><i class="fas fa-plus"></i></span>\n                </div>\n                <div class="nota-content">\n                    ${s.trim()}\n                </div>\n            </div>\n        `
-    )),
-    (e = e.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (t, e, n, s) =>
-      e.toLowerCase() !== s.toLowerCase()
-        ? t
-        : `<div class="is-hidden-from-players">${n}</div>`
-    )),
-    (e = e.replace(/\[(\*?)(stat|hp|count|money)\s.*?\]/gi, "")),
-    (e = e.replace(/<p>\s*<\/p>/gi, "")),
-    e.trim()
-  );
-}
-export function parseAllShortcodes(t, e = {}) {
-  if (!t || !t.conteudo)
-    return { left: "", right: "", bottom: "", details: "" };
-  const n = { left: [], right: [], bottom: [], details: [] },
-    s = { stat: 1, money: 2, hp: 3, count: 4, default: 99 },
-    a = t.conteudo,
-    o = /\[(.*?)\]/g;
-  let r;
-  const i = [];
-  for (; null !== (r = o.exec(a)); )
-    i.push({ full: r[0], inner: r[1], index: r.index });
-  const c = [],
-    l = /\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi;
-  let u;
-  for (; null !== (u = l.exec(a)); ) {
-    const [t, e, n, s] = u;
-    if (e.toLowerCase() === s.toLowerCase()) {
-      const e = u.index + t.indexOf(n);
-      c.push({ start: e, end: e + n.length });
-    }
-  }
-  const d = i
-    .map((t) => {
-      const e = _parseArguments(t.inner),
-        n = e[0] || "",
-        a = n.replace(/^[#*]+/, "").toLowerCase();
-      if (!["stat", "hp", "count", "money"].includes(a)) return null;
-      const o = n.startsWith("#"),
-        r = e.includes("#"),
-        i = ((l = t.index), c.some((t) => l >= t.start && l < t.end));
-      var l;
-      let u = e.slice(1);
-      return (
-        r && (u = u.filter((t) => "#" !== t)),
-        {
-          command: a,
-          args: u,
-          originalShortcode: t.full,
-          isHidden: o || r || i,
-          order: s[a] || s.default,
+
+export function _parseKeyValueArgs(args) {
+    const params = {};
+    if (!args) return params;
+    args.forEach(arg => {
+        const parts = arg.split('=');
+        if (parts.length === 2) {
+            params[parts[0].toLowerCase()] = parts[1].replace(/^['"]|['"]$/g, '');
         }
-      );
-    })
-    .filter(Boolean);
-  d.sort((t, e) => t.order - e.order);
-  const p = (t, e) =>
-    e ? `<div class="is-hidden-from-players">${t}</div>` : t;
-  return (
-    d.forEach((s) => {
-      let a = null;
-      s.args.includes("left")
-        ? (a = "left")
-        : s.args.includes("right")
-        ? (a = "right")
-        : s.args.includes("bottom") && (a = "bottom");
-      let o = "";
-      switch (s.command) {
-        case "stat":
-          (o = _parseStat(s.args)), n[a || "left"].push(p(o, s.isHidden));
-          break;
-        case "hp":
-          (o = _parseHp(s.args, t.id, s.originalShortcode)),
-            n[a || "bottom"].push(p(o, s.isHidden));
-          break;
-        case "money":
-          const r = _parseKeyValueArgs(s.args),
-            i = parseFloat(r.current) || 0;
-          let c = r.currency || "";
-          if (!c) {
-            const t = ["left", "right", "bottom"],
-              n = s.args.find((e) => !e.includes("=") && !t.includes(e));
-            n ? (c = n) : e.defaultCurrency && (c = e.defaultCurrency);
-          }
-          const l = formatNumber(i);
-          (o = `\n<div class="shortcode-money is-interactive" data-item-id="${
-            t.id
-          }" data-shortcode="${encodeURIComponent(
-            s.originalShortcode
-          )}">\n<i class="fas fa-coins"></i>\n<span class="money-value-display">${l}</span><input type="text" class="money-value-input is-hidden" value="${i}"><span class="money-currency">${c}</span>\n</div>\n`
-            .trim()
-            .replace(/\s+/g, " ")),
-            n[a || "left"].push(p(o, s.isHidden));
-          break;
-        case "count":
-          const u = s.originalShortcode.includes("[*count"),
-            d = _parseCount(s.args, t.id, s.originalShortcode),
-            h = p(d, s.isHidden);
-          u ? n[a || "right"].push(h) : a ? n[a].push(h) : n.details.push(h);
-      }
-    }),
-    {
-      left: n.left.join(""),
-      right: n.right.join(""),
-      bottom: n.bottom.join(""),
-      details: n.details.join(""),
+    });
+    return params;
+}
+
+function formatNumber(num) {
+    if (typeof num !== 'number' && typeof num !== 'string') return num;
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function _parseStat(args) {
+    const positionKeywords = ["left", "right", "bottom"];
+    const mainArgs = args.filter(arg => !positionKeywords.includes(arg) && arg !== 'isPlayerSheet');
+
+    if (mainArgs.length === 0) return "";
+
+    const addTooltip = (text) => {
+        if (!text) return "";
+        const match = text.match(/(.*?)\s*\((.*?)\)/);
+        if (match) {
+            const mainText = match[1].trim();
+            const tooltipText = match[2].trim();
+            return `<span class="has-tooltip" data-tooltip="${tooltipText}">${mainText}</span>`;
+        }
+        return text;
+    };
+    
+    if (mainArgs.length === 1 || mainArgs[0].toLowerCase() === 'null') {
+        const content = mainArgs.length === 1 ? mainArgs[0] : mainArgs.slice(1).join(' ');
+        return `<div class="shortcode-stat">${addTooltip(content)}</div>`;
     }
-  );
+
+    const value = mainArgs[mainArgs.length - 1];
+    const label = mainArgs.slice(0, -1).join(' ');
+    
+    return `<div class="shortcode-stat"><strong>${label}:</strong> ${addTooltip(value)}</div>`;
 }
-export function extractRawShortcodes(t) {
-  if (!t) return [];
-  const e = /\[(.*?)\]/g,
-    n = [];
-  let s;
-  for (; null !== (s = e.exec(t)); ) n.push(s[0]);
-  return n;
+
+
+function _parseHp(args, itemId, originalShortcode) {
+    const params = _parseKeyValueArgs(args);
+    const maxHp = parseInt(params.max, 10) || 100;
+    const currentHp = params.current !== undefined ? parseInt(params.current, 10) : maxHp;
+    const finalCurrentHp = Math.max(0, Math.min(currentHp, maxHp));
+
+    return `<div class="shortcode-hp" data-item-id="${itemId}" data-shortcode="${encodeURIComponent(originalShortcode)}" data-max-hp="${maxHp}">
+              <strong class="hp-label">PV</strong>
+              <div class="hp-input-wrapper">
+                  <input type="number" class="hp-current-input" value="${finalCurrentHp}" max="${maxHp}" min="0">
+                  <span class="hp-max-value">/ ${maxHp}</span>
+              </div>
+          </div>`;
 }
+
+export function parseHpShortcode(item) {
+    if (!item || !item.conteudo) return "";
+    const match = item.conteudo.match(/\[hp\s+(.*?)\]/i);
+    if (match) {
+        const args = _parseArguments(match[1]);
+        return _parseHp(args, item.id, match[0]);
+    }
+    return "";
+}
+
+function _parseCount(args, itemId, originalShortcode) {
+    const positionKeywords = ["left", "right", "bottom"];
+    const isCheckbox = args.includes("checkbox");
+    const mainArgs = args.filter(arg => arg !== "checkbox" && !positionKeywords.includes(arg));
+
+    const params = _parseKeyValueArgs(mainArgs.filter(arg => arg.includes('=')));
+    let theme = 'number';
+    if (params.icon) theme = 'custom-icon';
+    else if (params.theme) theme = params.theme;
+    else if (isCheckbox) theme = 'default';
+
+    const name = mainArgs.find(arg => !arg.includes('=')) || '';
+    const max = parseInt(params.max, 10) || 0;
+    let current = params.current !== undefined ? parseInt(params.current, 10) : max;
+    current = Math.max(0, Math.min(current, max));
+
+    if (!name && max === 0) return "";
+
+    const dataAttrs = `data-item-id="${itemId}" data-shortcode="${encodeURIComponent(originalShortcode)}"`;
+    let representation = '';
+
+    if (['default', 'arrow', 'potion', 'custom-icon'].includes(theme) && max > 0) {
+        representation = `<span class="count-checkboxes-interactive theme-${theme}">`;
+        for (let i = 1; i <= max; i++) {
+            const isChecked = i <= current;
+            let icon = '';
+            if (theme === 'arrow') icon = '<i class="fas fa-arrow-up"></i>';
+            else if (theme === 'potion') icon = '<i class="fas fa-flask"></i>';
+            else if (theme === 'custom-icon') icon = `<i class="fas fa-${params.icon.replace(/["']/g, '')}"></i>`;
+            representation += `<span class="count-checkbox ${isChecked ? 'is-checked' : ''}" data-value="${i}" role="button" tabindex="0">${icon}</span>`;
+        }
+        representation += `</span>`;
+    } else {
+        representation = `<span class="count-value-interactive">
+      <button class="count-btn" data-action="decrement" aria-label="Diminuir">-</button>
+      <span class="count-current-value">${current}</span>
+      <span class="count-separator">/</span>
+      <span class="count-max-value">${max}</span>
+      <button class="count-btn" data-action="increment" aria-label="Aumentar">+</button>
+      </span>`.replace(/\s+/g, ' ');
+    }
+    
+    representation = `<div class="count-representation">${representation}</div>`;
+
+    return `<div class="shortcode-count is-interactive" ${dataAttrs}>
+              ${name ? `<strong class="count-name">${name}:</strong> ` : ''}
+              ${representation}
+          </div>`;
+}
+
+
+export function parseMainContent(content) {
+    if (!content) return "";
+    let processedContent = content;
+    
+    processedContent = processedContent.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, '');
+    processedContent = processedContent.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, '');
+    
+    processedContent = processedContent.replace(/\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi, (match, title, isHidden, noteContent) => {
+        return `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
+          <div class="nota-header" role="button" tabindex="0">
+              <span class="nota-title">${title}</span>
+              <span class="nota-icon"><i class="fas fa-plus"></i></span>
+          </div>
+          <div class="nota-content">${noteContent.trim()}</div>
+      </div>`;
+    });
+
+    processedContent = processedContent.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (match, startTag, hiddenContent, endTag) => {
+        if (startTag.toLowerCase() !== endTag.toLowerCase()) return match;
+        return `<div class="is-hidden-from-players">${hiddenContent}</div>`;
+    });
+
+    processedContent = processedContent.replace(/\[(\*?)(stat|hp|count|money)\s.*?\]/gi, '');
+    processedContent = processedContent.replace(/<p>\s*<\/p>/gi, '');
+    
+    return processedContent.trim();
+}
+
+export function parseAllShortcodes(item, options = {}) {
+    if (!item || !item.conteudo) return { all: [], left: "", right: "", bottom: "", details: "" };
+
+    const result = { all: [], left: [], right: [], bottom: [], details: [] };
+    const commandOrder = { stat: 1, money: 2, hp: 3, count: 4, default: 99 };
+    const content = item.conteudo;
+    const shortcodeRegex = /\[(.*?)\]/g;
+    let match;
+
+    const foundShortcodes = [];
+    while ((match = shortcodeRegex.exec(content)) !== null) {
+        foundShortcodes.push({ full: match[0], inner: match[1], index: match.index });
+    }
+
+    const hiddenRanges = [];
+    const hideRegex = /\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi;
+    let hideMatch;
+    while ((hideMatch = hideRegex.exec(content)) !== null) {
+        const [full, startTag, innerContent, endTag] = hideMatch;
+        if (startTag.toLowerCase() === endTag.toLowerCase()) {
+            const startIndex = hideMatch.index + full.indexOf(innerContent);
+            hiddenRanges.push({ start: startIndex, end: startIndex + innerContent.length });
+        }
+    }
+
+    const parsedShortcodes = foundShortcodes.map(sc => {
+        const args = _parseArguments(sc.inner);
+        const commandRaw = args[0] || '';
+        const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
+
+        if (!['stat', 'hp', 'count', 'money'].includes(command)) return null;
+
+        const isHashHidden = commandRaw.startsWith('#');
+        const isArgHidden = args.includes('#');
+        const isInsideHideBlock = hiddenRanges.some(range => sc.index >= range.start && sc.index < range.end);
+        
+        let finalArgs = args.slice(1);
+        if (isArgHidden) {
+            finalArgs = finalArgs.filter(arg => arg !== '#');
+        }
+
+        return {
+            command: command,
+            args: finalArgs,
+            originalShortcode: sc.full,
+            isHidden: isHashHidden || isArgHidden || isInsideHideBlock,
+            order: commandOrder[command] || commandOrder.default
+        };
+    }).filter(Boolean);
+
+    parsedShortcodes.sort((a, b) => a.order - b.order);
+
+    const wrapIfHidden = (html, isHidden) => isHidden ? `<div class="is-hidden-from-players">${html}</div>` : html;
+
+    parsedShortcodes.forEach(sc => {
+        let position = null;
+        if (sc.args.includes("left")) position = "left";
+        else if (sc.args.includes("right")) position = "right";
+        else if (sc.args.includes("bottom")) position = "bottom";
+        
+        let html = '';
+        let shortcodeData = {
+            type: sc.command,
+            isResource: false,
+            html: ''
+        };
+
+        const finalArgs = options.isPlayerSheet ? [...sc.args, 'isPlayerSheet'] : sc.args;
+
+        switch (sc.command) {
+            case "stat":
+                html = _parseStat(finalArgs);
+                result[position || 'left'].push(wrapIfHidden(html, sc.isHidden));
+                break;
+            case "hp":
+                html = _parseHp(finalArgs, item.id, sc.originalShortcode);
+                result[position || 'bottom'].push(wrapIfHidden(html, sc.isHidden));
+                break;
+            case "money":
+                const params = _parseKeyValueArgs(finalArgs);
+                const currentRaw = (params.current || "").replace(/[^\d.\-]/g, '');
+                const currentValue = parseFloat(currentRaw) || 0;
+                let currency = params.currency || '';
+                if (!currency) {
+                    const positionKeywords = ['left', 'right', 'bottom'];
+                    const currencyArg = finalArgs.find(arg => !arg.includes('=') && !positionKeywords.includes(arg));
+                    if (currencyArg) currency = currencyArg;
+                    else if (options.defaultCurrency) currency = options.defaultCurrency;
+                }
+                const formattedValue = formatNumber(currentValue);
+
+                html = `<div class="shortcode-money is-interactive" data-item-id="${item.id}" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
+                          <i class="fas fa-coins"></i>
+                          <span class="money-value-display">${formattedValue}</span>
+                          <input type="text" class="money-value-input is-hidden" value="${currentValue}">
+                          <span class="money-currency">${currency}</span>
+                        </div>`.replace(/\s+/g, ' ');
+                result[position || 'left'].push(wrapIfHidden(html, sc.isHidden));
+                break;
+            case "count":
+                const isResource = sc.originalShortcode.includes("[*count");
+                shortcodeData.isResource = isResource;
+                html = _parseCount(finalArgs, item.id, sc.originalShortcode);
+                const wrappedHtml = wrapIfHidden(html, sc.isHidden);
+
+                if (isResource) {
+                    result[position || 'right'].push(wrappedHtml);
+                } else if (position) {
+                    result[position].push(wrappedHtml);
+                } else {
+                    result.details.push(wrappedHtml);
+                }
+                break;
+        }
+
+        if (html) {
+            shortcodeData.html = html; // Store the unwrapped HTML
+            result.all.push(shortcodeData);
+        }
+    });
+    
+    return {
+        all: result.all,
+        left: result.left.join(''),
+        right: result.right.join(''),
+        bottom: result.bottom.join(''),
+        details: result.details.join('')
+    };
+}
+
+
+export function extractRawShortcodes(content) {
+    if (!content) return [];
+    const regex = /\[(.*?)\]/g;
+    const shortcodes = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        shortcodes.push(match[0]);
+    }
+        return shortcodes;
+    }
+    
+    export function parseNotas(content) {
+        if (!content) return "";
+        let result = '';
+        
+        // This regex finds all [nota] blocks and extracts their parts.
+        const notaRegex = /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi;
+        
+        // Use replace to iterate over all matches, but build the result separately.
+        content.replace(notaRegex, (match, title, isHidden, noteContent) => {
+            result += `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
+              <div class="nota-header" role="button" tabindex="0">
+                  <span class="nota-title">${title}</span>
+                  <span class="nota-icon"><i class="fas fa-plus"></i></span>
+              </div>
+              <div class="nota-content">${noteContent.trim()}</div>
+          </div>`;
+          return ''; // Return empty string as we are not modifying the original content string here.
+        });
+    
+        return result;
+    }
+    

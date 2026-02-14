@@ -1,103 +1,138 @@
-import * as firebaseService from './firebaseService.js';
+import { addChatMessage, listenToChat } from './firebaseService.js';
+import { processRoll } from './diceLogic.js';
 
 const messagesContainer = () => document.getElementById('chat-messages');
-const inputForm = () => document.getElementById('chat-input-area');
-const inputField = () => document.getElementById('chat-input');
-const toggleBtn = () => document.getElementById('toggle-chat-btn');
-const closeBtn = () => document.getElementById('close-chat-btn');
 const sidebar = () => document.getElementById('chat-sidebar');
-
-let unsubscribeChat = null;
+const inputField = () => document.getElementById('chat-input');
+const inputForm = () => document.getElementById('chat-input-area');
+const closeBtn = () => document.getElementById('close-chat-btn');
 
 function renderMessage(doc) {
-  const data = doc.data ? doc.data() : doc;
-  const id = doc.id || (data && data.id) || null;
-  const el = document.createElement('div');
-  el.className = 'chat-message';
-  
-  // Determina a classe com base no tipo
-  const messageType = data.type === 'system' ? 'is-system' : 'is-user';
-  el.classList.add(messageType);
-  
-  // Formata a hora (se disponível)
-  let timeStr = '';
-  if (data.createdAt) {
-    try {
-      const date = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      timeStr = ` ${hours}:${minutes}`;
-    } catch (e) {
-      // fallback se não conseguir formatar
+    const data = doc.data ? doc.data() : doc;
+    const el = document.createElement('div');
+    el.className = `chat-message ${data.type === 'system' ? 'is-system' : 'is-user'}`;
+    
+    let timeStr = '';
+    if (data.createdAt && data.createdAt.toDate) {
+        const date = data.createdAt.toDate();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        timeStr = ` ${hours}:${minutes}`;
     }
-  }
-  
-  // Cria a estrutura: message-sender com nome e hora, depois o texto
-  el.innerHTML = `
-    <span class="message-sender">${data.sender || 'Anônimo'}${timeStr}</span>
-    <span class="message-text">${data.text}</span>
-  `;
-  el.dataset.id = id;
-  return el;
+
+    el.innerHTML = `
+        <span class="message-sender">${data.sender || 'Anônimo'}${timeStr}</span>
+        <span class="message-text">${data.text}</span>
+    `;
+    return el;
 }
 
-export function logSystemMessage(text) {
-  try {
-    return firebaseService.addChatMessage(text, 'system', 'Sistema');
-  } catch (e) {
-    console.error('Falha ao enviar mensagem do sistema:', e);
-  }
+function scrollToBottom() {
+    const el = messagesContainer();
+    if (el) {
+        setTimeout(() => { el.scrollTop = el.scrollHeight; }, 100);
+    }
 }
 
-export function initializeChat() {
-  if (!toggleBtn()) return;
-
-  toggleBtn().addEventListener('click', () => {
+export function toggleChat() {
     const s = sidebar();
-    if (!s) return;
-    s.classList.toggle('is-hidden');
-  });
+    if (s) {
+        const isHidden = s.classList.contains('is-hidden');
+        s.classList.toggle('is-hidden');
+        if (isHidden) {
+            const input = inputField();
+            if (input) setTimeout(() => input.focus(), 100);
+            scrollToBottom();
+            removeChatNotification();
+        }
+    }
+}
 
-  if (closeBtn()) {
-    closeBtn().addEventListener('click', () => {
-      const s = sidebar();
-      if (!s) return;
-      s.classList.add('is-hidden');
-    });
-  }
+/**
+ * Função ÚNICA para enviar mensagens.
+ * Centraliza a lógica de criar a mensagem do usuário e processar comandos.
+ */
+export async function sendMessage(text, user, characterContext = null, macroName = null) {
+    if (!text || !user) return;
 
-  // Submit handler
-  if (inputForm()) {
-    inputForm().addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const text = (inputField() && inputField().value || '').trim();
-      if (!text) return;
-      const sender = localStorage.getItem('rpgboard_user_name') || 'Anônimo';
-      inputField().value = '';
-      try {
-        await firebaseService.addChatMessage(text, 'user', sender);
-      } catch (err) {
-        console.error('Erro ao enviar mensagem de chat:', err);
-      }
-    });
-  }
+    // 1. Grava a mensagem do usuário no banco (O "Eco" visual: "Usuario: /r 1d20")
+    try {
+        await addChatMessage(text, 'user', user);
+        scrollToBottom();
+    } catch (err) {
+        console.error("Erro ao enviar mensagem:", err);
+        return;
+    }
 
-  // Real-time listener
-  if (unsubscribeChat) unsubscribeChat();
-  unsubscribeChat = firebaseService.listenToChat((snapshot) => {
+    // 2. Verifica se é comando e processa a resposta do Sistema
+    const cleanText = text.trim();
+    if (cleanText.startsWith('/r ') || cleanText.startsWith('/roll ')) {
+        // A diceLogic vai gerar a mensagem do sistema e o dado 3D
+        processRoll(cleanText, characterContext, user, macroName);
+    }
+}
+
+// --- Notificações ---
+function showChatNotification() {
+}
+
+function removeChatNotification() {
+}
+
+function initNotifications() {
     const container = messagesContainer();
     if (!container) return;
-    container.innerHTML = '';
-    snapshot.docs.forEach(doc => {
-      const el = renderMessage(doc);
-      container.appendChild(el);
+
+    const observer = new MutationObserver((mutations) => {
+        const s = sidebar();
+        if (s && s.classList.contains('is-hidden')) {
+            if (mutations.some(m => m.addedNodes.length > 0)) {
+                showChatNotification();
+            }
+        }
     });
-    // Auto-scroll to bottom
-    container.scrollTop = container.scrollHeight;
-  });
+    observer.observe(container, { childList: true });
 }
 
-export default {
-  initializeChat,
-  logSystemMessage,
-};
+// --- Inicialização ---
+export function initializeChat() {
+    const btnClose = closeBtn();
+    if (btnClose) btnClose.onclick = () => sidebar()?.classList.add('is-hidden');
+    
+    const defaultToggleBtn = document.getElementById('toggle-chat-btn');
+    if (defaultToggleBtn) defaultToggleBtn.onclick = toggleChat;
+    
+    const form = inputForm();
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const input = inputField();
+            if (!input) return;
+            
+            const text = input.value.trim();
+            if (!text) return;
+            
+            const user = localStorage.getItem('rpgboard_user_name') || 'Anônimo';
+            input.value = '';
+            
+            // CHAMA A FUNÇÃO CENTRALIZADA
+            // Contexto é null pois o chat geral não sabe qual ficha está aberta
+            await sendMessage(text, user, null); 
+        };
+    }
+
+    listenToChat((snapshot) => {
+        const container = messagesContainer();
+        if (!container) return;
+        
+        container.innerHTML = '';
+        snapshot.docs.forEach(doc => container.appendChild(renderMessage(doc)));
+        scrollToBottom();
+    });
+
+    initNotifications();
+}
+
+export function logSystemMessage(text, senderName = 'Sistema') {
+    return addChatMessage(text, 'system', senderName);
+}

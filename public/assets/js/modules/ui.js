@@ -55,20 +55,40 @@ export function showConfirmationPopover({
       document.addEventListener("click", handleOutsideClick, !0);
     }, 0);
 }
-export function showToast(e, t = "is-info") {
-  const o = document.createElement("div");
-  (o.className = `toast notification ${t}`),
-    (o.textContent = e),
-    document.body.appendChild(o),
+export function showToast(message, type = "is-info") {
+    let container = document.getElementById("notification-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "notification-container";
+        document.body.appendChild(container);
+    }
+
+    const notification = document.createElement("div");
+    notification.className = `notification toast-notification ${type}`;
+    
+    // AQUI ESTÁ A CORREÇÃO: Usar innerHTML para interpretar as tags <strong> e <span>
+    notification.innerHTML = `
+        <button class="delete" type="button"></button>
+        <div>${message}</div>
+    `;
+
+    // Reativa o evento de fechar no botão criado via HTML string
+    const closeBtn = notification.querySelector(".delete");
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            notification.classList.add("is-exit");
+            setTimeout(() => notification.remove(), 300);
+        });
+    }
+
+    container.prepend(notification);
+
     setTimeout(() => {
-      o.classList.add("is-active");
-    }, 10),
-    setTimeout(() => {
-      o.classList.remove("is-active"),
-        setTimeout(() => {
-          o.remove();
-        }, 300);
-    }, 3e3);
+        if (document.body.contains(notification)) {
+            notification.classList.add("is-exit");
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 4000);
 }
 export function showGlobalLoader(e) {
   let t = document.getElementById("global-loader");

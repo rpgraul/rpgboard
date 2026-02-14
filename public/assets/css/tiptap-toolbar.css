@@ -3,3 +3,5 @@
 .tiptap-button i { pointer-events: none; }
 .tiptap-button:hover { background-color: #3A3F44; }
 .tiptap-button.is-active { background-color: #3273e2; color: white; }
+.tiptap-toolbar-group { display: flex; gap: 0.1rem; }
+.tiptap-separator { width: 1px; height: 20px; background-color: #4A4A4A; margin: 0 0.5rem; }
