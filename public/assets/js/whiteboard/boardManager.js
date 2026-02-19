@@ -106,21 +106,43 @@ function changeBoard(id) {
 let saveTimeout;
 async function sanitizeBase64Images() {
     const objects = canvas.getObjects();
-    const promises = [];
+    const base64Map = new Map(); // Cache: base64 -> Promise<{url}>
+
+    const updatePromises = [];
+
     for (const obj of objects) {
         if (obj.type === 'image' && obj._element && obj.getSrc && obj.getSrc().startsWith('data:')) {
-            promises.push(
-                fetch(obj.getSrc())
+            const src = obj.getSrc();
+
+            if (!base64Map.has(src)) {
+                // First time seeing this base64, start upload
+                const uploadPromise = fetch(src)
                     .then(r => r.blob())
                     .then(blob => firebaseService.uploadImageToImgBB(blob))
-                    .then(({ url }) => {
-                        obj.setSrc(url, () => canvas.renderAll(), { crossOrigin: 'anonymous' });
-                    })
-                    .catch(err => console.warn('ImgBB upload failed for object', obj.uid, err))
-            );
+                    .catch(err => {
+                        console.warn('ImgBB upload failed', err);
+                        throw err;
+                    });
+                base64Map.set(src, uploadPromise);
+            }
+
+            // Map this object to wait for the (shared or new) upload promise
+            const p = base64Map.get(src)
+                .then(({ url }) => {
+                    return new Promise(resolve => {
+                        obj.setSrc(url, () => {
+                            canvas.renderAll();
+                            resolve();
+                        }, { crossOrigin: 'anonymous' });
+                    });
+                })
+                .catch(() => { /* error already logged in uploadPromise */ });
+
+            updatePromises.push(p);
         }
     }
-    if (promises.length > 0) await Promise.all(promises);
+
+    if (updatePromises.length > 0) await Promise.all(updatePromises);
 }
 
 function saveToFirebase() {

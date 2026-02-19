@@ -74,8 +74,8 @@ async function updateUserState(userName) {
 
     if (userName) {
         localStorage.setItem('rpgboard_user_name', userName);
-        if(loginBtn) loginBtn.style.display = 'none';
-        if(userNameSpan) {
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (userNameSpan) {
             userNameSpan.textContent = userName;
             userNameSpan.style.display = 'inline-block';
         }
@@ -88,8 +88,8 @@ async function updateUserState(userName) {
         }
     } else {
         localStorage.removeItem('rpgboard_user_name');
-        if(loginBtn) loginBtn.style.display = 'inline-flex';
-        if(userNameSpan) userNameSpan.style.display = 'none';
+        if (loginBtn) loginBtn.style.display = 'inline-flex';
+        if (userNameSpan) userNameSpan.style.display = 'none';
     }
 }
 
@@ -100,7 +100,7 @@ function handleDeleteItem(item) {
         try {
             const u = localStorage.getItem('rpgboard_user_name') || 'Visitante';
             chat.logSystemMessage(`${u} deletou o card "${item.titulo || item.id}"`);
-        } catch (e) {}
+        } catch (e) { }
     }).catch(err => { console.error(err); alert("Erro ao deletar."); });
 }
 
@@ -118,7 +118,7 @@ async function handleReorder(orderedIds) {
 
 // INICIALIZAÇÃO PRINCIPAL
 document.addEventListener('DOMContentLoaded', async () => {
-    
+
     // 1. PRIMEIRO: Construir o Layout (Menu, FAB, Chat, Modais)
     await initializeLayout({
         fabActions: ['settings', 'bulk-edit', 'converter', 'help', 'chat', 'dice', 'add-card']
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 2. SEGUNDO: Inicializar o Chat agora que o container existe
     chat.initializeChat();
-    
+
     // 3. TERCEIRO: Referências aos Elementos (DEPOIS do layout pronto)
     const addCardButton = document.getElementById('fab-add-card');
     const fabHelp = document.getElementById('fab-help');
@@ -169,8 +169,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Listeners de UI ---
 
-    if(userLoginBtn) userLoginBtn.addEventListener('click', () => openModal(userLoginModal));
-    if(formUserLogin) formUserLogin.addEventListener('submit', (e) => {
+    if (userLoginBtn) userLoginBtn.addEventListener('click', () => openModal(userLoginModal));
+    if (formUserLogin) formUserLogin.addEventListener('submit', (e) => {
         e.preventDefault();
         const userName = userNameInput.value.trim();
         if (userName) {
@@ -187,10 +187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     injectDragDropStyles();
 
-    // 6. Carregar Configurações e Inicializar Grid
     try {
         appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
+        window.IMGBB_API_KEY = appSettings.imgbbApiKey;
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
                 chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
-            } catch (e) {}
+            } catch (e) { }
             return { ...item, ...updatedData };
         } catch (error) { console.error(error); alert("Falha ao salvar."); throw error; }
     }
@@ -378,16 +378,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         });
-        allItems.sort((a, b) => (a.order || 0) - (b.order || 0));        
+        allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
         applyFilters();
-    });
-
-    firebaseService.listenToDiceRolls((change) => {
-        const d = change.doc.data();
-        if (d) {
-            let t = (d.diceType || '').toString().toLowerCase().trim().replace(/^\d+/, '');
-            visualizeDiceRoll(t, d.result, d.userName, d.label);
-        }
     });
 
     // 10. Filtros e Pesquisa (Lógica Completa)
@@ -519,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const box = document.createElement('div');
         box.className = 'box';
         const parsed = shortcodeParser.parseAllShortcodes(item);
-        const allShortcodes = (parsed.left||'')+(parsed.right||'')+(parsed.bottom||'')+(parsed.details||'');
+        const allShortcodes = (parsed.left || '') + (parsed.right || '') + (parsed.bottom || '') + (parsed.details || '');
         box.innerHTML = `
             ${item.url ? `<div class="modal-image-container"><img src="${item.url}"></div>` : ''}
             <div class="modal-text-container">

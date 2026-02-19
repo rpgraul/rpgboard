@@ -131,7 +131,7 @@ function convertEditorHtmlToShortcodes(html) {
 
 // 2. INICIALIZAÇÃO PRINCIPAL
 document.addEventListener("DOMContentLoaded", async () => {
-  
+
   // A. INICIALIZAR LAYOUT MODULAR
   const layout = await initializeLayout({
     fabActions: ['help', 'chat'] // No modo texto, queremos menos distrações
@@ -147,6 +147,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const firebaseService = await import('./modules/firebaseService.js');
     const appSettings = await firebaseService.getSettings();
     window.appSettings = appSettings;
+    window.IMGBB_API_KEY = appSettings.imgbbApiKey;
     if (appSettings.siteTitle) {
       document.title = `${appSettings.siteTitle} - GameBoard`;
     }
@@ -245,7 +246,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const li = document.createElement("li");
       const container = document.createElement("div");
       container.className = `menu-item-container ${card.id === currentEditorCardId ? "is-active" : ""}`;
-      
+
       const label = document.createElement("label");
       label.className = "card-select-label";
       const check = document.createElement("input");
@@ -263,7 +264,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       li.appendChild(container);
       cardList.appendChild(li);
     });
-    
+
     bulkActions.classList.toggle("is-hidden", selectedIds.length === 0);
   }
 
@@ -293,7 +294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // G. LISTENERS E EVENTOS DE UI
   listenToItems((snapshot) => {
-    allCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b) => (a.titulo||"").localeCompare(b.titulo||""));
+    allCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || ""));
     renderCardList();
     // Auto-load se houver hash na URL
     const hashId = window.location.hash.substring(1);
@@ -301,7 +302,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   searchInput.addEventListener("input", renderCardList);
-  
+
   [cardTitle, cardTags, cardDesc, cardVisibility].forEach(el => {
     el.addEventListener("input", () => {
       clearTimeout(mainEditorSaveTimeout);
@@ -339,7 +340,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!btn) return;
     const action = btn.dataset.action;
     const val = btn.dataset.level || btn.dataset.align;
-    
+
     const chain = mainEditor.chain().focus();
     if (action === "undo") chain.undo().run();
     else if (action === "redo") chain.redo().run();
@@ -352,7 +353,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Gerador de Shortcodes
   const shortcodeModal = document.getElementById("shortcode-generator-modal");
   document.getElementById("shortcode-generator-btn").onclick = () => openModal(shortcodeModal);
-  
+
   // Eventos de Fechar/Abrir Chat e Ajuda vindos do Orquestrador
   // Removed event listeners for toggleChatBtn and fabHelp as they are now handled globally in layout.js
 

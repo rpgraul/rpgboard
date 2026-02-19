@@ -6,14 +6,16 @@ let settingsModal = null,
   tagsInput = null,
   filtersInput = null,
   defaultCurrencyInput = null,
+  imgbbApiKeyInput = null,
   fabSettings = null,
   submitButton = null;
 function populateForm(t) {
   t &&
     ((titleInput.value = t.siteTitle || ""),
-    (tagsInput.value = (t.recommendedTags || []).join(", ")),
-    (filtersInput.value = JSON.stringify(t.filters || [], null, 2)),
-    (defaultCurrencyInput.value = t.defaultCurrency || ""));
+      (tagsInput.value = (t.recommendedTags || []).join(", ")),
+      (filtersInput.value = JSON.stringify(t.filters || [], null, 2)),
+      (defaultCurrencyInput.value = t.defaultCurrency || ""),
+      (imgbbApiKeyInput.value = t.imgbbApiKey || ""));
 }
 async function openSettingsModal() {
   try {
@@ -44,6 +46,7 @@ async function handleSave(t) {
     recommendedTags: e,
     filters: n,
     defaultCurrency: defaultCurrencyInput.value.trim(),
+    imgbbApiKey: imgbbApiKeyInput.value.trim(),
   };
   try {
     await firebaseService.saveSettings(s),
@@ -66,12 +69,13 @@ export function initializeSettings() {
     (defaultCurrencyInput = document.getElementById(
       "settings-default-currency"
     )),
+    (imgbbApiKeyInput = document.getElementById("settings-imgbb-api-key")),
     settingsModal &&
-      fabSettings &&
-      settingsForm &&
-      ((submitButton = settingsForm
-        .closest(".modal-card")
-        .querySelector('button[type="submit"]')),
+    fabSettings &&
+    settingsForm &&
+    ((submitButton = settingsForm
+      .closest(".modal-card")
+      .querySelector('button[type="submit"]')),
       fabSettings.addEventListener("click", openSettingsModal),
       settingsForm.addEventListener("submit", handleSave));
 }

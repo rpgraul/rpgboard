@@ -109,7 +109,7 @@ export async function initializeLayout(config = {}) {
   // Verify required containers exist or will be created
   const headerContainer = document.getElementById('app-header');
   const fabContainer = document.getElementById('app-fab');
-  
+
   if (!headerContainer) {
     console.error('[Layout] Missing required element: #app-header');
     throw new Error('Layout initialization failed: #app-header not found in DOM');
@@ -154,7 +154,7 @@ export async function initializeLayout(config = {}) {
     header: headerElement,
     fab: fabElement,
     overlays: overlaysContainer,
-    
+
     // Chat elements
     chatSidebar: document.getElementById('chat-sidebar'),
     chatInputArea: document.getElementById('chat-input-area'),
@@ -162,21 +162,21 @@ export async function initializeLayout(config = {}) {
     chatMessages: document.getElementById('chat-messages'),
     toggleChatBtn: document.getElementById('toggle-chat-btn'),
     closeChatBtn: document.getElementById('close-chat-btn'),
-    
+
     // Help modal
     helpModal: document.getElementById('help-modal'),
     fabHelp: document.getElementById('fab-help'),
-    
+
     // User authentication
     userLoginBtn: document.getElementById('user-login-btn'),
     userNameTag: document.getElementById('user-name'),
     userArea: document.getElementById('user-area'),
     userLoginModal: document.getElementById('user-login-modal'),
-    
+
     // Narrator mode
     narratorLoginBtn: document.getElementById('narrator-login-btn'),
     narratorModal: document.getElementById('narrator-modal'),
-    
+
     // Dice system
     diceContainer: document.getElementById('dice-container'),
     diceMainBtn: document.getElementById('dice-main-btn'),
@@ -254,13 +254,22 @@ export async function initializeLayout(config = {}) {
 
   return layoutReferences;
 }
-    // Adiciona CSS customizado do header se ainda não estiver presente
-    if (!document.getElementById('header-menu-css')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'assets/css/header-menu.css';
-      link.id = 'header-menu-css';
-      document.head.appendChild(link);
-    }
+// Adiciona CSS customizado do header se ainda não estiver presente
+if (!document.getElementById('header-menu-css')) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'assets/css/header-menu.css';
+  link.id = 'header-menu-css';
+  document.head.appendChild(link);
+}
+
+// Adiciona CSS de dados se ainda não estiver presente
+if (!document.getElementById('rpg-dice-css')) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'assets/css/rpg-dice.css';
+  link.id = 'rpg-dice-css';
+  document.head.appendChild(link);
+}
 
 export default { initializeLayout };

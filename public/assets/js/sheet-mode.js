@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const firebaseService = await import('./modules/firebaseService.js');
         const appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
+        window.IMGBB_API_KEY = appSettings.imgbbApiKey;
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }
@@ -67,43 +68,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         layout.fabMacros.addEventListener('click', () => openModal(document.getElementById('macro-modal')));
     }
 
-        // 4. INJETAR HTML DA FICHA NA .sheet-layout
-        injectSheetLayoutHTML();
+    // 4. INJETAR HTML DA FICHA NA .sheet-layout
+    injectSheetLayoutHTML();
 
-        // 5. CONFIGURAÇÃO DOS ELEMENTOS DA PÁGINA (após injeção)
-        imgEl = document.getElementById('char-image');
-        nameEl = document.getElementById('char-name');
-        visualStatsContainer = document.getElementById('visual-stats-container');
-        visualCountsContainer = document.getElementById('visual-counts-container');
-        rawContentEditor = document.getElementById('raw-content-editor');
-        notesEditor = document.getElementById('player-notes-editor');
+    // 5. CONFIGURAÇÃO DOS ELEMENTOS DA PÁGINA (após injeção)
+    imgEl = document.getElementById('char-image');
+    nameEl = document.getElementById('char-name');
+    visualStatsContainer = document.getElementById('visual-stats-container');
+    visualCountsContainer = document.getElementById('visual-counts-container');
+    rawContentEditor = document.getElementById('raw-content-editor');
+    notesEditor = document.getElementById('player-notes-editor');
 
-        // Inicializar Tiptap Editor para Descrição (não-bloqueante)
-        initializeDescEditor().catch(console.error);
+    // Inicializar Tiptap Editor para Descrição (não-bloqueante)
+    initializeDescEditor().catch(console.error);
 
-        // 6. CARREGAMENTO DE DADOS (FIREBASE)
-        listenToItems((snapshot) => {
-            allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            checkUrlAndLoad();
-        });
+    // 6. CARREGAMENTO DE DADOS (FIREBASE)
+    listenToItems((snapshot) => {
+        allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        checkUrlAndLoad();
+    });
 
-        listenToDiceRolls((change) => {
-            const rollData = change.doc.data();
-            if (rollData) {
-                let cleanType = (rollData.diceType || '').toString().toLowerCase().trim().replace(/^\d+/, '');
-                visualizeDiceRoll(cleanType, rollData.result, rollData.userName, rollData.label);
-            }
-        });
-
-        setupSheetSpecificListeners();
-        loadMacros();
+    setupSheetSpecificListeners();
+    loadMacros();
 });
 
-    // Função para injetar o HTML da ficha na .sheet-layout
-    function injectSheetLayoutHTML() {
-        const layout = document.querySelector('.sheet-layout');
-        if (!layout) return;
-        layout.innerHTML = `
+// Função para injetar o HTML da ficha na .sheet-layout
+function injectSheetLayoutHTML() {
+    const layout = document.querySelector('.sheet-layout');
+    if (!layout) return;
+    layout.innerHTML = `
             <div class="sheet-column column-visual">
                 <div class="box is-full-height">
                     <div id="char-image-container" class="char-image-container">
@@ -163,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </footer>
         `;
-    }
+}
 function checkUrlAndLoad() {
     const hash = window.location.hash.substring(1);
     if (hash && allItems.some(i => i.id === hash)) loadCharacter(hash);
@@ -203,21 +196,21 @@ function loadCharacter(id) {
     currentCharacter = char;
     localStorage.setItem(`sheet_last_char_${getCurrentUserName()}`, id);
     window.location.hash = id;
-    
+
     if (imgEl) imgEl.src = char.url || '';
     if (nameEl) nameEl.textContent = char.titulo;
-    
-    if(visualStatsContainer) {
+
+    if (visualStatsContainer) {
         visualStatsContainer.innerHTML = '';
-        if(visualCountsContainer) visualCountsContainer.innerHTML = '';
+        if (visualCountsContainer) visualCountsContainer.innerHTML = '';
         const parsed = shortcodeParser.parseAllShortcodes(char, { isPlayerSheet: true });
-        
+
         visualStatsContainer.innerHTML = parsed.all.filter(s => s.type === 'stat' || s.type === 'money').map(s => s.html).join('');
-        if(visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
+        if (visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
     }
 
     if (rawContentEditor && document.activeElement !== rawContentEditor) rawContentEditor.value = htmlToRaw(char.conteudo || '');
-    
+
     // Carregar conteúdo no descEditor quando estiver pronto
     if (!descEditor) {
         // Se editor não está pronto, tentar inicializar antes de carregar conteúdo
@@ -229,7 +222,7 @@ function loadCharacter(id) {
     } else if (!descEditor.view?.hasFocus?.()) {
         descEditor.commands.setContent(char.descricao || '');
     }
-    
+
     if (notesEditor && document.activeElement !== notesEditor) notesEditor.value = char.playerNotes || '';
 }
 
@@ -242,8 +235,8 @@ function htmlToRaw(html) {
 }
 
 function setupSheetSpecificListeners() {
-    if(rawContentEditor) rawContentEditor.addEventListener('input', (e) => handleAutoSave('conteudo', e.target.value, true));
-    if(notesEditor) notesEditor.addEventListener('input', (e) => handleAutoSave('playerNotes', e.target.value, false));
+    if (rawContentEditor) rawContentEditor.addEventListener('input', (e) => handleAutoSave('conteudo', e.target.value, true));
+    if (notesEditor) notesEditor.addEventListener('input', (e) => handleAutoSave('playerNotes', e.target.value, false));
 
     // Listener para upload de imagem do personagem
     const imgUploadInput = document.getElementById('char-image-upload');
@@ -272,7 +265,7 @@ function setupSheetSpecificListeners() {
     }
 
     const quickChatInput = document.getElementById('sheet-chat-input');
-    if(quickChatInput) {
+    if (quickChatInput) {
         quickChatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 const msg = quickChatInput.value.trim();
@@ -288,9 +281,9 @@ function setupSheetSpecificListeners() {
             }
         });
     }
-    
+
     const saveMacroBtn = document.getElementById('save-macro-btn');
-    if(saveMacroBtn) saveMacroBtn.onclick = saveMacro;
+    if (saveMacroBtn) saveMacroBtn.onclick = saveMacro;
 
     // Listeners para botões de shortcode generator (pode haver vários em diferentes toolbars)
     document.querySelectorAll('.shortcode-generator-btn').forEach(btn => {
@@ -478,9 +471,9 @@ function getMacros() {
 function saveMacro() {
     const n = document.getElementById('macro-name').value.trim();
     const c = document.getElementById('macro-command').value.trim();
-    if(!n || !c) return;
+    if (!n || !c) return;
     const m = getMacros();
-    m.push({name:n, command:c});
+    m.push({ name: n, command: c });
     localStorage.setItem(`macros_${getCurrentUserName()}`, JSON.stringify(m));
     loadMacros();
     closeModal(document.getElementById('macro-modal'));
@@ -490,14 +483,14 @@ function saveMacro() {
 
 function loadMacros() {
     const container = document.getElementById('macro-bar');
-    if(!container) return;
+    if (!container) return;
     container.innerHTML = '';
     const m = getMacros();
     m.forEach((mac, i) => {
         const b = document.createElement('button');
-        b.className='button is-small is-rounded is-primary is-light';
-        b.textContent=mac.name;
-        b.style.marginRight='5px';
+        b.className = 'button is-small is-rounded is-primary is-light';
+        b.textContent = mac.name;
+        b.style.marginRight = '5px';
         b.onclick = () => {
             const user = getCurrentUserName();
             addChatMessage(mac.command, 'user', user);
@@ -505,8 +498,8 @@ function loadMacros() {
         };
         b.oncontextmenu = (e) => {
             e.preventDefault();
-            if(confirm('Deletar macro?')){
-                m.splice(i,1);
+            if (confirm('Deletar macro?')) {
+                m.splice(i, 1);
                 localStorage.setItem(`macros_${getCurrentUserName()}`, JSON.stringify(m));
                 loadMacros();
             }
@@ -522,20 +515,20 @@ async function handleCharImageUpload(event) {
     try {
         // Mostrar loading (opcional)
         imgEl.style.opacity = '0.5';
-        
+
         // Fazer upload da imagem
         const result = await uploadImage(file);
-        
+
         // Atualizar Firebase com a nova URL
         await updateItem({ id: currentCharacterId }, { url: result.url });
-        
-// Atualizar imagem na tela
+
+        // Atualizar imagem na tela
         imgEl.src = result.url;
         imgEl.style.opacity = '1';
-        
+
         // Limpar input
         event.target.value = '';
-        
+
         console.log('Imagem atualizada com sucesso');
     } catch (error) {
         imgEl.style.opacity = '1';
@@ -547,17 +540,17 @@ async function handleCharImageUpload(event) {
 
 function openContentEditorModal() {
     if (!currentCharacter) return;
-    
+
     // Se o editor não existe, criar
     if (!contentEditor) {
         initializeContentEditor();
     }
-    
+
     // Carregar conteúdo no editor
     if (contentEditor) {
         contentEditor.commands.setContent(currentCharacter.conteudo || '');
     }
-    
+
     // Abrir modal
     const modal = document.getElementById('content-editor-modal');
     openModal(modal);
@@ -701,26 +694,26 @@ function updateContentToolbarButtonStates(editor) {
 function saveContentEditor() {
     if (!currentCharacterId || !contentEditor) return;
     const html = contentEditor.getHTML();
-    
+
     handleAutoSave('conteudo', html, false);
-    
+
     closeModal(document.getElementById('content-editor-modal'));
 }
 
 function insertShortcodeInContent() {
     if (!contentEditor) return;
-    
+
     // Prompt simples para o usuário escolher o tipo de shortcode
     const types = ['stat', 'hp', 'money', 'count'];
     let type = prompt(`Selecione o tipo de shortcode:\n\n${types.join(', ')}`);
-    
+
     if (!type || !types.includes(type.toLowerCase())) {
         alert('Tipo de shortcode inválido');
         return;
     }
-    
+
     type = type.toLowerCase();
-    
+
     // Exemplos de shortcodes
     const examples = {
         'stat': '[stat "atributo" "valor"]',
@@ -728,7 +721,7 @@ function insertShortcodeInContent() {
         'money': '[money "quantidade" "moeda"]',
         'count': '[count "nome" "valor"]'
     };
-    
+
     const shortcode = examples[type];
     if (shortcode) {
         contentEditor.chain().focus().insertContent(shortcode).run();
@@ -739,7 +732,7 @@ function handleShortcodeGeneration() {
     // Detectar qual editor está ativo
     const contentEditorModal = document.getElementById('content-editor-modal');
     const isContentModalOpen = contentEditorModal && !contentEditorModal.classList.contains('is-active') === false;
-    
+
     if (isContentModalOpen && contentEditor) {
         // Usar o editor de conteúdo
         insertShortcodeInContent();
@@ -751,18 +744,18 @@ function handleShortcodeGeneration() {
 
 function insertShortcodeInDesc() {
     if (!descEditor) return;
-    
+
     // Prompt simples para o usuário escolher o tipo de shortcode
     const types = ['stat', 'hp', 'money', 'count'];
     let type = prompt(`Selecione o tipo de shortcode:\n\n${types.join(', ')}`);
-    
+
     if (!type || !types.includes(type.toLowerCase())) {
         alert('Tipo de shortcode inválido');
         return;
     }
-    
+
     type = type.toLowerCase();
-    
+
     // Exemplos de shortcodes
     const examples = {
         'stat': '[stat "atributo" "valor"]',
@@ -770,7 +763,7 @@ function insertShortcodeInDesc() {
         'money': '[money "quantidade" "moeda"]',
         'count': '[count "nome" "valor"]'
     };
-    
+
     const shortcode = examples[type];
     if (shortcode) {
         descEditor.chain().focus().insertContent(shortcode).run();
@@ -792,30 +785,30 @@ function openShortcodeGeneratorModal() {
         document.getElementById('money-value').value = '';
         document.getElementById('money-currency').value = 'ouro';
         document.getElementById('nota-titulo').value = '';
-        
+
         // Hide all form sections
         document.getElementById('shortcode-options-stat').classList.add('is-hidden');
         document.getElementById('shortcode-options-hp').classList.add('is-hidden');
         document.getElementById('shortcode-options-count').classList.add('is-hidden');
         document.getElementById('shortcode-options-money').classList.add('is-hidden');
         document.getElementById('shortcode-options-nota').classList.add('is-hidden');
-        
+
         openModal(modal);
     }
 }
 
 function updateShortcodeOptions() {
     const type = document.getElementById('shortcode-type').value;
-    
+
     // Hide all sections
     document.getElementById('shortcode-options-stat').classList.add('is-hidden');
     document.getElementById('shortcode-options-hp').classList.add('is-hidden');
     document.getElementById('shortcode-options-count').classList.add('is-hidden');
     document.getElementById('shortcode-options-money').classList.add('is-hidden');
     document.getElementById('shortcode-options-nota').classList.add('is-hidden');
-    
+
     // Show the selected type section
-    switch(type) {
+    switch (type) {
         case 'stat':
             document.getElementById('shortcode-options-stat').classList.remove('is-hidden');
             break;
@@ -840,10 +833,10 @@ function insertShortcodeFromModal() {
         alert('Selecione um tipo de shortcode');
         return;
     }
-    
+
     let shortcode = '';
-    
-    switch(type) {
+
+    switch (type) {
         case 'stat':
             const statLabel = document.getElementById('stat-label').value || 'atributo';
             const statValue = document.getElementById('stat-value').value || '0';
@@ -870,13 +863,13 @@ function insertShortcodeFromModal() {
             shortcode = `[nota "${notaTitulo}"]`;
             break;
     }
-    
+
     if (!shortcode) return;
-    
+
     // Detect which editor is active
     const contentEditorModal = document.getElementById('content-editor-modal');
     const isContentModalOpen = contentEditorModal && contentEditorModal.classList.contains('is-active');
-    
+
     if (isContentModalOpen && contentEditor) {
         // Insert into content editor
         contentEditor.chain().focus().insertContent(shortcode).run();
@@ -884,7 +877,7 @@ function insertShortcodeFromModal() {
         // Insert into description editor
         descEditor.chain().focus().insertContent(shortcode).run();
     }
-    
+
     // Close modal
     closeModal(document.getElementById('shortcode-generator-modal'));
 }

@@ -6,8 +6,8 @@ import { initializeModals } from './modules/modal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Layout Base
-    const layout = await initializeLayout({ 
-        fabActions: ['help', 'chat', 'settings'] 
+    const layout = await initializeLayout({
+        fabActions: ['help', 'chat', 'settings']
     });
 
     // 2. Autenticação e Modais
@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const firebaseService = await import('./modules/firebaseService.js');
         const appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
+        window.IMGBB_API_KEY = appSettings.imgbbApiKey;
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }

@@ -54,19 +54,69 @@ export function renderOverlays() {
           <h4>Contadores: [count] e [*count]</h4>
           <p>Use <code>*count</code> para aparecer no card. <code>count</code> apenas nos detalhes.</p>
           <pre><code>[*count "Flechas" max=10 theme=arrow]</code></pre>
-
-          <h4>Texto Oculto: [hide] ou [#]</h4>
-          <pre><code>[#]Este texto só o Narrador vê.[/#]</code></pre>
-
-          <hr>
-          <h4>Modo Narrador</h4>
-          <p>Acesse o botão "Narrador" no topo para gerenciar visibilidade e cards ocultos.</p>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <!-- Modal de Identificação de Usuário -->
+ 
+           <h4>Texto Oculto: [hide] ou [#]</h4>
+           <pre><code>[#]Este texto só o Narrador vê.[/#]</code></pre>
+ 
+           <hr>
+           <h4>Modo Narrador</h4>
+           <p>Acesse o botão "Narrador" no topo para gerenciar visibilidade e cards ocultos.</p>
+         </div>
+       </section>
+     </div>
+   </div>
+ 
+   <!-- Modal de Configurações Globais -->
+   <div id="settings-modal" class="modal">
+     <div class="modal-background"></div>
+     <div class="modal-card">
+       <header class="modal-card-head">
+         <p class="modal-card-title">Configurações Globais</p>
+         <button class="delete" aria-label="close"></button>
+       </header>
+       <section class="modal-card-body">
+         <form id="form-settings">
+           <div class="field">
+             <label class="label">Título do Site</label>
+             <div class="control">
+               <input class="input" id="settings-title" type="text" placeholder="Ex: GameBoard RPG">
+             </div>
+           </div>
+           <div class="field">
+             <label class="label">Tags Recomendadas (Separadas por vírgula)</label>
+             <div class="control">
+               <input class="input" id="settings-recommended-tags" type="text" placeholder="Ex: PJ, Inimigo, Item">
+             </div>
+           </div>
+           <div class="field">
+             <label class="label">Moeda Padrão</label>
+             <div class="control">
+               <input class="input" id="settings-default-currency" type="text" placeholder="Ex: GP, Silver">
+             </div>
+           </div>
+           <div class="field">
+             <label class="label">ImgBB API Key</label>
+             <div class="control">
+               <input class="input" id="settings-imgbb-api-key" type="password" placeholder="Sua API Key do ImgBB">
+             </div>
+             <p class="help">Necessária para salvar imagens no Whiteboard sem ultrapassar o limite do Firebase.</p>
+           </div>
+           <div class="field">
+             <label class="label">Filtros Customizados (JSON Array)</label>
+             <div class="control">
+               <textarea class="textarea" id="settings-filters" placeholder='[{"label": "PJs", "value": "pj"}]'></textarea>
+             </div>
+           </div>
+         </form>
+       </section>
+       <footer class="modal-card-foot">
+         <button class="button is-success" form="form-settings" type="submit">Salvar</button>
+         <button class="button modal-cancel" type="button">Cancelar</button>
+       </footer>
+     </div>
+   </div>
+ 
+   <!-- Modal de Identificação de Usuário -->
   <div id="user-login-modal" class="modal">
     <div class="modal-background"></div>
     <div class="modal-card">
