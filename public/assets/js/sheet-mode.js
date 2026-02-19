@@ -56,18 +56,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. VINCULAÇÃO DE EVENTOS DOS COMPONENTES INJETADOS
     // Os botões FAB e elementos globais já foram criados pelo layout.js
-    // Usamos as referências retornadas em vez de fazer getElementById novamente
-    if (layout.toggleChatBtn) {
-        layout.toggleChatBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            chat.toggleChat();
-        });
-    }
-
-    if (layout.fabHelp) {
-        layout.fabHelp.addEventListener('click', () => openModal(layout.helpModal));
-    }
+    // Listeners for #toggle-chat-btn, #fab-help, #dice-main-btn, .dice-quick-btn are now handled in layout.js.
+    // Keeping page-specific listeners.
 
     if (layout.fabChangeChar) {
         layout.fabChangeChar.addEventListener('click', openCharSelection);
@@ -280,18 +270,6 @@ function setupSheetSpecificListeners() {
         cancelBtn.addEventListener('click', () => closeModal(contentEditorModal));
         saveBtn.addEventListener('click', saveContentEditor);
     }
-
-    document.querySelectorAll('.dice-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const dice = btn.dataset.dice;
-            if(dice) {
-                const user = getCurrentUserName();
-                const cmd = `/r 1${dice}`;
-                addChatMessage(cmd, 'user', user);
-                processRoll(cmd, currentCharacter, user, null);
-            }
-        });
-    });
 
     const quickChatInput = document.getElementById('sheet-chat-input');
     if(quickChatInput) {
@@ -551,7 +529,7 @@ async function handleCharImageUpload(event) {
         // Atualizar Firebase com a nova URL
         await updateItem({ id: currentCharacterId }, { url: result.url });
         
-        // Atualizar imagem na tela
+// Atualizar imagem na tela
         imgEl.src = result.url;
         imgEl.style.opacity = '1';
         

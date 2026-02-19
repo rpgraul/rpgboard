@@ -1,5 +1,0 @@
-.tiptap-toolbar { display: flex; align-items: center; padding: 0.5rem; border-radius: 8px 8px 0 0; background-color: #272B30; border: 1px solid #4A4A4A; border-bottom: none; flex-wrap: wrap; gap: 0.25rem; }
-.tiptap-button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; background: transparent; color: #adb5bd; border-radius: 4px; cursor: pointer; transition: background-color 0.2s ease; }
-.tiptap-button i { pointer-events: none; }
-.tiptap-button:hover { background-color: #3A3F44; }
-.tiptap-button.is-active { background-color: #3273e2; color: white; }

@@ -89,7 +89,7 @@ body {
     flex-direction: column;
     align-items: flex-end;
     gap: 1rem;
-    z-index: 30;
+    z-index: 9200;
 }
 
 .fab-container.is-hidden {
@@ -143,7 +143,7 @@ body.is-bulk-editing .fab-container {
     flex-direction: column;
     transform: translateX(0);
     transition: transform 0.3s ease;
-    z-index: 100;
+    z-index: 9100;
 }
 
 #chat-sidebar.is-hidden {
@@ -315,17 +315,15 @@ body.is-bulk-editing .fab-container {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw; /* Use vw/vh for full viewport coverage */
+    height: 100vh;
     z-index: 9000;
     pointer-events: none;
     display: flex;
-    flex-direction: column-reverse;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 20px;
-    padding-top: 120px;
-    padding-bottom: 50px;
+    flex-direction: column; /* Changed from column-reverse to center */
+    justify-content: center; /* Center vertically */
+    align-items: center;     /* Center horizontally */
+    overflow: hidden; /* Ensure dice do not overflow the container */
 }
 
 .dice-wrapper {
@@ -360,12 +358,14 @@ body.is-bulk-editing .fab-container {
 }
 
 .dice-roll-wrapper {
-    display: flex;
+    position: relative; /* Added for proper positioning within flex container */
+    pointer-events: auto; /* Ensure dice are interactive */
+    margin: 10px; /* Standardize margin */
+    display: flex; /* Keep flex properties for internal alignment */
     flex-direction: column;
     align-items: center;
     flex-shrink: 0;
-    margin-bottom: 20px;
-    width: 100px;
+    width: 100px; /* Keep width */
 }
 
 .dice-roll-wrapper .die-list {

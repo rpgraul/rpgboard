@@ -117,8 +117,9 @@ function convertEditorHtmlToShortcodes(html) {
     const theme = e.getAttribute("data-theme"); if (theme && theme !== "number") c.push(theme);
     const icon = e.getAttribute("data-icon"); if (icon) c.push(`icon="${icon.trim()}"`);
     const pos = e.getAttribute("data-position"); if (pos) c.push(pos);
+    if (e.getAttribute("data-is-overlay") === "true") c.unshift("*");
     if (e.getAttribute("data-is-hidden") === "true") c.push("#");
-    e.replaceWith(document.createTextNode(`[${e.getAttribute("data-is-overlay") === "true" ? "*" : ""}count ${c.join(" ")}]`));
+    e.replaceWith(document.createTextNode(`[${c.join(" ")}]`));
   });
   // Nota
   body.querySelectorAll('[data-node-type="notaShortcode"]').forEach((e) => {
@@ -353,7 +354,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("shortcode-generator-btn").onclick = () => openModal(shortcodeModal);
   
   // Eventos de Fechar/Abrir Chat e Ajuda vindos do Orquestrador
-  if (layout.toggleChatBtn) layout.toggleChatBtn.onclick = () => chat.toggleChat();
-  if (layout.fabHelp) layout.fabHelp.onclick = () => openModal(layout.helpModal);
+  // Removed event listeners for toggleChatBtn and fabHelp as they are now handled globally in layout.js
 
 });

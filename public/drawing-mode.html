@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="assets/css/drawing-mode.css">
     <link rel="stylesheet" href="assets/css/chat.css">
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Patrick+Hand&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- Fabric.js Global -->
     <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
     <script type="importmap">
@@ -28,100 +29,190 @@
     <div id="app-fab"></div>
 
     <div class="whiteboard-layout">
-        <!-- Toolbar Superior -->
-        <div class="wb-toolbar" id="wb-toolbar">
-            <button class="button is-small tool-btn is-active" data-tool="select" title="Selecionar (V)">
-                <span class="icon"><i class="fas fa-mouse-pointer"></i></span>
-            </button>
-            <button class="button is-small tool-btn" data-tool="move" title="Mover (Espaço ou Clique Roda do Mouse)">
-                <span class="icon"><i class="fas fa-hand-paper"></i></span>
-            </button>
-            <button class="button is-small tool-btn" data-tool="draw" title="Pincel (P)">
-                <span class="icon"><i class="fas fa-pencil-alt"></i></span>
-            </button>
-            <button class="button is-small tool-btn" data-tool="text" title="Texto (T)">
-                <span class="icon"><i class="fas fa-font"></i></span>
-            </button>
-            
-            <div class="shape-dropdown">
-                <button class="button is-small tool-btn" id="btn-shape-group" title="Formas">
-                    <span class="icon"><i id="current-shape-icon" class="fas fa-square"></i></span>
-                    <span class="icon is-small"><i class="fas fa-caret-down"></i></span>
+        <!-- Sidebar Esquerda (Vertical) -->
+        <div class="wb-vertical-bar">
+            <!-- Ferramentas Principais -->
+            <div class="wb-tool-group">
+                <button class="button is-small tool-btn is-active" data-tool="select" title="Selecionar (V)">
+                    <i class="fas fa-mouse-pointer"></i>
                 </button>
-                <div class="shape-dropdown-content">
-                    <button class="shape-option" data-shape="rect"><i class="fas fa-square"></i> Quadrado</button>
-                    <button class="shape-option" data-shape="circle"><i class="fas fa-circle"></i> Círculo</button>
-                    <button class="shape-option" data-shape="triangle"><i class="fas fa-play" style="transform: rotate(-90deg);"></i> Triângulo</button>
-                    <button class="shape-option" data-shape="arrow"><i class="fas fa-long-arrow-alt-right"></i> Seta</button>
+                <button class="button is-small tool-btn" data-tool="move" title="Mover (Espaço)">
+                    <i class="fas fa-hand-paper"></i>
+                </button>
+                <button class="button is-small tool-btn" data-tool="draw" title="Pincel (P)">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="button is-small tool-btn" data-tool="text" title="Texto (T)">
+                    <i class="fas fa-font"></i>
+                </button>
+                
+                <button class="button is-small tool-btn" data-tool="shape" title="Formas (S)">
+                    <i class="fas fa-shapes"></i>
+                </button>
+
+                <button class="button is-small tool-btn" id="btn-assets-toggle" title="Assets">
+                    <i class="fas fa-images"></i>
+                </button>
+                
+                <button class="button is-small tool-btn" id="btn-image-upload" title="Upload Imagem">
+                    <i class="fas fa-upload"></i>
+                </button>
+                <input type="file" id="file-upload-input" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="wb-tool-group bottom">
+                <button class="button is-small is-danger is-light" id="btn-clear" title="Limpar Tudo">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button class="button is-small is-success" id="btn-export" title="Baixar JPG">
+                    <i class="fas fa-file-download"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Painéis de Opções (Flutuantes/Contextuais) -->
+        <div class="wb-options-panel" id="options-panel-draw" style="display: none;">
+            <h6 class="panel-title">Pincel</h6>
+            
+            <div class="panel-row">
+                <label>Cor</label>
+                <input type="color" class="color-picker" id="wb-color-draw" value="#000000">
+            </div>
+            
+            <div class="panel-row">
+                <label>Tamanho</label>
+                <input type="range" id="wb-width-draw" min="1" max="50" value="3" class="slider">
+            </div>
+
+            <div class="panel-row">
+                <label>Opacidade</label>
+                <input type="range" id="wb-opacity-draw" min="0.1" max="1" step="0.1" value="1" class="slider">
+            </div>
+
+            <div class="panel-row">
+                <label>Estilo</label>
+                <div class="buttons has-addons is-centered is-small">
+                    <button class="button is-selected is-info style-btn" data-style="solid">Sólido</button>
+                    <button class="button style-btn" data-style="dashed">Tracejado</button>
                 </div>
             </div>
-
-            <div class="separator"></div>
-            
-            <input type="color" class="color-picker" id="wb-color" value="#ffffff">
-            <input type="number" class="width-picker input is-small" id="wb-width" value="3" min="1" max="50">
-
-            <div class="separator"></div>
-
-            <button class="button is-small is-danger is-light" id="btn-clear" title="Limpar">
-                <span class="icon"><i class="fas fa-eraser"></i></span>
-            </button>
-            <button class="button is-small is-success" id="btn-export" title="Baixar JPG">
-                <span class="icon"><i class="fas fa-file-download"></i></span>
-            </button>
         </div>
 
-        <!-- Gerenciador de Boards -->
-        <div class="wb-board-manager">
-            <div class="select is-small">
-                <select id="board-select">
-                    <option value="" disabled selected>Carregando...</option>
-                </select>
+        <div class="wb-options-panel" id="options-panel-text" style="display: none;">
+            <h6 class="panel-title">Texto</h6>
+            <div class="panel-row">
+                <label>Cor</label>
+                <input type="color" class="color-picker" id="wb-color-text" value="#000000">
             </div>
-            <button id="btn-add-board" class="button is-success is-small"><i class="fas fa-plus"></i></button>
-            <button id="btn-del-board" class="button is-danger is-small"><i class="fas fa-trash"></i></button>
-            <button id="btn-save-board" class="button is-info is-small"><i class="fas fa-save"></i></button>
+            <div class="panel-row">
+                <div class="select is-small is-fullwidth">
+                    <select id="wb-font-family">
+                        <option value="Arial" selected>Arial</option>
+                        <option value="Patrick Hand">Hand</option>
+                        <option value="Kalam">Marker</option>
+                        <option value="Roboto">Roboto</option>
+                    </select>
+                </div>
+            </div>
+            <div class="panel-row">
+                <button class="button is-small is-fullwidth" id="btn-text-bg" data-active="false">
+                    <span class="icon"><i class="fas fa-highlighter"></i></span>
+                    <span>Fundo</span>
+                </button>
+            </div>
         </div>
 
+        <div class="wb-options-panel" id="options-panel-shape" style="display: none;">
+            <h6 class="panel-title">Formas</h6>
+            <div class="panel-row">
+                <label>Cor da Borda</label>
+                <input type="color" class="color-picker" id="wb-color-shape" value="#000000">
+            </div>
+            <div class="panel-row">
+                <label>Espessura</label>
+                <input type="range" id="wb-width-shape" min="1" max="20" value="3" class="slider">
+            </div>
+            <div class="panel-row">
+                <label>Estilo</label>
+                <div class="buttons has-addons is-centered is-small">
+                    <button class="button shape-fill-btn is-info is-selected" data-fill="border" title="Borda"><i class="far fa-square"></i></button>
+                    <button class="button shape-fill-btn" data-fill="solid" title="Sólido"><i class="fas fa-square"></i></button>
+                </div>
+            </div>
+            <div class="panel-row">
+                <label>Tipo</label>
+                <div class="buttons has-addons is-centered is-small">
+                    <button class="button shape-option" data-shape="rect" title="Quadrado"><i class="fas fa-square"></i></button>
+                    <button class="button shape-option" data-shape="circle" title="Círculo"><i class="fas fa-circle"></i></button>
+                    <button class="button shape-option" data-shape="triangle" title="Triângulo"><i class="fas fa-play" style="transform: rotate(-90deg);"></i></button>
+                    <button class="button shape-option" data-shape="arrow" title="Seta"><i class="fas fa-long-arrow-alt-right"></i></button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Área Principal -->
         <div class="wb-container">
-            <div class="wb-sidebar">
-                <h6 class="title is-7 has-text-centered has-text-grey-light mt-2">Assets</h6>
+            <!-- Assets Drawer (Oculto por padrão) -->
+            <div class="wb-assets-drawer" id="assets-drawer">
+                <h6 class="title is-7 has-text-centered has-text-grey-light mt-2">Galeria</h6>
                 <div id="assets-list" class="assets-list">
-                    <!-- Imagens hardcoded para teste inicial, depois virá do Firebase storage se quiser -->
-                    <img src="assets/img/asset1.jpg" class="asset-item" draggable="true">
-                    <img src="assets/img/asset2.jpg" class="asset-item" draggable="true">
+                    <div class="has-text-centered p-2 has-text-grey">
+                        <small>Arraste imagens aqui ou use o botão de upload.</small>
+                    </div>
                 </div>
             </div>
+
             <div class="wb-scroll-area" id="wb-scroll-area">
                 <canvas id="c"></canvas>
             </div>
         </div>
     </div>
+    
+    <!-- Gerenciador de Boards -->
+    <div class="wb-board-manager">
+        <div class="select is-small">
+            <select id="board-select">
+                <option value="" disabled selected>Carregando...</option>
+            </select>
+        </div>
+        <button id="btn-add-board" class="button is-success is-small"><i class="fas fa-plus"></i></button>
+        <button id="btn-del-board" class="button is-danger is-small"><i class="fas fa-trash"></i></button>
+        <button id="btn-save-board" class="button is-info is-small"><i class="fas fa-save"></i></button>
+    </div>
 
-    <!-- Painel de Ações (Zoom / Undo / Redo) -->
+    <!-- Custom Context Menu -->
+    <div id="wb-context-menu" class="wb-context-menu" style="display: none;">
+        <button class="ctx-item" data-action="front">
+            <span class="icon"><i class="fas fa-arrow-up"></i></span>
+            <span>Trazer para Frente</span>
+        </button>
+        <button class="ctx-item" data-action="back">
+            <span class="icon"><i class="fas fa-arrow-down"></i></span>
+            <span>Enviar para Trás</span>
+        </button>
+        <div class="ctx-separator"></div>
+        <button class="ctx-item" data-action="lock">
+            <span class="icon"><i class="fas fa-lock"></i></span>
+            <span>Travar/Destravar</span>
+        </button>
+        <div class="ctx-separator"></div>
+        <button class="ctx-item is-danger" data-action="delete">
+            <span class="icon"><i class="fas fa-trash"></i></span>
+            <span>Deletar</span>
+        </button>
+    </div>
+
+    <!-- Actions Panel (Bottom Left) -->
     <div class="wb-actions-panel">
         <div class="wb-action-group">
-            <button class="wb-action-btn" id="btn-zoom-out" title="Diminuir Zoom (Ctrl -)">
-                <i class="fas fa-minus"></i>
-            </button>
-            <button class="wb-action-btn zoom-display" id="btn-zoom-reset" title="Resetar Zoom">
-                100%
-            </button>
-            <button class="wb-action-btn" id="btn-zoom-in" title="Aumentar Zoom (Ctrl +)">
-                <i class="fas fa-plus"></i>
-            </button>
+            <button class="wb-action-btn" id="btn-zoom-out"><i class="fas fa-minus"></i></button>
+            <button class="wb-action-btn zoom-display" id="btn-zoom-reset">100%</button>
+            <button class="wb-action-btn" id="btn-zoom-in"><i class="fas fa-plus"></i></button>
         </div>
-        
         <div class="wb-separator-vertical"></div>
-
         <div class="wb-action-group">
-            <button class="wb-action-btn" id="btn-undo" title="Desfazer (Ctrl+Z)" disabled>
-                <i class="fas fa-undo"></i>
-            </button>
-            <button class="wb-action-btn" id="btn-redo" title="Refazer (Ctrl+Y)" disabled>
-                <i class="fas fa-redo"></i>
-            </button>
+            <button class="wb-action-btn" id="btn-undo" disabled><i class="fas fa-undo"></i></button>
+            <button class="wb-action-btn" id="btn-redo" disabled><i class="fas fa-redo"></i></button>
         </div>
     </div>
 

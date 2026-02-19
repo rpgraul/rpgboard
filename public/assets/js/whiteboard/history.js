@@ -20,12 +20,16 @@ export function initializeHistory() {
 
     if (btnUndo) btnUndo.onclick = (e) => { e.preventDefault(); undo(); };
     if (btnRedo) btnRedo.onclick = (e) => { e.preventDefault(); redo(); };
-    
+
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.metaKey) {
             if (e.key.toLowerCase() === 'z') {
                 e.preventDefault();
-                undo();
+                if (e.shiftKey) {
+                    redo();
+                } else {
+                    undo();
+                }
             }
             if (e.key.toLowerCase() === 'y') {
                 e.preventDefault();
@@ -39,7 +43,7 @@ export function saveState() {
     if (isLocked || !canvas) return;
 
     const json = JSON.stringify(canvas.toJSON());
-    
+
     // Evita duplicados idênticos no topo da pilha
     if (historyIndex >= 0 && json === history[historyIndex]) return;
 
@@ -49,7 +53,7 @@ export function saveState() {
 
     history.push(json);
     historyIndex = history.length - 1;
-    
+
     // Limita o histórico a 50 passos para performance
     if (history.length > 50) {
         history.shift();
@@ -61,7 +65,7 @@ export function saveState() {
 
 export function undo() {
     if (isLocked || historyIndex <= 0) return;
-    
+
     isLocked = true;
     historyIndex--;
     loadState();
@@ -69,7 +73,7 @@ export function undo() {
 
 export function redo() {
     if (isLocked || historyIndex >= history.length - 1) return;
-    
+
     isLocked = true;
     historyIndex++;
     loadState();
@@ -82,10 +86,10 @@ function loadState() {
             canvas.setBackgroundColor('#ffffff');
         }
         canvas.renderAll();
-        
+
         // Avisa outros módulos (como o Firebase) que o canvas mudou
-        canvas.fire('object:modified'); 
-        
+        canvas.fire('object:modified');
+
         setTimeout(() => {
             isLocked = false;
             updateButtons();

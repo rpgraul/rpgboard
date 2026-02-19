@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Chat (Opcional, mas útil)
     chat.initializeChat();
-    if(layout.toggleChatBtn) layout.toggleChatBtn.onclick = () => chat.toggleChat();
 
     // 4. Carregar settings e garantir título no header
     try {

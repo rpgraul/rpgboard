@@ -7,25 +7,27 @@ let origX = 0, origY = 0;
 let activeShape = null;
 
 export function initializeShapes() {
-    const shapeBtns = document.querySelectorAll('.shape-option');
-    const shapeGroupBtn = document.getElementById('btn-shape-group');
-    const iconMap = { 
-        'rect': 'fa-square', 'circle': 'fa-circle', 
-        'triangle': 'fa-play', 'arrow': 'fa-long-arrow-alt-right' 
-    };
+    const shapeBtns = document.querySelectorAll('.wb-options-panel .shape-option');
+    // Removed old dropdown logic
 
     shapeBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
+            // Visual feedback
+            shapeBtns.forEach(b => {
+                b.classList.remove('is-info', 'is-selected');
+            });
+            btn.classList.add('is-info', 'is-selected');
+
+            // Logic
             currentShapeType = btn.dataset.shape;
-            document.getElementById('current-shape-icon').className = `fas ${iconMap[currentShapeType]}`;
-            if(currentShapeType === 'triangle') document.getElementById('current-shape-icon').style.transform = 'rotate(-90deg)';
-            else document.getElementById('current-shape-icon').style.transform = '';
-            
-            setMode('shape'); // Modo "dummy" apenas para UI, logicamente tratamos no canvas event
+
+            // Ensure we are in shape mode (if clicked from panel)
+            setMode('shape');
         });
     });
 
-    shapeGroupBtn.addEventListener('click', () => setMode('shape'));
+    // Default selection visual
+    if (shapeBtns.length > 0) shapeBtns[0].classList.add('is-info', 'is-selected');
 
     // Canvas Events
     canvas.on('mouse:down', onMouseDown);
@@ -41,7 +43,10 @@ function onMouseDown(o) {
     if (state.mode === 'text') {
         const text = new fabric.IText('Texto', {
             left: pointer.x, top: pointer.y,
-            fill: state.color, fontSize: 24, fontFamily: 'Arial'
+            fill: state.color,
+            fontSize: 24,
+            fontFamily: state.font || 'Arial',
+            backgroundColor: state.textBg ? '#f1c40f' : ''
         });
         canvas.add(text);
         canvas.setActiveObject(text);
@@ -56,23 +61,33 @@ function onMouseDown(o) {
         isDrawing = true;
         origX = pointer.x;
         origY = pointer.y;
-        const { color, width } = state;
+        const { color, width, shapeFill } = state;
+
+        let fillVal = 'transparent';
+        let strokeVal = color;
+        let strokeWidthVal = width;
+
+        if (shapeFill === 'solid') {
+            fillVal = color;
+            strokeVal = 'transparent'; // Or same color if desired
+            strokeWidthVal = 0;
+        }
 
         if (currentShapeType === 'rect') {
             activeShape = new fabric.Rect({
                 left: origX, top: origY, width: 0, height: 0,
-                fill: 'transparent', stroke: color, strokeWidth: width
+                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal
             });
         } else if (currentShapeType === 'circle') {
             activeShape = new fabric.Circle({
                 left: origX, top: origY, radius: 0,
-                fill: 'transparent', stroke: color, strokeWidth: width,
+                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
                 originX: 'center', originY: 'center'
             });
         } else if (currentShapeType === 'triangle') {
             activeShape = new fabric.Triangle({
                 left: origX, top: origY, width: 0, height: 0,
-                fill: 'transparent', stroke: color, strokeWidth: width
+                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal
             });
         } else if (currentShapeType === 'arrow') {
             activeShape = new fabric.Line([origX, origY, origX, origY], {
@@ -94,8 +109,8 @@ function onMouseMove(o) {
         const dist = Math.sqrt(Math.pow(pointer.x - origX, 2) + Math.pow(pointer.y - origY, 2));
         activeShape.set({ radius: dist / 2 });
     } else {
-        if(origX > pointer.x) activeShape.set({ left: pointer.x });
-        if(origY > pointer.y) activeShape.set({ top: pointer.y });
+        if (origX > pointer.x) activeShape.set({ left: pointer.x });
+        if (origY > pointer.y) activeShape.set({ top: pointer.y });
         activeShape.set({
             width: Math.abs(origX - pointer.x),
             height: Math.abs(origY - pointer.y)
@@ -112,7 +127,7 @@ function onMouseUp() {
         if (currentShapeType === 'arrow' && activeShape) {
             const line = activeShape;
             canvas.remove(line);
-            
+
             const dx = line.x2 - line.x1;
             const dy = line.y2 - line.y1;
             const angle = Math.atan2(dy, dx) * (180 / Math.PI);

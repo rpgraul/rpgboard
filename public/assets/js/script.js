@@ -180,30 +180,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    if (diceQuickBtns) {
-        diceQuickBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const diceType = btn.dataset.dice;
-                if (!diceType) return;
-                const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
-                const command = `/r 1${diceType}`;
-                firebaseService.addChatMessage(command, 'user', userName);
-                processRoll(command, null, userName, null);
-                if (diceFabWrapper) diceFabWrapper.classList.remove('is-active');
-            });
-        });
-    }
+    // Removed event listeners for diceQuickBtns, diceMainBtn, and toggleChatBtn
+    // as they are now handled globally in layout.js
 
-    if (diceMainBtn && diceFabWrapper) {
-        diceMainBtn.addEventListener('click', () => diceFabWrapper.classList.toggle('is-active'));
-    }
 
-    if (toggleChatBtn) {
-        toggleChatBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            chat.toggleChat();
-        });
-    }
 
     injectDragDropStyles();
 

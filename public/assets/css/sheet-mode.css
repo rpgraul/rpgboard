@@ -284,56 +284,6 @@ h3.title.is-6 {
     margin-right: 10px;
 }
 
-#dice-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none; /* Permite clicar através dele */
-    z-index: 9999; /* Garante que fique acima de TUDO (modais, chat, footer) */
-    display: flex;
-    flex-direction: column;
-    justify-content: center; /* Centraliza verticalmente */
-    align-items: center;     /* Centraliza horizontalmente */
-    overflow: hidden;
-}
-
-/* Garante que os dados individuais tenham espaço */
-.dice-roll-wrapper {
-    position: relative;
-    pointer-events: auto; /* Permite interagir com o dado se necessário */
-    margin: 10px;
-}
-
-.dice-label {
-    margin-top: 5px;
-    background: rgba(0,0,0,0.8);
-    padding: 4px 8px;
-    border-radius: 4px;
-    text-align: center;
-    min-width: 80px;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.dice-user-name {
-    color: #fff;
-    font-weight: bold;
-    font-size: 13px;
-    text-shadow: 0 1px 2px black;
-}
-
-.dice-info-text {
-    color: #ffd700;
-    font-size: 12px;
-    font-weight: normal;
-    border-top: 1px solid rgba(255,255,255,0.2);
-    padding-top: 2px;
-}
-
 /* Modal de Edição de Conteúdo */
 #content-editor-modal .modal-card {
     margin: auto;

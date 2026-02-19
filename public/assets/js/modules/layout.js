@@ -28,7 +28,8 @@ import { toggleChat } from './chat.js';
 import { processRoll } from './diceLogic.js';
 import { getCurrentUserName } from './auth.js';
 import { openModal } from './modal.js';
-import { addChatMessage } from './firebaseService.js';
+import { addChatMessage, listenToDiceRolls } from './firebaseService.js';
+import { visualizeDiceRoll } from './dice3d.js';
 
 /**
  * Initializes the complete layout structure for a GameBoard page.
@@ -193,6 +194,19 @@ export async function initializeLayout(config = {}) {
     layoutReferences.diceFabWrapper?.classList.toggle('is-active');
   });
 
+  document.querySelectorAll('.dice-quick-btn').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const dType = e.currentTarget.dataset.dice;
+      const userName = getCurrentUserName();
+      const command = `/r 1${dType}`;
+
+      await addChatMessage(command, 'user', userName);
+      processRoll(command, null, userName);
+      // Close the dice fab wrapper after a quick roll
+      layoutReferences.diceFabWrapper?.classList.remove('is-active');
+    });
+  });
+
   // Help:
   layoutReferences.fabHelp?.addEventListener('click', () => {
     openModal(layoutReferences.helpModal);
@@ -224,6 +238,16 @@ export async function initializeLayout(config = {}) {
   if (missingElements.length > 0) {
     console.warn(`[Layout] Missing optional elements: ${missingElements.join(', ')}`);
   }
+
+  // Step 6: Initialize global dice listener
+  console.log('[Layout] Step 6: Initializing global dice listener...');
+  listenToDiceRolls((change) => {
+    const d = change.doc.data();
+    if (d) {
+      let t = (d.diceType || '').toString().toLowerCase().trim().replace(/^\d+/, '');
+      visualizeDiceRoll(t, d.result, d.userName, d.label);
+    }
+  });
 
   console.log('[Layout] Layout initialization complete!');
   console.log('[Layout] Available references:', Object.keys(layoutReferences));
