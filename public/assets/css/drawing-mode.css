@@ -202,8 +202,8 @@ html, body {
 .wb-actions-panel {
     position: absolute;
     bottom: 20px;
-    right: 20px; /* Moved to right */
-    left: auto;
+    right: 20px !important;
+    left: auto !important;
     background: #23272a;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);

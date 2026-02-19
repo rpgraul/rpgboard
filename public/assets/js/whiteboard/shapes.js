@@ -46,7 +46,8 @@ function onMouseDown(o) {
             fill: state.color,
             fontSize: 24,
             fontFamily: state.font || 'Arial',
-            backgroundColor: state.textBg ? '#f1c40f' : ''
+            backgroundColor: state.textBg ? '#f1c40f' : '',
+            uid: window.generateUid()
         });
         canvas.add(text);
         canvas.setActiveObject(text);
@@ -76,18 +77,21 @@ function onMouseDown(o) {
         if (currentShapeType === 'rect') {
             activeShape = new fabric.Rect({
                 left: origX, top: origY, width: 0, height: 0,
-                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal
+                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
+                uid: window.generateUid()
             });
         } else if (currentShapeType === 'circle') {
             activeShape = new fabric.Circle({
                 left: origX, top: origY, radius: 0,
                 fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
-                originX: 'center', originY: 'center'
+                originX: 'center', originY: 'center',
+                uid: window.generateUid()
             });
         } else if (currentShapeType === 'triangle') {
             activeShape = new fabric.Triangle({
                 left: origX, top: origY, width: 0, height: 0,
-                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal
+                fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
+                uid: window.generateUid()
             });
         } else if (currentShapeType === 'arrow') {
             activeShape = new fabric.Line([origX, origY, origX, origY], {
@@ -142,7 +146,10 @@ function onMouseUp() {
                 stroke: color, strokeWidth: width, originX: 'center', originY: 'center'
             });
 
-            const group = new fabric.Group([arrowLine, arrowHead], { selectable: true });
+            const group = new fabric.Group([arrowLine, arrowHead], {
+                selectable: true,
+                uid: window.generateUid()
+            });
             canvas.add(group);
             canvas.setActiveObject(group);
         } else if (activeShape) {

@@ -1,4 +1,5 @@
 import { canvas } from './canvas.js';
+import * as clipboard from './clipboard.js';
 
 let currentMode = 'select';
 let lastActiveMode = 'select'; // Armazena a ferramenta anterior ao "Move" temporário
@@ -96,6 +97,16 @@ export function initializeTools() {
             case 'p': setMode('draw'); break;
             case 't': setMode('text'); break;
             case 's': setMode('shape'); break;
+        }
+
+        // Clipboard
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'c') clipboard.copy();
+            if (e.key === 'v') clipboard.paste();
+            if (e.key === 'd') {
+                e.preventDefault();
+                clipboard.duplicate();
+            }
         }
     });
 

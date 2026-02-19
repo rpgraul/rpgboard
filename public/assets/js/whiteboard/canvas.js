@@ -10,7 +10,7 @@ window._isPointerDown = false; // Flag global para o cursor saber se está clica
 
 export function initializeCanvas(canvasId, scrollContainerId) {
     const el = document.getElementById(canvasId);
-    el.oncontextmenu = () => false; 
+    el.oncontextmenu = () => false;
 
     canvas = new fabric.Canvas(canvasId, {
         width: BOARD_SIZE,
@@ -23,8 +23,20 @@ export function initializeCanvas(canvasId, scrollContainerId) {
         stopContextMenu: true
     });
 
+    // Ensure UID is saved in JSON for all objects
+    fabric.Object.prototype.toObject = (function (toObject) {
+        return function (propertiesToInclude) {
+            return toObject.call(this, ['uid'].concat(propertiesToInclude));
+        };
+    })(fabric.Object.prototype.toObject);
+
+    // Helper to generate Unique IDs
+    window.generateUid = () => {
+        return Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    };
+
     const scrollArea = document.getElementById(scrollContainerId);
-    
+
     // --- ESPAÇO (PAN TEMPORÁRIO) ---
     window.addEventListener('keydown', (e) => {
         if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
@@ -43,7 +55,7 @@ export function initializeCanvas(canvasId, scrollContainerId) {
     });
 
     // --- MOUSE EVENTS ---
-    canvas.on('mouse:down', function(opt) {
+    canvas.on('mouse:down', function (opt) {
         const evt = opt.e;
         window._isPointerDown = true;
         const state = getCurrentState();
@@ -58,7 +70,7 @@ export function initializeCanvas(canvasId, scrollContainerId) {
         }
     });
 
-    canvas.on('mouse:move', function(opt) {
+    canvas.on('mouse:move', function (opt) {
         if (isDragging && scrollArea) {
             const evt = opt.e;
             scrollArea.scrollLeft -= (evt.clientX - lastPosX);
@@ -69,10 +81,10 @@ export function initializeCanvas(canvasId, scrollContainerId) {
         updateVisualCursor(); // Mantém o cursor atualizado durante o movimento
     });
 
-    canvas.on('mouse:up', function(opt) {
+    canvas.on('mouse:up', function (opt) {
         window._isPointerDown = false;
         isDragging = false;
-        
+
         // Se foi um clique do meio, restaura a ferramenta anterior
         if (opt.e.button === 1) {
             restorePreviousMode();
@@ -108,10 +120,10 @@ function initializeZoomControls() {
     const btnReset = document.getElementById('btn-zoom-reset');
 
     const updateDisplay = () => {
-        if(btnReset) btnReset.textContent = Math.round(canvas.getZoom() * 100) + '%';
+        if (btnReset) btnReset.textContent = Math.round(canvas.getZoom() * 100) + '%';
     };
 
-    canvas.on('mouse:wheel', function(opt) {
+    canvas.on('mouse:wheel', function (opt) {
         if (!opt.e.ctrlKey) return;
         opt.e.preventDefault();
         opt.e.stopPropagation();
@@ -122,9 +134,9 @@ function initializeZoomControls() {
         updateDisplay();
     });
 
-    if(btnIn) btnIn.onclick = () => { canvas.setZoom(Math.min(5, canvas.getZoom() * 1.2)); updateDisplay(); };
-    if(btnOut) btnOut.onclick = () => { canvas.setZoom(Math.max(0.1, canvas.getZoom() * 0.8)); updateDisplay(); };
-    if(btnReset) btnReset.onclick = () => { canvas.setZoom(1); updateDisplay(); };
+    if (btnIn) btnIn.onclick = () => { canvas.setZoom(Math.min(5, canvas.getZoom() * 1.2)); updateDisplay(); };
+    if (btnOut) btnOut.onclick = () => { canvas.setZoom(Math.max(0.1, canvas.getZoom() * 0.8)); updateDisplay(); };
+    if (btnReset) btnReset.onclick = () => { canvas.setZoom(1); updateDisplay(); };
 }
 
 export function clearCanvas() {

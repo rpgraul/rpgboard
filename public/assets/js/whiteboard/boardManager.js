@@ -1,6 +1,6 @@
 import * as firebaseService from '../modules/firebaseService.js';
 import { canvas } from './canvas.js';
-import { resetHistory } from './history.js'; 
+import { resetHistory } from './history.js';
 
 let currentBoardId = null;
 let boardList = [];
@@ -41,17 +41,17 @@ export function initializeBoardManager() {
     });
 
     select.addEventListener('change', () => {
-        if(select.value) changeBoard(select.value);
+        if (select.value) changeBoard(select.value);
     });
 
     btnAdd.addEventListener('click', async () => {
         const name = prompt("Nome do novo Board:", "Novo Whiteboard");
-        if(name) await createNewBoard(name);
+        if (name) await createNewBoard(name);
     });
 
     btnDel.addEventListener('click', async () => {
-        if(!currentBoardId) return;
-        if(confirm("Deletar este board para todos?")) {
+        if (!currentBoardId) return;
+        if (confirm("Deletar este board para todos?")) {
             const idToDelete = currentBoardId;
             const currentIndex = boardList.findIndex(b => b.id === idToDelete);
             let nextId = null;
@@ -79,7 +79,7 @@ async function createNewBoard(name) {
 
 function changeBoard(id) {
     if (currentBoardId === id && unsubscribeCurrentBoard) return;
-    
+
     currentBoardId = id;
     document.getElementById('board-select').value = id;
 
@@ -104,6 +104,25 @@ function changeBoard(id) {
 }
 
 let saveTimeout;
+async function sanitizeBase64Images() {
+    const objects = canvas.getObjects();
+    const promises = [];
+    for (const obj of objects) {
+        if (obj.type === 'image' && obj._element && obj.getSrc && obj.getSrc().startsWith('data:')) {
+            promises.push(
+                fetch(obj.getSrc())
+                    .then(r => r.blob())
+                    .then(blob => firebaseService.uploadImageToImgBB(blob))
+                    .then(({ url }) => {
+                        obj.setSrc(url, () => canvas.renderAll(), { crossOrigin: 'anonymous' });
+                    })
+                    .catch(err => console.warn('ImgBB upload failed for object', obj.uid, err))
+            );
+        }
+    }
+    if (promises.length > 0) await Promise.all(promises);
+}
+
 function saveToFirebase() {
     if (!currentBoardId || isReceivingUpdate) return;
     clearTimeout(saveTimeout);
@@ -111,7 +130,8 @@ function saveToFirebase() {
         const select = document.getElementById('board-select');
         const name = select.options[select.selectedIndex]?.text || "Board";
         try {
+            await sanitizeBase64Images();
             await firebaseService.saveBoard(currentBoardId, name, canvas.toJSON());
-        } catch(e) { console.error(e); }
-    }, 1000); // Aumentado para 1s para não sobrecarregar
+        } catch (e) { console.error(e); }
+    }, 1500);
 }
