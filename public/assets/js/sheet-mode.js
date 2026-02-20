@@ -4,6 +4,13 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
+import CardLink from "./tiptap-extensions/cardLink.js";
+import StatNode from "./tiptap-extensions/StatNode.js";
+import HpNode from "./tiptap-extensions/HpNode.js";
+import MoneyNode from "./tiptap-extensions/MoneyNode.js";
+import CountNode from "./tiptap-extensions/CountNode.js";
+import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
+import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 
 import { listenToItems, updateItem, listenToDiceRolls, addChatMessage } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName } from './modules/auth.js';
@@ -14,6 +21,7 @@ import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as chat from './modules/chat.js';
 import { visualizeDiceRoll } from './modules/dice3d.js';
 import { processRoll } from './modules/diceLogic.js';
+import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes } from './modules/editorUtils.js';
 
 let allItems = [];
 let currentCharacterId = null;
@@ -23,7 +31,11 @@ let contentEditor = null;
 let contentEditorSaveTimeout = null;
 
 // Referências de elementos que serão preenchidos após o layout carregar
-let imgEl, nameEl, visualStatsContainer, visualCountsContainer, rawContentEditor, notesEditor;
+let imgEl, nameEl, visualStatsContainer, visualCountsContainer, notesEditor;
+let mainEditor, mainEditorSaveTimeout;
+let sideViewEditor;
+let isProcessingUpdate = false;
+let editingNodePos = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. INICIALIZAÇÃO DO LAYOUT MODULAR
@@ -58,8 +70,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Listeners for #toggle-chat-btn, #fab-help, #dice-main-btn, .dice-quick-btn are now handled in layout.js.
     // Keeping page-specific listeners.
 
-    if (layout.fabChangeChar) {
-        layout.fabChangeChar.addEventListener('click', openCharSelection);
+    const fabChangeChar = document.getElementById('fab-change-char');
+    if (fabChangeChar) {
+        fabChangeChar.addEventListener('click', openCharSelection);
     }
 
     if (layout.fabMacros) {
@@ -74,8 +87,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     nameEl = document.getElementById('char-name');
     visualStatsContainer = document.getElementById('visual-stats-container');
     visualCountsContainer = document.getElementById('visual-counts-container');
-    rawContentEditor = document.getElementById('raw-content-editor');
     notesEditor = document.getElementById('player-notes-editor');
+
+    // 5.1 INICIALIZAR EDITOR TIPTAP (após injeção)
+    await initializeMainEditor();
 
 
     // 6. CARREGAMENTO DE DADOS (FIREBASE)
@@ -104,22 +119,47 @@ function injectSheetLayoutHTML() {
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; margin-bottom: 1rem;">
                         <h2 id="char-name" class="title is-4" style="margin: 0; flex: 1;"></h2>
-                        <button id="edit-content-btn" class="button is-small is-light" data-tooltip="Editar Conteúdo">
-                            <span class="icon is-small"><i class="fas fa-pen"></i></span>
-                        </button>
                     </div>
                     <div id="visual-stats-container" class="content mt-4"></div>
                     <div id="visual-counts-container" class="content mt-4"></div>
                 </div>
             </div>
             <div class="sheet-column column-raw-editor">
-                <div class="box is-full-height">
-                    <h3 class="title is-6"><i class="fas fa-align-left"></i> Descrição</h3>
-                    <div id="desc-tiptap-wrapper" class="tiptap-editor-wrapper" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="box is-full-height" style="display: flex; flex-direction: column;">
+                    <h3 class="title is-6"><i class="fas fa-align-left"></i> Conteúdo Principal</h3>
+                    <div id="tiptap-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                         <div role="toolbar" aria-label="toolbar" class="tiptap-toolbar">
-                            <!-- Toolbar será preenchida pelo JS -->
+                            <div role="group" class="tiptap-toolbar-group">
+                                <button class="tiptap-button" data-action="undo" data-tooltip="Desfazer"><i class="fas fa-undo"></i></button>
+                                <button class="tiptap-button" data-action="redo" data-tooltip="Refazer"><i class="fas fa-redo"></i></button>
+                            </div>
+                            <div class="tiptap-separator"></div>
+                             <div role="group" class="tiptap-toolbar-group">
+                                <button class="tiptap-button" data-action="toggleHeading" data-level="1" data-tooltip="Título 1">H1</button>
+                                <button class="tiptap-button" data-action="toggleHeading" data-level="2" data-tooltip="Título 2">H2</button>
+                                <button class="tiptap-button" data-action="toggleHeading" data-level="3" data-tooltip="Título 3">H3</button>
+                                <button class="tiptap-button" data-action="toggleBulletList" data-tooltip="Lista"><i class="fas fa-list-ul"></i></button>
+                                <button class="tiptap-button" data-action="toggleOrderedList" data-tooltip="Lista Numerada"><i class="fas fa-list-ol"></i></button>
+                            </div>
+                             <div class="tiptap-separator"></div>
+                            <div role="group" class="tiptap-toolbar-group">
+                                <button class="tiptap-button" data-action="toggleBold" data-tooltip="Negrito"><i class="fas fa-bold"></i></button>
+                                <button class="tiptap-button" data-action="toggleItalic" data-tooltip="Itálico"><i class="fas fa-italic"></i></button>
+                                 <button class="tiptap-button" data-action="toggleStrike" data-tooltip="Riscado"><i class="fas fa-strikethrough"></i></button>
+                                <button class="tiptap-button" data-action="toggleHighlight" data-tooltip="Destacar"><i class="fas fa-highlighter"></i></button>
+                            </div>
+                            <div class="tiptap-separator"></div>
+                            <div role="group" class="tiptap-toolbar-group">
+                                <button class="tiptap-button" data-action="setTextAlign" data-align="left" data-tooltip="Alinhar à Esquerda"><i class="fas fa-align-left"></i></button>
+                                <button class="tiptap-button" data-action="setTextAlign" data-align="center" data-tooltip="Centralizar"><i class="fas fa-align-center"></i></button>
+                                <button class="tiptap-button" data-action="setTextAlign" data-align="right" data-tooltip="Alinhar à Direita"><i class="fas fa-align-right"></i></button>
+                            </div>
+                             <div class="tiptap-separator"></div>
+                             <div role="group" class="tiptap-toolbar-group">
+                                <button id="shortcode-generator-btn" class="tiptap-button" data-tooltip="Gerador de Shortcodes"><i class="fas fa-magic"></i></button>
+                            </div>
                         </div>
-                        <div id="desc-editor" class="tiptap-editor-content" style="flex: 1; overflow-y: auto;"></div>
+                        <div id="editor" style="flex: 1; overflow-y: auto; padding: 1rem;"></div>
                     </div>
                     <p class="help">Alterações são salvas automaticamente.</p>
                 </div>
@@ -213,9 +253,19 @@ function loadCharacter(id) {
         renderContainers({ conteudo: finalTechContent });
     }
 
-    if (rawContentEditor && document.activeElement !== rawContentEditor) rawContentEditor.value = htmlToRaw(char.conteudo || '');
+    if (mainEditor) {
+        isProcessingUpdate = true;
+        const parsed = preParseShortcodesForEditor(char.conteudo || "");
+        mainEditor.commands.setContent(parsed, false);
+        isProcessingUpdate = false;
+    }
 
     if (notesEditor && document.activeElement !== notesEditor) notesEditor.value = char.playerNotes || '';
+
+    // Visibilidade narrativa-only no modal
+    if (isNarrator()) {
+        document.querySelectorAll(".narrator-only").forEach(el => el.classList.remove("is-hidden"));
+    }
 }
 
 function htmlToRaw(html) {
@@ -227,7 +277,6 @@ function htmlToRaw(html) {
 }
 
 function setupSheetSpecificListeners() {
-    if (rawContentEditor) rawContentEditor.addEventListener('input', (e) => handleAutoSave('conteudo', e.target.value, true));
     if (notesEditor) notesEditor.addEventListener('input', (e) => handleAutoSave('playerNotes', e.target.value, false));
 
     // Listener para upload de imagem do personagem
@@ -236,30 +285,11 @@ function setupSheetSpecificListeners() {
         imgUploadInput.addEventListener('change', handleCharImageUpload);
     }
 
-    // Listener para botão de editar conteúdo
-    const editContentBtn = document.getElementById('edit-content-btn');
-    if (editContentBtn) {
-        editContentBtn.addEventListener('click', openContentEditorModal);
-    }
 
-    // Listeners para modal de conteúdo
-    const contentEditorModal = document.getElementById('content-editor-modal');
-    if (contentEditorModal) {
-        const closeBtn = contentEditorModal.querySelector('.modal-background');
-        const deleteBtn = contentEditorModal.querySelector('.delete');
-        const cancelBtn = contentEditorModal.querySelector('.modal-cancel');
-        const saveBtn = document.getElementById('save-content-btn');
-
-        closeBtn.addEventListener('click', () => closeModal(contentEditorModal));
-        deleteBtn.addEventListener('click', () => closeModal(contentEditorModal));
-        cancelBtn.addEventListener('click', () => closeModal(contentEditorModal));
-        saveBtn.addEventListener('click', () => {
-            if (contentEditorModal.dataset.mode === 'container') {
-                saveContainerContent();
-            } else {
-                saveContentEditor();
-            }
-        });
+    // Listeners para modal de gerador de shortcodes
+    const shortcodeInsertBtn = document.getElementById('shortcode-insert-btn');
+    if (shortcodeInsertBtn) {
+        shortcodeInsertBtn.addEventListener('click', handleShortcodeGeneration);
     }
 
     const quickChatInput = document.getElementById('sheet-chat-input');
@@ -305,9 +335,9 @@ function setupSheetSpecificListeners() {
     }
 }
 
-function handleAutoSave(field, value, isRaw = false) {
+function handleAutoSave(field, value, isRaw) {
     if (!currentCharacterId) return;
-    clearTimeout(autoSaveTimeout);
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
     autoSaveTimeout = setTimeout(() => {
         const updateData = {};
         updateData[field] = isRaw ? value.replace(/\n/g, '<br>') : value;
@@ -315,7 +345,154 @@ function handleAutoSave(field, value, isRaw = false) {
     }, 1000);
 }
 
+async function initializeMainEditor() {
+    mainEditor = new Editor({
+        element: document.querySelector("#editor"),
+        extensions: [
+            StarterKit,
+            Highlight,
+            Underline,
+            Link.configure({ openOnClick: false }),
+            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            CardLink.configure({
+                suggestion: {
+                    items: ({ query }) => allItems.filter(c => c.titulo.toLowerCase().startsWith(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
+                },
+            }),
+            StatNode,
+            HpNode,
+            MoneyNode,
+            CountNode,
+            ContainerShortcode,
+            FichaShortcode,
+        ],
+        editorProps: {
+            attributes: { class: "ProseMirror" },
+            handleKeyDown: (view, event) => {
+                if (event.key === "]" || (event.key === "/" && event.shiftKey)) {
+                    setTimeout(() => {
+                        const html = mainEditor.getHTML();
+                        if (html.includes("[stat") || html.includes("[hp") || html.includes("[money") || html.includes("[count") || html.includes("[container") || html.includes("[#") || html.includes("[ficha")) {
+                            forceEditorReparse(mainEditor, html);
+                        }
+                    }, 10);
+                }
+                return false;
+            }
+        },
+        onUpdate: () => {
+            if (isProcessingUpdate) return;
+            clearTimeout(mainEditorSaveTimeout);
+            mainEditorSaveTimeout = setTimeout(saveMainEditorContent, 800);
+        }
+    });
 
+    // Toolbar Events
+    document.querySelector(".tiptap-toolbar").onclick = (e) => {
+        const btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const val = btn.dataset.level || btn.dataset.align;
+        const chain = mainEditor.chain().focus();
+        if (action === "undo") chain.undo().run();
+        else if (action === "redo") chain.redo().run();
+        else if (action === "toggleBold") chain.toggleBold().run();
+        else if (action === "toggleItalic") chain.toggleItalic().run();
+        else if (action === "toggleStrike") chain.toggleStrike().run();
+        else if (action === "toggleHighlight") chain.toggleHighlight().run();
+        else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
+        else if (action === "toggleBulletList") chain.toggleBulletList().run();
+        else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
+        else if (action === "setTextAlign") chain.setTextAlign(val).run();
+    };
+
+    const shortcodeModal = document.getElementById("shortcode-generator-modal");
+    const typeSelect = document.getElementById("shortcode-type");
+
+    typeSelect.addEventListener("change", (e) => {
+        document.querySelectorAll(".shortcode-options").forEach(el => el.classList.add("is-hidden"));
+        const target = document.getElementById(`shortcode-options-${e.target.value}`);
+        if (target) target.classList.remove("is-hidden");
+        document.getElementById("shortcode-common-options").classList.remove("is-hidden");
+    });
+
+    document.getElementById("shortcode-generator-btn").onclick = () => {
+        editingNodePos = null;
+        document.getElementById("shortcode-generator-form").reset();
+        typeSelect.dispatchEvent(new Event("change"));
+        openModal(shortcodeModal);
+    };
+
+    // Re-bind shortcode editing
+    document.addEventListener("edit-shortcode", (e) => {
+        const { type, attrs, pos } = e.detail;
+        editingNodePos = pos;
+        document.getElementById("shortcode-generator-form").reset();
+
+        const typeMap = {
+            'containerShortcode': 'container',
+            'statNode': 'stat',
+            'hpNode': 'hp',
+            'moneyNode': 'money',
+            'countNode': 'count'
+        };
+
+        const mappedType = typeMap[type] || type;
+        typeSelect.value = mappedType;
+        typeSelect.dispatchEvent(new Event("change"));
+
+        if (mappedType === "container") {
+            document.getElementById("container-label").value = attrs.label || "";
+            document.getElementById("container-type").value = attrs.type || "default";
+            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+        } else if (mappedType === "stat") {
+            document.getElementById("stat-label").value = attrs.label || "";
+            document.getElementById("stat-value").value = attrs.value || "";
+            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+            document.getElementById("shortcode-position").value = attrs.position || "";
+        } else if (mappedType === "hp") {
+            document.getElementById("hp-max").value = attrs.max || "";
+            document.getElementById("hp-current").value = attrs.current || "";
+            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+            document.getElementById("shortcode-position").value = attrs.position || "";
+        } else if (mappedType === "money") {
+            document.getElementById("money-value").value = attrs.current || "";
+            document.getElementById("money-currency").value = attrs.currency || "";
+            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+            document.getElementById("shortcode-position").value = attrs.position || "";
+        } else if (mappedType === "count") {
+            document.getElementById("count-label").value = attrs.label || "";
+            document.getElementById("count-max").value = attrs.max || "";
+            document.getElementById("count-value").value = attrs.current || "";
+            document.getElementById("count-overlay").checked = !!attrs.isOverlay;
+            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+            document.getElementById("shortcode-position").value = attrs.position || "";
+        }
+
+        openModal(shortcodeModal);
+    });
+}
+
+function saveMainEditorContent() {
+    if (!currentCharacterId) return;
+    const html = mainEditor.getHTML();
+    const shortcodes = convertEditorHtmlToShortcodes(html);
+
+    // Atualiza localmente para evitar pulos se houver sync vindo do firebase
+    currentCharacter.conteudo = shortcodes;
+
+    updateItem({ id: currentCharacterId }, { conteudo: shortcodes }).catch(console.error);
+}
+
+function forceEditorReparse(editor, html) {
+    if (isProcessingUpdate) return;
+    isProcessingUpdate = true;
+    const parsed = preParseShortcodesForEditor(html);
+    editor.commands.setContent(parsed, true);
+    setTimeout(() => {
+        isProcessingUpdate = false;
+    }, 0);
+}
 
 function getMacros() {
     return JSON.parse(localStorage.getItem(`macros_${getCurrentUserName()}`) || '[]');
@@ -391,201 +568,49 @@ async function handleCharImageUpload(event) {
     }
 }
 
-function openContentEditorModal() {
-    if (!currentCharacter) return;
+// Shortcode Generator Integration
+async function handleShortcodeGeneration() {
+    const type = document.getElementById('shortcode-type').value;
+    if (!type) return;
 
-    // Se o editor não existe, criar
-    if (!contentEditor) {
-        initializeContentEditor();
-    }
-
-    // Carregar conteúdo no editor
-    if (contentEditor) {
-        contentEditor.commands.setContent(currentCharacter.conteudo || '');
-    }
-
-    // Abrir modal
-    const modal = document.getElementById('content-editor-modal');
-    openModal(modal);
-}
-
-function initializeContentEditor() {
-    try {
-        const element = document.querySelector('#content-editor');
-        if (!element) {
-            console.warn('Elemento #content-editor não encontrado');
-            return;
-        }
-
-        contentEditor = new Editor({
-            element: element,
-            extensions: [
-                StarterKit,
-                Highlight,
-                Underline,
-                Link.configure({ openOnClick: false }),
-                TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            ],
-            editorProps: {
-                attributes: { class: 'ProseMirror' },
-            },
-            onUpdate: () => {
-                clearTimeout(contentEditorSaveTimeout);
-                // Não precisamos salvar automaticamente aqui, apenas ao clicar em Salvar
-            }
-        });
-
-        // Vincular toolbar ao editor
-        setupContentToolbar(contentEditor);
-        console.log('Editor de conteúdo inicializado com sucesso');
-    } catch (error) {
-        console.error('Erro ao inicializar editor de conteúdo:', error);
-    }
-}
-
-function setupContentToolbar(editor) {
-    if (!editor) return;
-    const toolbar = document.querySelector('#content-tiptap-wrapper .tiptap-toolbar');
-    if (!toolbar) return;
-
-    toolbar.querySelectorAll('.tiptap-button').forEach(btn => {
-        const action = btn.dataset.action;
-        if (!action) return;
-
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const level = btn.dataset.level ? parseInt(btn.dataset.level) : undefined;
-            const align = btn.dataset.align;
-
-            switch (action) {
-                case 'undo':
-                    editor.commands.undo();
-                    break;
-                case 'redo':
-                    editor.commands.redo();
-                    break;
-                case 'toggleHeading':
-                    editor.commands.toggleHeading({ level });
-                    break;
-                case 'toggleBulletList':
-                    editor.commands.toggleBulletList();
-                    break;
-                case 'toggleOrderedList':
-                    editor.commands.toggleOrderedList();
-                    break;
-                case 'toggleBold':
-                    editor.commands.toggleBold();
-                    break;
-                case 'toggleItalic':
-                    editor.commands.toggleItalic();
-                    break;
-                case 'toggleStrike':
-                    editor.commands.toggleStrike();
-                    break;
-                case 'toggleHighlight':
-                    editor.commands.toggleHighlight();
-                    break;
-                case 'setTextAlign':
-                    editor.commands.setTextAlign(align);
-                    break;
-                case 'setLink':
-                    const url = prompt('URL:');
-                    if (url) {
-                        editor.commands.setLink({ href: url });
-                    }
-                    break;
-            }
-        });
-    });
-
-    // Atualizar estado dos botões
-    editor.on('update', () => updateContentToolbarButtonStates(editor));
-    updateContentToolbarButtonStates(editor);
-}
-
-function updateContentToolbarButtonStates(editor) {
-    const toolbar = document.querySelector('#content-tiptap-wrapper .tiptap-toolbar');
-    if (!toolbar) return;
-
-    toolbar.querySelectorAll('.tiptap-button').forEach(btn => {
-        const action = btn.dataset.action;
-        const level = btn.dataset.level ? parseInt(btn.dataset.level) : undefined;
-        const align = btn.dataset.align;
-
-        let isActive = false;
-        switch (action) {
-            case 'toggleHeading':
-                isActive = editor.isActive('heading', { level });
-                break;
-            case 'toggleBulletList':
-                isActive = editor.isActive('bulletList');
-                break;
-            case 'toggleOrderedList':
-                isActive = editor.isActive('orderedList');
-                break;
-            case 'toggleBold':
-                isActive = editor.isActive('bold');
-                break;
-            case 'toggleItalic':
-                isActive = editor.isActive('italic');
-                break;
-            case 'toggleStrike':
-                isActive = editor.isActive('strike');
-                break;
-            case 'toggleHighlight':
-                isActive = editor.isActive('highlight');
-                break;
-            case 'setTextAlign':
-                isActive = editor.isActive({ textAlign: align });
-                break;
-        }
-
-        btn.classList.toggle('is-active', isActive);
-    });
-}
-
-function saveContentEditor() {
-    if (!currentCharacterId || !contentEditor) return;
-    const html = contentEditor.getHTML();
-
-    handleAutoSave('conteudo', html, false);
-
-    closeModal(document.getElementById('content-editor-modal'));
-}
-
-function insertShortcodeInContent() {
-    if (!contentEditor) return;
-
-    // Prompt simples para o usuário escolher o tipo de shortcode
-    const types = ['stat', 'hp', 'money', 'count'];
-    let type = prompt(`Selecione o tipo de shortcode:\n\n${types.join(', ')}`);
-
-    if (!type || !types.includes(type.toLowerCase())) {
-        alert('Tipo de shortcode inválido');
-        return;
-    }
-
-    type = type.toLowerCase();
-
-    // Exemplos de shortcodes
-    const examples = {
-        'stat': '[stat "atributo" "valor"]',
-        'hp': '[hp "valor_atual" "valor_máximo"]',
-        'money': '[money "quantidade" "moeda"]',
-        'count': '[count "nome" "valor"]'
+    let nodeType = '';
+    let attrs = {
+        isHidden: document.getElementById('shortcode-hidden').checked,
+        position: document.getElementById('shortcode-position').value
     };
 
-    const shortcode = examples[type];
-    if (shortcode) {
-        contentEditor.chain().focus().insertContent(shortcode).run();
+    if (type === 'stat') {
+        nodeType = 'statNode';
+        attrs.label = document.getElementById('stat-label').value.trim();
+        attrs.value = document.getElementById('stat-value').value.trim();
+    } else if (type === 'hp') {
+        nodeType = 'hpNode';
+        attrs.max = document.getElementById('hp-max').value.trim();
+        attrs.current = document.getElementById('hp-current').value.trim();
+    } else if (type === 'money') {
+        nodeType = 'moneyNode';
+        attrs.current = document.getElementById('money-value').value.trim();
+        attrs.currency = document.getElementById('money-currency').value;
+    } else if (type === 'count') {
+        nodeType = 'countNode';
+        attrs.label = document.getElementById('count-label').value.trim();
+        attrs.max = document.getElementById('count-max').value.trim();
+        attrs.current = document.getElementById('count-value').value.trim();
+        attrs.isOverlay = document.getElementById('count-overlay').checked;
+    } else if (type === 'container') {
+        nodeType = 'containerShortcode';
+        attrs.label = document.getElementById('container-label').value.trim();
+        attrs.type = document.getElementById('container-type').value;
     }
-}
 
-if (isContentModalOpen && contentEditor) {
-    // Usar o editor de conteúdo
-    insertShortcodeInContent();
-}
+    if (editingNodePos !== null) {
+        mainEditor.chain().focus().insertContentAt(editingNodePos, { type: nodeType, attrs }).run();
+    } else {
+        mainEditor.chain().focus().insertContent({ type: nodeType, attrs }).run();
+    }
 
+    closeModal(document.getElementById('shortcode-generator-modal'));
+}
 
 function openShortcodeGeneratorModal() {
     const modal = document.getElementById('shortcode-generator-modal');
@@ -700,91 +725,70 @@ function openContainerEditor(container, index) {
     modal.dataset.containerIndex = index;
     modal.querySelector('.modal-card-title').textContent = `Editar: ${container.label}`;
 
-    if (!contentEditor) {
-        initializeContentEditor();
+    // Usaremos o terminal visual do editor para facilitar a edição focada
+    // Se quiser usar o mainEditor para isso, precisamos de um mecanismo de swap ou apenas usar o modal como antes mas com o novo sistema.
+    // Como o usuário quer "mesma forma que text-mode", no text-mode editamos direto.
+    // Mas no sheet-mode os botões laterais são úteis.
+
+    // Vou inicializar um segundo editor se necessário (sideViewEditor equivalente do text-mode)
+    if (!sideViewEditor) {
+        initializeSideViewEditor();
     }
 
-    if (contentEditor) {
-        contentEditor.commands.setContent(container.content || '');
+    if (sideViewEditor) {
+        sideViewEditor.commands.setContent(preParseShortcodesForEditor(container.content || ''));
     }
 
     openModal(modal);
 }
 
+function initializeSideViewEditor() {
+    sideViewEditor = new Editor({
+        element: document.querySelector("#content-tiptap-wrapper"),
+        extensions: [
+            StarterKit,
+            Highlight,
+            Underline,
+            Link.configure({ openOnClick: false }),
+            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            StatNode,
+            HpNode,
+            MoneyNode,
+            CountNode,
+            ContainerShortcode,
+        ],
+        editorProps: { attributes: { class: "ProseMirror" } }
+    });
+}
+
 /**
- * Salva o conteúdo editado de volta para o shortcode do container.
+ * Salva o conteúdo editado de um container de volta para o documento principal.
  */
 async function saveContainerContent() {
-    if (!currentCharacterId || !contentEditor) return;
+    if (!currentCharacterId || !sideViewEditor) return;
 
     const modal = document.getElementById('content-editor-modal');
     const index = parseInt(modal.dataset.containerIndex, 10);
     const containers = shortcodeParser.extractContainers(currentCharacter.conteudo);
 
     if (containers[index]) {
-        const newInnerContent = contentEditor.getHTML();
+        const newInnerContent = convertEditorHtmlToShortcodes(sideViewEditor.getHTML());
         const oldFullMatch = containers[index].fullMatch;
 
-        // Reconstrói o shortcode preservando as flags/tokens originais (# e close)
         const headerMatch = oldFullMatch.match(/\[container\s+[^\]]*\]/i)[0];
         const newFullShortcode = `${headerMatch}\n${newInnerContent}\n[/container]`;
 
-        // Substituição granular no conteúdo total
         const newConteudo = currentCharacter.conteudo.replace(oldFullMatch, newFullShortcode);
-
         await updateItem({ id: currentCharacterId }, { conteudo: newConteudo });
-
-        // Atualiza o estado local para evitar inconsistências se salvar de novo sem recarregar
         currentCharacter.conteudo = newConteudo;
+
+        // Atualizar o editor principal também para refletir a mudança
+        if (mainEditor) {
+            isProcessingUpdate = true;
+            mainEditor.commands.setContent(preParseShortcodesForEditor(newConteudo), false);
+            isProcessingUpdate = false;
+        }
 
         closeModal(modal);
     }
-}
-
-function insertShortcodeFromModal() {
-    const type = document.getElementById('shortcode-type').value;
-    if (!type) {
-        alert('Selecione um tipo de shortcode');
-        return;
-    }
-
-    let shortcode = '';
-
-    switch (type) {
-        case 'stat':
-            const statLabel = document.getElementById('stat-label').value || 'atributo';
-            const statValue = document.getElementById('stat-value').value || '0';
-            shortcode = `[stat "${statLabel}" "${statValue}"]`;
-            break;
-        case 'hp':
-            const hpMax = document.getElementById('hp-max').value || '100';
-            const hpCurrent = document.getElementById('hp-current').value || '100';
-            shortcode = `[hp max="${hpMax}" current="${hpCurrent}"]`;
-            break;
-        case 'count':
-            const countLabel = document.getElementById('count-label').value || 'contador';
-            const countValue = document.getElementById('count-value').value || '0';
-            const countMax = document.getElementById('count-max').value || '10';
-            shortcode = `[count "${countLabel}" "${countValue}" max="${countMax}"]`;
-            break;
-        case 'money':
-            const moneyValue = document.getElementById('money-value').value || '0';
-            const moneyCurrency = document.getElementById('money-currency').value || 'ouro';
-            shortcode = `[money "${moneyValue}" "${moneyCurrency}"]`;
-            break;
-        case 'nota':
-            const notaTitulo = document.getElementById('nota-titulo').value || 'nota';
-            shortcode = `[nota "${notaTitulo}"]`;
-            break;
-    }
-
-    if (!shortcode) return;
-
-    if (isContentModalOpen && contentEditor) {
-        // Insert into content editor
-        contentEditor.chain().focus().insertContent(shortcode).run();
-    }
-
-    // Close modal
-    closeModal(document.getElementById('shortcode-generator-modal'));
 }

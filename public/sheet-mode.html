@@ -25,7 +25,8 @@
                 "@tiptap/extension-link": "https://esm.sh/@tiptap/extension-link@2.2.4",
                 "@tiptap/extension-highlight": "https://esm.sh/@tiptap/extension-highlight@2.2.4",
                 "@tiptap/extension-underline": "https://esm.sh/@tiptap/extension-underline@2.2.4",
-                "@tiptap/extension-text-align": "https://esm.sh/@tiptap/extension-text-align@2.2.4"
+                "@tiptap/extension-text-align": "https://esm.sh/@tiptap/extension-text-align@2.2.4",
+                "@tiptap/suggestion": "https://esm.sh/@tiptap/suggestion@2.2.4"
             }
         }
     </script>
@@ -102,16 +103,147 @@
     <div class="modal-background"></div>
     <div class="modal-card">
       <header class="modal-card-head">
-        <p class="modal-card-title">Gerador de Shortcodes</p>
+        <p class="modal-card-title">Shortcode</p>
         <button class="delete" aria-label="close"></button>
       </header>
       <section class="modal-card-body">
         <form id="shortcode-generator-form">
-          <!-- Opções de shortcode serão injetadas pelo JS -->
+          <div class="field">
+            <label class="label">Tipo de Shortcode</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select id="shortcode-type">
+                  <option value="">Selecione um tipo</option>
+                  <option value="stat">Status ([stat])</option>
+                  <option value="hp">HP ([hp])</option>
+                  <option value="count">Contador ([count])</option>
+                  <option value="money">Dinheiro ([money])</option>
+                  <option value="container">Container ([container])</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="shortcode-options-stat" class="shortcode-options is-hidden">
+            <div class="field">
+              <label class="label">Rótulo</label>
+              <div class="control">
+                <input class="input" type="text" id="stat-label" placeholder="Ex: Força, Destreza">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Valor</label>
+              <div class="control">
+                <input class="input" type="text" id="stat-value" placeholder="10">
+              </div>
+            </div>
+          </div>
+
+          <div id="shortcode-options-hp" class="shortcode-options is-hidden">
+            <div class="field">
+              <label class="label">HP Máximo</label>
+              <div class="control">
+                <input class="input" type="number" id="hp-max" placeholder="100">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">HP Atual</label>
+              <div class="control">
+                <input class="input" type="number" id="hp-current" placeholder="100">
+              </div>
+            </div>
+          </div>
+
+          <div id="shortcode-options-count" class="shortcode-options is-hidden">
+            <div class="field">
+              <label class="label">Rótulo</label>
+              <div class="control">
+                <input class="input" type="text" id="count-label" placeholder="Ex: Poções, Flechas">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Quantidade Atual</label>
+              <div class="control">
+                <input class="input" type="number" id="count-value" placeholder="0">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Máximo</label>
+              <div class="control">
+                <input class="input" type="number" id="count-max" placeholder="0">
+              </div>
+            </div>
+            <div class="field">
+              <label class="checkbox">
+                <input type="checkbox" id="count-overlay">
+                Destacar no Overlay (*)
+              </label>
+            </div>
+          </div>
+
+          <div id="shortcode-options-money" class="shortcode-options is-hidden">
+            <div class="field">
+              <label class="label">Quantidade</label>
+              <div class="control">
+                <input class="input" type="number" id="money-value" placeholder="0">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Moeda (Opcional)</label>
+              <div class="control">
+                <input class="input" type="text" id="money-currency" placeholder="Ex: GP, $ (Deixe vazio para padrão)">
+              </div>
+            </div>
+          </div>
+
+          <div id="shortcode-options-container" class="shortcode-options is-hidden">
+            <div class="field">
+              <label class="label">Rótulo / Título</label>
+              <div class="control">
+                <input class="input" type="text" id="container-label" placeholder="Ex: Mochila, Magias">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Tipo (Ícone/Cor)</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="container-type">
+                    <option value="default">Padrão</option>
+                    <option value="inventory">Inventário</option>
+                    <option value="spells">Magias</option>
+                    <option value="skills">Habilidades</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="shortcode-common-options" class="is-hidden mt-4 pt-4" style="border-top: 1px solid #444;">
+            <div class="field">
+              <label class="label">Posição</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="shortcode-position">
+                    <option value="">Padrão</option>
+                    <option value="left">Esquerda (Overlay)</option>
+                    <option value="right">Direita (Overlay)</option>
+                    <option value="bottom">Baixo (Overlay)</option>
+                    <option value="top">Topo (Overlay)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="field narrator-only is-hidden">
+              <label class="checkbox has-text-danger">
+                <input type="checkbox" id="shortcode-hidden">
+                Oculto dos Jogadores (#)
+              </label>
+            </div>
+          </div>
         </form>
       </section>
       <footer class="modal-card-foot">
-        <button id="shortcode-insert-btn" class="button is-success">Inserir</button>
+        <button id="shortcode-insert-btn" class="button is-success">Salvar/Inserir</button>
         <button class="button modal-cancel">Cancelar</button>
       </footer>
     </div>

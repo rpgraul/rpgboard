@@ -34,6 +34,7 @@ export function renderHeader() {
     { id: 'nav-whiteboard', label: 'Whiteboard', icon: 'fas fa-pencil-ruler', href: 'drawing-mode.html', page: 'whiteboard' }
   ];
 
+
   container.innerHTML = `
     <header class="top-bar">
       <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:2rem;">
@@ -41,16 +42,16 @@ export function renderHeader() {
         <nav class="main-nav" style="display:flex;gap:0.5rem;align-items:center;">
           ${menu.map(item => `
             ${item.action === 'login' ?
-              `<button id="${item.id}" class="button is-small is-link" style="display:flex;align-items:center;gap:0.3em;">
+      `<button id="${item.id}" class="button is-small is-link" style="display:flex;align-items:center;gap:0.3em;">
                 <span class="icon"><i class="${item.icon}"></i></span>
                 <span id="user-name-label">${item.label}</span>
               </button>`
-              :
-              `<a id="${item.id}" href="${item.href}" class="button is-small${currentPage===item.page?' is-link is-light':' is-link'}" style="display:flex;align-items:center;gap:0.3em;">
+      :
+      `<a id="${item.id}" href="${item.href}" class="button is-small${currentPage === item.page ? ' is-link is-light' : ' is-link'}" style="display:flex;align-items:center;gap:0.3em;">
                 <span class="icon"><i class="${item.icon}"></i></span>
                 <span>${item.label}</span>
               </a>`
-            }
+    }
           `).join('')}
         </nav>
       </div>

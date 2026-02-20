@@ -179,36 +179,3 @@ export const getBoard = async (id) => {
   const snap = await getDoc(doc(db, "rpg-boards", id));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
-export async function migrateData() {
-  const snapshot = await getDocs(itemsCollectionRef);
-  const batch = writeBatch(db);
-  let count = 0;
-
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    if (data.descricao && data.descricao.trim()) {
-      const novoBloco = `\n\n[container label="Descrição Antiga" type="default" close]\n${data.descricao}\n[/container]`;
-      let newContent = data.conteudo || "";
-
-      if (newContent.includes("[/ficha]")) {
-        newContent = newContent.replace("[/ficha]", `${novoBloco}\n[/ficha]`);
-      } else {
-        newContent = `${newContent}\n\n[ficha]\n${novoBloco}\n[/ficha]`;
-      }
-
-      batch.update(docSnap.ref, {
-        conteudo: newContent,
-        descricao: deleteField(),
-      });
-      count++;
-    }
-  });
-
-  if (count > 0) {
-    await batch.commit();
-    console.log(`Migração concluída: ${count} cards atualizados.`);
-    return count;
-  }
-  console.log("Nenhum card precisava de migração.");
-  return 0;
-}
