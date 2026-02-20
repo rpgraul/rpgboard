@@ -15,8 +15,21 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { updateSyncStatus } from "./ui.js";
 
 const { db } = window.firebaseInstances;
+
+async function wrapSync(promise) {
+  updateSyncStatus(true);
+  try {
+    return await promise;
+  } catch (err) {
+    updateSyncStatus(false, true);
+    throw err;
+  } finally {
+    updateSyncStatus(false);
+  }
+}
 
 // --- IMGBB ---
 export async function uploadImageToImgBB(file) {
@@ -40,47 +53,57 @@ export const listenToItems = (cb) => onSnapshot(query(itemsCollectionRef, orderB
 export const saveUser = (name) => setDoc(doc(usersCollectionRef, name.toLowerCase()), { name, lastSeen: serverTimestamp() }, { merge: true });
 
 export async function addItem(itemData, file = null) {
-  const snapshot = await getDocs(itemsCollectionRef);
-  const newItem = { ...itemData, createdAt: serverTimestamp(), order: snapshot.size + 1 };
-  if (file) {
-    const img = await uploadImageToImgBB(file);
-    newItem.url = img.url;
-  }
-  const docRef = await addDoc(itemsCollectionRef, newItem);
-  return docRef.id;
+  return wrapSync((async () => {
+    const snapshot = await getDocs(itemsCollectionRef);
+    const newItem = { ...itemData, createdAt: serverTimestamp(), order: snapshot.size + 1 };
+    if (file) {
+      const img = await uploadImageToImgBB(file);
+      newItem.url = img.url;
+    }
+    const docRef = await addDoc(itemsCollectionRef, newItem);
+    return docRef.id;
+  })());
 }
 
-export const deleteItem = (item) => deleteDoc(doc(db, "rpg-items", item.id));
+export const deleteItem = (item) => wrapSync(deleteDoc(doc(db, "rpg-items", item.id)));
 export const deleteItems = async (ids) => {
-  const batch = writeBatch(db);
-  ids.forEach(id => batch.delete(doc(db, "rpg-items", id)));
-  await batch.commit();
+  return wrapSync((async () => {
+    const batch = writeBatch(db);
+    ids.forEach(id => batch.delete(doc(db, "rpg-items", id)));
+    await batch.commit();
+  })());
 };
 
 export async function updateItem(item, data, file = null) {
-  if (file) {
-    const img = await uploadImageToImgBB(file);
-    data.url = img.url;
-    data.storagePath = deleteField();
-  }
-  return updateDoc(doc(db, "rpg-items", item.id), data);
+  return wrapSync((async () => {
+    if (file) {
+      const img = await uploadImageToImgBB(file);
+      data.url = img.url;
+      data.storagePath = deleteField();
+    }
+    return updateDoc(doc(db, "rpg-items", item.id), data);
+  })());
 }
 
 export const updateItemsVisibility = async (ids, val) => {
-  const batch = writeBatch(db);
-  ids.forEach(id => batch.update(doc(db, "rpg-items", id), { isVisibleToPlayers: val }));
-  await batch.commit();
+  return wrapSync((async () => {
+    const batch = writeBatch(db);
+    ids.forEach(id => batch.update(doc(db, "rpg-items", id), { isVisibleToPlayers: val }));
+    await batch.commit();
+  })());
 };
 
 export const addTagsToItems = async (ids, tags) => {
-  const batch = writeBatch(db);
-  ids.forEach(id => batch.update(doc(db, "rpg-items", id), { tags: arrayUnion(...tags) }));
-  await batch.commit();
+  return wrapSync((async () => {
+    const batch = writeBatch(db);
+    ids.forEach(id => batch.update(doc(db, "rpg-items", id), { tags: arrayUnion(...tags) }));
+    await batch.commit();
+  })());
 };
 
 // --- CHAT ---
 export const addChatMessage = (text, type = 'user', sender = 'Anônimo') =>
-  addDoc(chatCollectionRef, { text, type, sender, createdAt: serverTimestamp() });
+  wrapSync(addDoc(chatCollectionRef, { text, type, sender, createdAt: serverTimestamp() }));
 
 export const listenToChat = (cb) => onSnapshot(query(chatCollectionRef, orderBy('createdAt', 'asc')), cb);
 
@@ -114,12 +137,14 @@ export function listenToDiceRolls(callback) {
 // Exports legados para compatibilidade
 export const removeImageFromItem = (item) => updateItem(item, { url: deleteField() });
 export const updateItemsOrder = async (ids) => {
-  const batch = writeBatch(db);
-  ids.forEach((id, i) => batch.update(doc(db, "rpg-items", id), { order: i }));
-  await batch.commit();
+  return wrapSync((async () => {
+    const batch = writeBatch(db);
+    ids.forEach((id, i) => batch.update(doc(db, "rpg-items", id), { order: i }));
+    await batch.commit();
+  })());
 };
 export const getSettings = async () => (await getDoc(doc(db, "config", "mainSettings"))).data() || {};
-export const saveSettings = (data) => setDoc(doc(db, "config", "mainSettings"), data, { merge: true });
+export const saveSettings = (data) => wrapSync(setDoc(doc(db, "config", "mainSettings"), data, { merge: true }));
 
 
 // --- WHITEBOARDS ---
@@ -132,21 +157,23 @@ export const listenToCurrentBoard = (boardId, cb) => {
 };
 
 export const saveBoard = async (boardId, name, json) => {
-  const data = {
-    name,
-    json: JSON.stringify(json),
-    updatedAt: serverTimestamp()
-  };
-  if (boardId) {
-    await updateDoc(doc(db, "rpg-boards", boardId), data);
-    return boardId;
-  } else {
-    const docRef = await addDoc(boardsCollectionRef, { ...data, createdAt: serverTimestamp() });
-    return docRef.id;
-  }
+  return wrapSync((async () => {
+    const data = {
+      name,
+      json: JSON.stringify(json),
+      updatedAt: serverTimestamp()
+    };
+    if (boardId) {
+      await updateDoc(doc(db, "rpg-boards", boardId), data);
+      return boardId;
+    } else {
+      const docRef = await addDoc(boardsCollectionRef, { ...data, createdAt: serverTimestamp() });
+      return docRef.id;
+    }
+  })());
 };
 
-export const deleteBoard = (id) => deleteDoc(doc(db, "rpg-boards", id));
+export const deleteBoard = (id) => wrapSync(deleteDoc(doc(db, "rpg-boards", id)));
 
 export const getBoard = async (id) => {
   const snap = await getDoc(doc(db, "rpg-boards", id));

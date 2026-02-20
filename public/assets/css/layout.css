@@ -464,3 +464,34 @@ body.is-bulk-editing .bulk-edit-bar {
         height: calc(100vh - 45px);
     }
 }
+/* ========== SYNC STATUS INDICATOR ========== */
+#sync-indicator {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 1000;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background-color: rgba(0, 0, 0, 0.7);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: opacity 0.5s ease;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#sync-indicator.is-syncing {
+    color: #ffd12b; /* Amarelo/Ouro */
+}
+
+#sync-indicator.is-saved {
+    color: #48c774; /* Verde Bulma */
+}
+
+#sync-indicator.is-error {
+    color: #f14668; /* Vermelho Bulma */
+    pointer-events: auto;
+}
