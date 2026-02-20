@@ -184,14 +184,9 @@ export function parseMainContent(content) {
         </div>`;
     });
 
-    // Novo Parser de Ficha (Isola no editor, omite no grid)
+    // Novo Parser de Ficha (Isola no editor, remove no grid para narrativa pura)
     const fichaRegex = /\[ficha\]([\s\S]*?)\[\/ficha\]/gi;
-    processedContent = processedContent.replace(fichaRegex, () => {
-        return `<div class="shortcode-ficha-placeholder">
-            <span class="icon"><i class="fas fa-id-card"></i></span>
-            <em>Mecânicas da ficha (ocultas no mural)</em>
-        </div>`;
-    });
+    processedContent = processedContent.replace(fichaRegex, "");
 
     // Remove tags de Hide isoladas, stats soltos, etc, que não devem aparecer no texto corrido
     processedContent = processedContent.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (match, startTag, hiddenContent, endTag) => {

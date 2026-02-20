@@ -183,3 +183,17 @@
     border-style: dashed !important;
     border-color: #ff3860 !important;
 }
+
+.sheet-containers-list {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 1rem;
+}
+
+.sheet-containers-list .buttons .button {
+    transition: all 0.2s ease;
+}
+
+.sheet-containers-list .buttons .button:hover {
+    filter: brightness(1.2);
+    transform: translateY(-1px);
+}

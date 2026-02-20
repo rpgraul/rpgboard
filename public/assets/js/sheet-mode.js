@@ -19,8 +19,6 @@ let allItems = [];
 let currentCharacterId = null;
 let currentCharacter = null;
 let autoSaveTimeout = null;
-let descEditor = null;
-let descEditorSaveTimeout = null;
 let contentEditor = null;
 let contentEditorSaveTimeout = null;
 
@@ -79,8 +77,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     rawContentEditor = document.getElementById('raw-content-editor');
     notesEditor = document.getElementById('player-notes-editor');
 
-    // Inicializar Tiptap Editor para Descrição (não-bloqueante)
-    initializeDescEditor().catch(console.error);
 
     // 6. CARREGAMENTO DE DADOS (FIREBASE)
     listenToItems((snapshot) => {
@@ -219,18 +215,6 @@ function loadCharacter(id) {
 
     if (rawContentEditor && document.activeElement !== rawContentEditor) rawContentEditor.value = htmlToRaw(char.conteudo || '');
 
-    // Carregar conteúdo no descEditor quando estiver pronto
-    if (!descEditor) {
-        // Se editor não está pronto, tentar inicializar antes de carregar conteúdo
-        initializeDescEditor().then(() => {
-            if (descEditor && !descEditor.view?.hasFocus?.()) {
-                descEditor.commands.setContent(char.descricao || '');
-            }
-        }).catch(console.error);
-    } else if (!descEditor.view?.hasFocus?.()) {
-        descEditor.commands.setContent(char.descricao || '');
-    }
-
     if (notesEditor && document.activeElement !== notesEditor) notesEditor.value = char.playerNotes || '';
 }
 
@@ -331,152 +315,7 @@ function handleAutoSave(field, value, isRaw = false) {
     }, 1000);
 }
 
-async function initializeDescEditor() {
-    try {
-        // Verificar se elemento existe
-        const element = document.querySelector('#desc-editor');
-        if (!element) {
-            console.warn('Elemento #desc-editor não encontrado');
-            return;
-        }
 
-        descEditor = new Editor({
-            element: element,
-            extensions: [
-                StarterKit,
-                Highlight,
-                Underline,
-                Link.configure({ openOnClick: false }),
-                TextAlign.configure({ types: ['heading', 'paragraph'] }),
-            ],
-            editorProps: {
-                attributes: { class: 'ProseMirror' },
-            },
-            onUpdate: () => {
-                clearTimeout(descEditorSaveTimeout);
-                descEditorSaveTimeout = setTimeout(() => {
-                    if (currentCharacterId && descEditor) {
-                        handleDescEditorSave();
-                    }
-                }, 800);
-            }
-        });
-
-        // Vincular toolbar ao editor
-        setupDescToolbar(descEditor);
-        console.log('Editor de descrição inicializado com sucesso');
-    } catch (error) {
-        console.error('Erro ao inicializar editor de descrição:', error);
-    }
-}
-
-function setupDescToolbar(editor) {
-    if (!editor) return;
-    const toolbar = document.querySelector('#desc-tiptap-wrapper .tiptap-toolbar');
-    if (!toolbar) return;
-
-    toolbar.querySelectorAll('.tiptap-button').forEach(btn => {
-        const action = btn.dataset.action;
-        if (!action) return;
-
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const level = btn.dataset.level ? parseInt(btn.dataset.level) : undefined;
-            const align = btn.dataset.align;
-
-            switch (action) {
-                case 'undo':
-                    editor.commands.undo();
-                    break;
-                case 'redo':
-                    editor.commands.redo();
-                    break;
-                case 'toggleHeading':
-                    editor.commands.toggleHeading({ level });
-                    break;
-                case 'toggleBulletList':
-                    editor.commands.toggleBulletList();
-                    break;
-                case 'toggleOrderedList':
-                    editor.commands.toggleOrderedList();
-                    break;
-                case 'toggleBold':
-                    editor.commands.toggleBold();
-                    break;
-                case 'toggleItalic':
-                    editor.commands.toggleItalic();
-                    break;
-                case 'toggleStrike':
-                    editor.commands.toggleStrike();
-                    break;
-                case 'toggleHighlight':
-                    editor.commands.toggleHighlight();
-                    break;
-                case 'setTextAlign':
-                    editor.commands.setTextAlign(align);
-                    break;
-                case 'setLink':
-                    const url = prompt('URL:');
-                    if (url) {
-                        editor.commands.setLink({ href: url });
-                    }
-                    break;
-            }
-        });
-    });
-
-    // Atualizar estado dos botões
-    editor.on('update', () => updateDescToolbarButtonStates(editor));
-    updateDescToolbarButtonStates(editor);
-}
-
-function updateDescToolbarButtonStates(editor) {
-    const toolbar = document.querySelector('#desc-tiptap-wrapper .tiptap-toolbar');
-    if (!toolbar) return;
-
-    toolbar.querySelectorAll('.tiptap-button').forEach(btn => {
-        const action = btn.dataset.action;
-        const level = btn.dataset.level ? parseInt(btn.dataset.level) : undefined;
-        const align = btn.dataset.align;
-
-        let isActive = false;
-        switch (action) {
-            case 'toggleHeading':
-                isActive = editor.isActive('heading', { level });
-                break;
-            case 'toggleBulletList':
-                isActive = editor.isActive('bulletList');
-                break;
-            case 'toggleOrderedList':
-                isActive = editor.isActive('orderedList');
-                break;
-            case 'toggleBold':
-                isActive = editor.isActive('bold');
-                break;
-            case 'toggleItalic':
-                isActive = editor.isActive('italic');
-                break;
-            case 'toggleStrike':
-                isActive = editor.isActive('strike');
-                break;
-            case 'toggleHighlight':
-                isActive = editor.isActive('highlight');
-                break;
-            case 'setTextAlign':
-                isActive = editor.isActive({ textAlign: align });
-                break;
-        }
-
-        btn.classList.toggle('is-active', isActive);
-    });
-}
-
-function handleDescEditorSave() {
-    if (!currentCharacterId || !descEditor) return;
-    const html = descEditor.getHTML();
-    const updateData = { descricao: html };
-    updateItem({ id: currentCharacterId }, updateData).catch(console.error);
-}
 
 function getMacros() {
     return JSON.parse(localStorage.getItem(`macros_${getCurrentUserName()}`) || '[]');
@@ -742,47 +581,11 @@ function insertShortcodeInContent() {
     }
 }
 
-function handleShortcodeGeneration() {
-    // Detectar qual editor está ativo
-    const contentEditorModal = document.getElementById('content-editor-modal');
-    const isContentModalOpen = contentEditorModal && !contentEditorModal.classList.contains('is-active') === false;
-
-    if (isContentModalOpen && contentEditor) {
-        // Usar o editor de conteúdo
-        insertShortcodeInContent();
-    } else if (descEditor) {
-        // Usar o editor de descrição
-        insertShortcodeInDesc();
-    }
+if (isContentModalOpen && contentEditor) {
+    // Usar o editor de conteúdo
+    insertShortcodeInContent();
 }
 
-function insertShortcodeInDesc() {
-    if (!descEditor) return;
-
-    // Prompt simples para o usuário escolher o tipo de shortcode
-    const types = ['stat', 'hp', 'money', 'count'];
-    let type = prompt(`Selecione o tipo de shortcode:\n\n${types.join(', ')}`);
-
-    if (!type || !types.includes(type.toLowerCase())) {
-        alert('Tipo de shortcode inválido');
-        return;
-    }
-
-    type = type.toLowerCase();
-
-    // Exemplos de shortcodes
-    const examples = {
-        'stat': '[stat "atributo" "valor"]',
-        'hp': '[hp "valor_atual" "valor_máximo"]',
-        'money': '[money "quantidade" "moeda"]',
-        'count': '[count "nome" "valor"]'
-    };
-
-    const shortcode = examples[type];
-    if (shortcode) {
-        descEditor.chain().focus().insertContent(shortcode).run();
-    }
-}
 
 function openShortcodeGeneratorModal() {
     const modal = document.getElementById('shortcode-generator-modal');
@@ -847,32 +650,44 @@ function updateShortcodeOptions() {
 function renderContainers(char) {
     if (!visualStatsContainer) return;
 
+    // Remove qualquer lista anterior
+    const existingList = visualStatsContainer.querySelector('.sheet-containers-list');
+    if (existingList) existingList.remove();
+
     const containers = shortcodeParser.extractContainers(char.conteudo);
     if (containers.length === 0) return;
 
     const containerList = document.createElement('div');
-    containerList.className = 'sheet-containers-list mt-4';
-    containerList.innerHTML = '<hr style="margin: 1rem 0; opacity: 0.3;">';
+    containerList.className = 'sheet-containers-list mt-4 mb-4';
+
+    // Título discreto
+    const title = document.createElement('p');
+    title.className = 'is-size-7 has-text-centered has-text-grey mb-2';
+    title.innerHTML = '<i class="fas fa-boxes"></i> ACESSÓRIOS E CONTEÚDOS';
+    containerList.appendChild(title);
+
+    const buttonsWrapper = document.createElement('div');
+    buttonsWrapper.className = 'buttons are-small is-centered';
 
     containers.forEach((c, index) => {
         const btn = document.createElement('button');
-        btn.className = `button is-fullwidth mb-2 type-${c.type}`;
+        btn.className = `button is-dark type-${c.type}`;
 
-        let icon = 'fa-box';
-        if (c.type === 'inventory') icon = 'fa-suitcase';
-        if (c.type === 'spells') icon = 'fa-scroll';
-        if (c.type === 'skills') icon = 'fa-fist-raised';
+        let emoji = '📦';
+        if (c.type === 'inventory') emoji = '🎒';
+        if (c.type === 'spells') emoji = '📜';
+        if (c.type === 'skills') emoji = '✊';
 
         btn.innerHTML = `
-            <span class="icon"><i class="fas ${icon}"></i></span>
+            <span class="mr-1">${emoji}</span>
             <span>${c.label}</span>
-            <span class="icon is-small ml-auto"><i class="fas fa-external-link-alt"></i></span>
         `;
 
         btn.onclick = () => openContainerEditor(c, index);
-        containerList.appendChild(btn);
+        buttonsWrapper.appendChild(btn);
     });
 
+    containerList.appendChild(buttonsWrapper);
     visualStatsContainer.appendChild(containerList);
 }
 
@@ -910,14 +725,18 @@ async function saveContainerContent() {
         const newInnerContent = contentEditor.getHTML();
         const oldFullMatch = containers[index].fullMatch;
 
-        // Reconstrói o shortcode com o novo conteúdo interno
-        // Usamos uma reconstrução simples baseada no original
+        // Reconstrói o shortcode preservando as flags/tokens originais (# e close)
         const headerMatch = oldFullMatch.match(/\[container\s+[^\]]*\]/i)[0];
         const newFullShortcode = `${headerMatch}\n${newInnerContent}\n[/container]`;
 
+        // Substituição granular no conteúdo total
         const newConteudo = currentCharacter.conteudo.replace(oldFullMatch, newFullShortcode);
 
         await updateItem({ id: currentCharacterId }, { conteudo: newConteudo });
+
+        // Atualiza o estado local para evitar inconsistências se salvar de novo sem recarregar
+        currentCharacter.conteudo = newConteudo;
+
         closeModal(modal);
     }
 }
@@ -961,16 +780,9 @@ function insertShortcodeFromModal() {
 
     if (!shortcode) return;
 
-    // Detect which editor is active
-    const contentEditorModal = document.getElementById('content-editor-modal');
-    const isContentModalOpen = contentEditorModal && contentEditorModal.classList.contains('is-active');
-
     if (isContentModalOpen && contentEditor) {
         // Insert into content editor
         contentEditor.chain().focus().insertContent(shortcode).run();
-    } else if (descEditor) {
-        // Insert into description editor
-        descEditor.chain().focus().insertContent(shortcode).run();
     }
 
     // Close modal

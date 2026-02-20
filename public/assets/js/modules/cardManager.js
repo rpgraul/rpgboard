@@ -7,8 +7,8 @@ export function initialize(e) {
   return isInitialized
     ? Promise.resolve()
     : new Promise((i) => {
-        (eventHandlers = e), (isInitialized = !0), i();
-      });
+      (eventHandlers = e), (isInitialized = !0), i();
+    });
 }
 export async function loadItems(e) {
   if (!isInitialized)
@@ -34,13 +34,12 @@ export function getItems() {
 export function filterItems(e) {
   return e
     ? items.filter((i) => {
-        const r = e.toLowerCase().trim(),
-          s = i.titulo.toLowerCase().includes(r),
-          t = "texto" === i.tipo && i.conteudo.toLowerCase().includes(r),
-          o = "imagem" === i.tipo && i.descricao?.toLowerCase().includes(r),
-          n = i.tags.some((e) => e.toLowerCase().includes(r));
-        return s || t || o || n;
-      })
+      const r = e.toLowerCase().trim(),
+        s = i.titulo.toLowerCase().includes(r),
+        t = (i.conteudo || "").toLowerCase().includes(r),
+        n = (i.tags || []).some((e) => e.toLowerCase().includes(r));
+      return s || t || n;
+    })
     : items;
 }
 

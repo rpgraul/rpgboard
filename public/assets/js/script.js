@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (loadingIndicator) loadingIndicator.style.display = 'none';
 
         const filteredItems = allItems.filter(dataItem => {
-            const textMatch = !normalizedSearchTerm || [dataItem.titulo, dataItem.conteudo, dataItem.descricao].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) || dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
+            const textMatch = !normalizedSearchTerm || [dataItem.titulo, dataItem.conteudo].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) || dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
             const tagMatch = selectedTags.length === 0 || selectedTags.every(selectedTag => dataItem.tags.some(itemTag => normalizeString(itemTag) === selectedTag));
             let visibilityMatch = true;
             if (auth.isNarrator() && (visibilityFilters.visible || visibilityFilters.hidden)) {
@@ -492,7 +492,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const data = {
             titulo: document.getElementById('card-titulo').value,
             conteudo: document.getElementById('card-conteudo').value,
-            descricao: document.getElementById('card-descricao').value,
             tags: cardTagsInput.value.split(',').map(t => t.trim()).filter(Boolean),
             isVisibleToPlayers: auth.isNarrator() ? document.getElementById('card-visibility').checked : true
         };
@@ -517,7 +516,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="modal-text-container">
                 <h2 class="title is-3">${item.titulo}</h2>
                 <div class="content modal-shortcodes">${allShortcodes}</div>
-                ${item.descricao ? `<hr><div class="content is-small"><strong>Descrição:</strong><br>${item.descricao.replace(/\n/g, '<br>')}</div>` : ''}
             </div>
         `;
         content.appendChild(box); openModal(detailModal);

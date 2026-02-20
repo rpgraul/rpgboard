@@ -20,15 +20,13 @@ export function renderCardViewMode(s, t) {
 
   let e = "";
   if (t && t.url) {
-    const i = `padding-bottom: ${t.width && t.height ? (t.height / t.width) * 100 : 75}%`; 
+    const i = `padding-bottom: ${t.width && t.height ? (t.height / t.width) * 100 : 75}%`;
     const a = t.conteudo ? shortcodeParser.parseAllShortcodes(t, appSettings) : {};
-    const n = t.descricao ? t.descricao.replace(/\n/g, "<br>") : "";
     let o = "";
     const hasShortcodes = Object.values(a).some((v) => v);
-    if (hasShortcodes || n) {
-      if (hasShortcodes) s.classList.add("has-overlay-content");
-      if (n && !hasShortcodes) s.classList.add("is-description-only");
-      o = `\n                <div class="card-info-layer" style="pointer-events: auto;">\n                    <div class="info-content">\n                        <div class="info-group-left">${a.left || ""}</div>\n                        <div class="info-group-right">${a.right || ""}</div>\n                        <div class="info-group-bottom">${a.bottom || ""}</div>\n                        <div class="info-group-details">${a.details || ""}</div>\n                        ${hasShortcodes && n ? '<hr class="tooltip-divider">' : ""}\n                        ${n ? `<div class="tooltip-description">${n}</div>` : ""}\n                    </div>\n                    <div class="info-toggles">\n                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>\n                    </div>\n                </div>`;
+    if (hasShortcodes) {
+      s.classList.add("has-overlay-content");
+      o = `\n                <div class="card-info-layer" style="pointer-events: auto;">\n                    <div class="info-content">\n                        <div class="info-group-left">${a.left || ""}</div>\n                        <div class="info-group-right">${a.right || ""}</div>\n                        <div class="info-group-bottom">${a.bottom || ""}</div>\n                        <div class="info-group-details">${a.details || ""}</div>\n                    </div>\n                    <div class="info-toggles">\n                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>\n                    </div>\n                </div>`;
     }
     e += `\n            <div class="card-image">\n                <figure class="image" style="${i}">\n                    <img src="${t.url}" alt="${t.titulo}">\n                    ${o}\n                </figure>\n            </div>\n        `;
   }
@@ -42,41 +40,35 @@ export function renderCardViewMode(s, t) {
     e += `<div class="tags">${t.tags.map((tag) => `<span class="tag is-info">${tag}</span>`).join(" ")}</div>`;
   }
 
+  // Botão Ver Ficha se contiver [ficha]
+  if (t.conteudo && t.conteudo.includes("[ficha]")) {
+    e += `<div class="mt-2"><a href="sheet-mode.html#${t.id}" class="button is-small is-dark is-fullwidth"><span class="icon is-small"><i class="fas fa-id-card"></i></span> <span>Ver Ficha</span></a></div>`;
+  }
+
   e += "</div>";
   s.innerHTML = `\n        <div class="card-actions-top">\n            <button class="action-icon edit-btn"><i class="fas fa-pencil-alt"></i></button>\n            <button class="action-icon delete-btn"><i class="fas fa-trash-alt"></i></button>\n        </div>\n    ` + e;
 }
 function updateCardView(s, t) {
   s.classList.remove("editing"),
     s.classList.remove("has-overlay-content"),
-    s.classList.remove("is-description-only"),
     s.classList.remove("is-hidden-from-players"),
     isNarrator() &&
-      !1 === t.isVisibleToPlayers &&
-      s.classList.add("is-hidden-from-players");
+    !1 === t.isVisibleToPlayers &&
+    s.classList.add("is-hidden-from-players");
   const e = s.querySelector(".card-info-layer");
   if (e) {
     const i = t.conteudo
-        ? shortcodeParser.parseAllShortcodes(t, appSettings)
-        : {},
-      a = t.descricao ? t.descricao.replace(/\n/g, "<br>") : "",
+      ? shortcodeParser.parseAllShortcodes(t, appSettings)
+      : {},
       n = Object.values(i).some((s) => s);
-    n && s.classList.add("has-overlay-content"),
-      a && !n && s.classList.add("is-description-only");
+    n && s.classList.add("has-overlay-content");
     const o = e.querySelector(".info-content");
     o &&
-      (o.innerHTML = `\n                <div class="info-group-left">${
-        i.left || ""
-      }</div>\n                <div class="info-group-right">${
-        i.right || ""
-      }</div>\n                <div class="info-group-bottom">${
-        i.bottom || ""
-      }</div>\n                <div class="info-group-details">\n                    ${
-        i.details || ""
-      }\n                </div>\n                ${
-        n && a ? '<hr class="tooltip-divider">' : ""
-      }\n                ${
-        a ? `<div class="tooltip-description">${a}</div>` : ""
-      }\n            `);
+      (o.innerHTML = `\n                <div class="info-group-left">${i.left || ""
+        }</div>\n                <div class="info-group-right">${i.right || ""
+        }</div>\n                <div class="info-group-bottom">${i.bottom || ""
+        }</div>\n                <div class="info-group-details">\n                    ${i.details || ""
+        }\n                </div>\n            `);
   }
   const i = s.querySelector(".card-content");
   if (i) {
@@ -89,38 +81,32 @@ function updateCardView(s, t) {
       t.tags.length > 0 &&
       (s += `<div class="tags">${t.tags
         .map((s) => `<span class="tag is-info">${s}</span>`)
-        .join(" ")}</div>`),
-      (i.innerHTML = s);
+        .join(" ")}</div>`);
+
+    if (t.conteudo && t.conteudo.includes("[ficha]")) {
+      s += `<div class="mt-2"><a href="sheet-mode.html#${t.id}" class="button is-small is-dark is-fullwidth"><span class="icon is-small"><i class="fas fa-id-card"></i></span> <span>Ver Ficha</span></a></div>`;
+    }
+
+    i.innerHTML = s;
   }
 }
 export function renderCardEditMode(s, t, e) {
   s.classList.add("editing");
   let i = "";
-  const a = `padding-bottom: ${
-      t.width && t.height ? (t.height / t.width) * 100 : 56.25
+  const a = `padding-bottom: ${t.width && t.height ? (t.height / t.width) * 100 : 56.25
     }%;`,
     n = t.url || "";
-  (i = `\n        <div class="card-image ${
-    n ? "" : "is-placeholder"
-  }">\n            <figure class="image" style="${a}">\n                <img src="${n}" alt="${
-    t.titulo || ""
-  }">\n                <div class="change-image-overlay">\n                    <label class="button is-light">\n                        <span class="icon is-small"><i class="fas fa-camera"></i></span>\n                        <span>${
-    n ? "Trocar" : "Adicionar"
-  } Imagem</span>\n                        <input type="file" class="edit-image-input" accept="image/*" style="display: none;">\n                    </label>\n                </div>\n            </figure>\n        </div>\n        <div class="card-content">\n            <div class="field"><div class="control"><input class="input edit-titulo" type="text" value="${
-    t.titulo || ""
-  }" placeholder="Título"></div></div>\n            <div class="field"><div class="control"><textarea class="textarea edit-conteudo" placeholder="Conteúdo...">${
-    t.conteudo || ""
-  }</textarea></div></div>\n            <div class="field"><div class="control"><textarea class="textarea edit-descricao" placeholder="Descrição (visível ao passar o mouse)">${
-    t.descricao || ""
-  }</textarea></div></div>\n            <div class="field"><div class="control"><input class="input edit-tags" type="text" value="${
-    t.tags?.join(", ") || ""
-  }" placeholder="Tags"></div></div>\n            ${
-    isNarrator()
-      ? `\n                <div class="field">\n                    <label class="checkbox narrator-control">\n                        <input type="checkbox" class="edit-visibility" ${
-          !1 !== t.isVisibleToPlayers ? "checked" : ""
-        }>\n                        <span class="switch-track"></span>\n                        <span class="switch-label-text">Visível para jogadores</span>\n                    </label>\n                </div>\n                `
+  (i = `\n        <div class="card-image ${n ? "" : "is-placeholder"
+    }">\n            <figure class="image" style="${a}">\n                <img src="${n}" alt="${t.titulo || ""
+    }">\n                <div class="change-image-overlay">\n                    <label class="button is-light">\n                        <span class="icon is-small"><i class="fas fa-camera"></i></span>\n                        <span>${n ? "Trocar" : "Adicionar"
+    } Imagem</span>\n                        <input type="file" class="edit-image-input" accept="image/*" style="display: none;">\n                    </label>\n                </div>\n            </figure>\n        </div>\n        <div class="card-content">\n            <div class="field"><div class="control"><input class="input edit-titulo" type="text" value="${t.titulo || ""
+    }" placeholder="Título"></div></div>\n            <div class="field"><div class="control"><textarea class="textarea edit-conteudo" placeholder="Conteúdo...">${t.conteudo || ""
+    }</textarea></div></div>\n            <div class="field"><div class="control"><input class="input edit-tags" type="text" value="${t.tags?.join(", ") || ""
+    }" placeholder="Tags"></div></div>\n            ${isNarrator()
+      ? `\n                <div class="field">\n                    <label class="checkbox narrator-control">\n                        <input type="checkbox" class="edit-visibility" ${!1 !== t.isVisibleToPlayers ? "checked" : ""
+      }>\n                        <span class="switch-track"></span>\n                        <span class="switch-label-text">Visível para jogadores</span>\n                    </label>\n                </div>\n                `
       : ""
-  }\n            <div class="field" style="margin-top: 1.5em; text-align: right;">\n                <button class="button is-primary save-btn"><span class="icon is-small"><i class="fas fa-save"></i></span> <span>Salvar</span></button>\n            </div>\n        </div>\n    `),
+    }\n            <div class="field" style="margin-top: 1.5em; text-align: right;">\n                <button class="button is-primary save-btn"><span class="icon is-small"><i class="fas fa-save"></i></span> <span>Salvar</span></button>\n            </div>\n        </div>\n    `),
     (s.innerHTML =
       '\n        <div class="card-actions-top">\n            <button class="action-icon save-btn"><i class="fas fa-save"></i></button>\n            <button class="action-icon cancel-btn"><i class="fas fa-times-circle"></i></button>\n        </div>' +
       i);
@@ -137,15 +123,14 @@ export function renderCardEditMode(s, t, e) {
 }
 export function getCardFormData(s) {
   const t = {
-      titulo: s.querySelector(".edit-titulo").value,
-      conteudo: s.querySelector(".edit-conteudo").value,
-      descricao: s.querySelector(".edit-descricao").value,
-      tags: s
-        .querySelector(".edit-tags")
-        .value.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    },
+    titulo: s.querySelector(".edit-titulo").value,
+    conteudo: s.querySelector(".edit-conteudo").value,
+    tags: s
+      .querySelector(".edit-tags")
+      .value.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  },
     e = s.querySelector(".edit-visibility");
   return e && (t.isVisibleToPlayers = e.checked), t;
 }

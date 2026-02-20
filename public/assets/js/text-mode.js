@@ -203,7 +203,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const emptyState = document.getElementById("empty-state");
   const cardTitle = document.getElementById("card-title");
   const cardTags = document.getElementById("card-tags");
-  const cardDesc = document.getElementById("card-description");
   const cardVisibility = document.getElementById("card-visibility-editor");
   const deleteBtn = document.getElementById("delete-card-btn");
   const bulkActions = document.getElementById("bulk-actions-container");
@@ -256,7 +255,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const updated = {
       titulo: cardTitle.textContent.trim(),
       tags: cardTags.textContent.split(",").map(t => t.trim()).filter(Boolean),
-      descricao: cardDesc.innerText.trim().replace(/\n/g, "<br>"),
       conteudo: convertEditorHtmlToShortcodes(mainEditor.getHTML()),
     };
     if (isNarrator()) updated.isVisibleToPlayers = cardVisibility.checked;
@@ -317,7 +315,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     emptyState.style.display = "none";
     cardTitle.textContent = card.titulo || "";
     cardTags.textContent = (card.tags || []).join(", ");
-    cardDesc.innerText = (card.descricao || "").replace(/<br\s*\/?>/gi, "\n");
     if (isNarrator()) cardVisibility.checked = card.isVisibleToPlayers !== false;
 
     const parsedContent = preParseShortcodesForEditor(card.conteudo || "");
@@ -335,7 +332,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   searchInput.addEventListener("input", renderCardList);
-  [cardTitle, cardTags, cardDesc, cardVisibility].forEach(el => {
+  [cardTitle, cardTags, cardVisibility].filter(Boolean).forEach(el => {
     el.addEventListener("input", () => {
       clearTimeout(mainEditorSaveTimeout);
       mainEditorSaveTimeout = setTimeout(saveCurrentCard, 800);
