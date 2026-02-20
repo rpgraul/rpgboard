@@ -25,7 +25,7 @@ function formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
-function _parseStat(args) {
+function _parseStat(args, originalShortcode) {
     const positionKeywords = ["left", "right", "bottom"];
     const mainArgs = args.filter(arg => !positionKeywords.includes(arg) && arg !== 'isPlayerSheet');
 
@@ -42,15 +42,16 @@ function _parseStat(args) {
         return text;
     };
 
-    if (mainArgs.length === 1 || mainArgs[0].toLowerCase() === 'null') {
-        const content = mainArgs.length === 1 ? mainArgs[0] : mainArgs.slice(1).join(' ');
-        return `<div class="shortcode-stat">${addTooltip(content)}</div>`;
-    }
+    const value = mainArgs[mainArgs.length - 1] || "";
+    const label = mainArgs.length > 1 ? mainArgs.slice(0, -1).join(' ') : "";
 
-    const value = mainArgs[mainArgs.length - 1];
-    const label = mainArgs.slice(0, -1).join(' ');
+    const dataAttrs = originalShortcode ? `data-shortcode="${encodeURIComponent(originalShortcode)}"` : "";
 
-    return `<div class="shortcode-stat"><strong>${label}:</strong> ${addTooltip(value)}</div>`;
+    return `<div class="shortcode-stat is-interactive" ${dataAttrs}>
+                ${label ? `<strong>${label}:</strong> ` : ""}
+                <span class="stat-value-display">${addTooltip(value)}</span>
+                <input type="text" class="stat-value-input is-hidden" value="${value}">
+            </div>`;
 }
 
 
@@ -316,7 +317,7 @@ export function parseAllShortcodes(item, options = {}) {
 
         switch (sc.command) {
             case "stat":
-                html = _parseStat(finalArgs);
+                html = _parseStat(finalArgs, sc.originalShortcode);
                 result[position || 'left'].push(wrapIfHidden(html, sc.isHidden));
                 break;
             case "hp":

@@ -6,8 +6,7 @@ export default Node.create({
   addAttributes: () => ({
     max: { default: 100 },
     current: { default: 100 },
-    position: { default: "" },
-    isHidden: { default: !1 },
+    isHidden: { default: false },
   }),
   parseHTML: () => [
     {
@@ -15,7 +14,6 @@ export default Node.create({
       getAttrs: (t) => ({
         max: parseInt(t.getAttribute("data-max"), 10),
         current: parseInt(t.getAttribute("data-current"), 10),
-        position: t.getAttribute("data-position") || "",
         isHidden: "true" === t.getAttribute("data-is-hidden"),
       }),
     },
@@ -26,59 +24,42 @@ export default Node.create({
       "data-node-type": "hpNode",
       "data-max": e.attrs.max,
       "data-current": e.attrs.current,
-      "data-position": e.attrs.position,
       "data-is-hidden": e.attrs.isHidden,
     }),
   ],
   addInputRules() {
     return [
       textInputRule({
-        find: /\[hp\s+max=(?:["']?)(\d+)(?:["']?)\s+current=(?:["']?)(\d+)(?:["']?)(?:\s+(.*?))?\]\s*$/,
+        find: /\[hp\s+max=(?:["']?)(\d+)(?:["']?)\s+current=(?:["']?)([-\d]+)(?:["']?)(?:\s+(#))?\]\s*$/,
         type: this.type,
-        getAttributes: (t) => {
-          const e = t[3] || "";
-          return {
-            max: parseInt(t[1], 10),
-            current: parseInt(t[2], 10),
-            isHidden: e.includes("#"),
-            position:
-              ["left", "right", "bottom", "top"].find((t) => e.includes(t)) ||
-              "",
-          };
-        },
+        getAttributes: (t) => ({
+          max: parseInt(t[1], 10),
+          current: parseInt(t[2], 10),
+          isHidden: t[3] === "#",
+        }),
       }),
     ];
   },
   addNodeView() {
     return ({ node: t, editor: e, getPos: a }) => {
-      const r =
-        e.view.dom.closest("[data-item-id]")?.dataset.itemId ||
-        "unknown-item",
-        n = document.createElement("div");
-      (n.className = "shortcode-hp"),
-        t.attrs.isHidden && n.classList.add("is-hidden-preview"),
-        (n.contentEditable = "false"),
-        (n.dataset.itemId = r),
-        (n.dataset.shortcode = encodeURIComponent(
-          `[hp max=${t.attrs.max} current=${t.attrs.current}]`
-        )),
-        (n.dataset.maxHp = t.attrs.max);
+      const n = document.createElement("div");
+      n.className = "shortcode-hp";
+      if (t.attrs.isHidden) n.classList.add("is-hidden-preview");
+      n.contentEditable = "false";
 
-      // Header with Label and Text
       const header = document.createElement("div");
       header.className = "hp-header";
 
-      const o = document.createElement("strong");
-      o.className = "hp-label";
-      o.textContent = `PV${t.attrs.position ? ` (${t.attrs.position})` : ""}`;
+      const label = document.createElement("strong");
+      label.className = "hp-label";
+      label.textContent = "PV";
 
       const hpText = document.createElement("span");
       hpText.className = "hp-text";
       hpText.textContent = `${t.attrs.current} / ${t.attrs.max}`;
 
-      header.append(o, hpText);
+      header.append(label, hpText);
 
-      // Bar Container and Fill
       const barContainer = document.createElement("div");
       barContainer.className = "hp-bar-container";
 

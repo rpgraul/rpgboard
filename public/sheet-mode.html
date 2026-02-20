@@ -179,6 +179,23 @@
                 Destacar no Overlay (*)
               </label>
             </div>
+            <div class="field">
+              <label class="label">Ícone (FontAwesome)</label>
+              <div class="control">
+                <input class="input" type="text" id="count-icon" placeholder="Ex: flask, heart, star">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Tema</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="count-theme">
+                    <option value="number">Número +/-</option>
+                    <option value="checkbox">Checkbox (Slots)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="shortcode-options-money" class="shortcode-options is-hidden">
@@ -219,20 +236,6 @@
           </div>
 
           <div id="shortcode-common-options" class="is-hidden mt-4 pt-4" style="border-top: 1px solid #444;">
-            <div class="field">
-              <label class="label">Posição</label>
-              <div class="control">
-                <div class="select is-fullwidth">
-                  <select id="shortcode-position">
-                    <option value="">Padrão</option>
-                    <option value="left">Esquerda (Overlay)</option>
-                    <option value="right">Direita (Overlay)</option>
-                    <option value="bottom">Baixo (Overlay)</option>
-                    <option value="top">Topo (Overlay)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
             <div class="field narrator-only is-hidden">
               <label class="checkbox has-text-danger">
                 <input type="checkbox" id="shortcode-hidden">
@@ -248,6 +251,28 @@
       </footer>
     </div>
   </div>
+  <!-- Modal para Edição de Ficha Técnica -->
+  <div id="ficha-editor-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card" style="width: 90%; max-width: 1000px;">
+      <header class="modal-card-head">
+        <p class="modal-card-title"><i class="fas fa-file-invoice"></i> Editar Ficha Técnica</p>
+        <button class="delete modal-cancel" aria-label="close"></button>
+      </header>
+      <section class="modal-card-body">
+        <div id="ficha-tiptap-container" class="tiptap-container">
+          <!-- Toolbar será injetada via JS -->
+          <div class="tiptap-toolbar mb-2"></div>
+          <div id="ficha-tiptap-editor" class="tiptap-editor" style="min-height: 400px; border: 1px solid #444; padding: 10px; background: #1a1a1a;"></div>
+        </div>
+      </section>
+      <footer class="modal-card-foot">
+        <button id="ficha-save-btn" class="button is-success">Salvar Mudanças</button>
+        <button class="button modal-cancel">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+
   <script type="module" src="assets/js/firebase-config.js"></script>
   <script type="module" src="assets/js/sheet-mode.js"></script>
   <script src="https://unpkg.com/@popperjs/core@2"></script>

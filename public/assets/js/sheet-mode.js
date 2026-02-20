@@ -36,6 +36,8 @@ let mainEditor, mainEditorSaveTimeout;
 let sideViewEditor;
 let isProcessingUpdate = false;
 let editingNodePos = null;
+let currentFichaBlock = ""; // Armazena o bloco [ficha] integral
+let fichaEditor = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. INICIALIZAÇÃO DO LAYOUT MODULAR
@@ -74,6 +76,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (fabChangeChar) {
         fabChangeChar.addEventListener('click', openCharSelection);
     }
+
+    const editSheetBtn = document.getElementById('edit-sheet-btn');
+    if (editSheetBtn) {
+        editSheetBtn.addEventListener('click', openSheetEditor);
+    }
+
+    document.getElementById('ficha-save-btn').addEventListener('click', saveFichaEditorContent);
 
     if (layout.fabMacros) {
         layout.fabMacros.addEventListener('click', () => openModal(document.getElementById('macro-modal')));
@@ -119,6 +128,9 @@ function injectSheetLayoutHTML() {
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; margin-bottom: 1rem;">
                         <h2 id="char-name" class="title is-4" style="margin: 0; flex: 1;"></h2>
+                        <button id="edit-sheet-btn" class="button is-small is-dark" title="Editar Ficha Técnica">
+                            <i class="fas fa-edit mr-1"></i> Ficha
+                        </button>
                     </div>
                     <div id="visual-stats-container" class="content mt-4"></div>
                     <div id="visual-counts-container" class="content mt-4"></div>
@@ -251,11 +263,23 @@ function loadCharacter(id) {
 
         // Renderizar Containers Dinâmicos (passando o conteúdo técnico)
         renderContainers({ conteudo: finalTechContent });
+
+        setupInteractiveSheetListeners();
     }
 
     if (mainEditor) {
         isProcessingUpdate = true;
-        const parsed = preParseShortcodesForEditor(char.conteudo || "");
+
+        // Isolar a ficha da narrativa
+        const fichaMatch = char.conteudo ? char.conteudo.match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i) : null;
+        currentFichaBlock = fichaMatch ? fichaMatch[0] : "";
+
+        let narrativeContent = char.conteudo || "";
+        if (fichaMatch) {
+            narrativeContent = char.conteudo.replace(fichaMatch[0], "").trim();
+        }
+
+        const parsed = preParseShortcodesForEditor(narrativeContent);
         mainEditor.commands.setContent(parsed, false);
         isProcessingUpdate = false;
     }
@@ -462,8 +486,10 @@ async function initializeMainEditor() {
             document.getElementById("shortcode-position").value = attrs.position || "";
         } else if (mappedType === "count") {
             document.getElementById("count-label").value = attrs.label || "";
-            document.getElementById("count-max").value = attrs.max || "";
-            document.getElementById("count-value").value = attrs.current || "";
+            document.getElementById("count-value").value = attrs.current || 0;
+            document.getElementById("count-max").value = attrs.max || 0;
+            document.getElementById("count-icon").value = attrs.icon || "";
+            document.getElementById("count-theme").value = attrs.theme || "number";
             document.getElementById("count-overlay").checked = !!attrs.isOverlay;
             document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
             document.getElementById("shortcode-position").value = attrs.position || "";
@@ -476,12 +502,17 @@ async function initializeMainEditor() {
 function saveMainEditorContent() {
     if (!currentCharacterId) return;
     const html = mainEditor.getHTML();
-    const shortcodes = convertEditorHtmlToShortcodes(html);
+    const narrativeShortcodes = convertEditorHtmlToShortcodes(html);
 
-    // Atualiza localmente para evitar pulos se houver sync vindo do firebase
-    currentCharacter.conteudo = shortcodes;
+    // Recombina com a ficha que está isolada
+    const fullContent = currentFichaBlock
+        ? `${currentFichaBlock}\n\n${narrativeShortcodes}`
+        : narrativeShortcodes;
 
-    updateItem({ id: currentCharacterId }, { conteudo: shortcodes }).catch(console.error);
+    // Atualiza localmente
+    currentCharacter.conteudo = fullContent;
+
+    updateItem({ id: currentCharacterId }, { conteudo: fullContent }).catch(console.error);
 }
 
 function forceEditorReparse(editor, html) {
@@ -575,8 +606,7 @@ async function handleShortcodeGeneration() {
 
     let nodeType = '';
     let attrs = {
-        isHidden: document.getElementById('shortcode-hidden').checked,
-        position: document.getElementById('shortcode-position').value
+        isHidden: document.getElementById('shortcode-hidden').checked
     };
 
     if (type === 'stat') {
@@ -594,9 +624,11 @@ async function handleShortcodeGeneration() {
     } else if (type === 'count') {
         nodeType = 'countNode';
         attrs.label = document.getElementById('count-label').value.trim();
-        attrs.max = document.getElementById('count-max').value.trim();
-        attrs.current = document.getElementById('count-value').value.trim();
+        attrs.max = parseInt(document.getElementById('count-max').value, 10) || 0;
+        attrs.current = parseInt(document.getElementById('count-value').value, 10) || 0;
         attrs.isOverlay = document.getElementById('count-overlay').checked;
+        attrs.icon = document.getElementById('count-icon').value.trim();
+        attrs.theme = document.getElementById('count-theme').value || "number";
     } else if (type === 'container') {
         nodeType = 'containerShortcode';
         attrs.label = document.getElementById('container-label').value.trim();
@@ -628,12 +660,16 @@ function openShortcodeGeneratorModal() {
         document.getElementById('money-currency').value = 'ouro';
         document.getElementById('nota-titulo').value = '';
 
+        document.getElementById('count-icon').value = '';
+        document.getElementById('count-theme').value = 'number';
+        document.getElementById('count-overlay').checked = false;
+
         // Hide all form sections
         document.getElementById('shortcode-options-stat').classList.add('is-hidden');
         document.getElementById('shortcode-options-hp').classList.add('is-hidden');
         document.getElementById('shortcode-options-count').classList.add('is-hidden');
         document.getElementById('shortcode-options-money').classList.add('is-hidden');
-        document.getElementById('shortcode-options-nota').classList.add('is-hidden');
+        document.getElementById('shortcode-options-container').classList.add('is-hidden');
 
         openModal(modal);
     }
@@ -764,6 +800,97 @@ function initializeSideViewEditor() {
 /**
  * Salva o conteúdo editado de um container de volta para o documento principal.
  */
+function setupInteractiveSheetListeners() {
+    const containers = [visualStatsContainer, visualCountsContainer];
+
+    containers.forEach(container => {
+        if (!container) return;
+
+        container.onclick = (e) => {
+            const interactive = e.target.closest('.is-interactive');
+            if (!interactive) return;
+
+            e.stopPropagation();
+
+            // Lógica específica por tipo
+            if (interactive.classList.contains('shortcode-hp')) {
+                const display = interactive.querySelector('.hp-display-mode');
+                const edit = interactive.querySelector('.hp-edit-mode');
+                if (display && edit) {
+                    display.classList.add('is-hidden');
+                    edit.classList.remove('is-hidden');
+                    const input = edit.querySelector('input');
+                    input.focus();
+                    input.select();
+                }
+            } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money')) {
+                const display = interactive.querySelector('.stat-value-display, .money-value-display');
+                const input = interactive.querySelector('input');
+                if (display && input) {
+                    display.classList.add('is-hidden');
+                    input.classList.remove('is-hidden');
+                    input.focus();
+                    input.select();
+                }
+            }
+        };
+
+        container.onchange = async (e) => {
+            const input = e.target;
+            const interactive = input.closest('.is-interactive');
+            if (!interactive || !interactive.dataset.shortcode) return;
+
+            const oldShortcode = decodeURIComponent(interactive.dataset.shortcode);
+            let newValue = input.value.trim();
+            let newShortcode = "";
+
+            if (interactive.classList.contains('shortcode-hp')) {
+                const max = interactive.dataset.maxHp;
+                newShortcode = `[hp max="${max}" current="${newValue}"]`;
+            } else if (interactive.classList.contains('shortcode-stat')) {
+                // Regex para pegar o rótulo do shortcode antigo e manter o novo valor
+                const labelMatch = oldShortcode.match(/\[stat\s+"([^"]*)"/i);
+                const label = labelMatch ? labelMatch[1] : "";
+                newShortcode = `[stat "${label}" "${newValue}"]`;
+            } else if (interactive.classList.contains('shortcode-money')) {
+                const currencyMatch = oldShortcode.match(/\[money\s+current=".*?"\s*(.*?)\]/i);
+                const currency = currencyMatch ? currencyMatch[1].trim() : "";
+                newShortcode = `[money current="${newValue}" ${currency}]`.replace(/\s+\]/, ']');
+            }
+
+            if (newShortcode) {
+                await updateFichaShortcode(oldShortcode, newShortcode);
+            }
+        };
+
+        // Atalhos de teclado para inputs
+        container.onkeydown = (e) => {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.target.blur();
+            }
+        };
+    });
+}
+
+/**
+ * Atualiza um shortcode específico dentro do bloco [ficha] e sincroniza tudo.
+ */
+async function updateFichaShortcode(oldSc, newSc) {
+    if (!currentFichaBlock || !currentCharacterId) return;
+
+    // Atualiza o bloco isolado
+    currentFichaBlock = currentFichaBlock.replace(oldSc, newSc);
+
+    // Recombina com a narrativa do mainEditor
+    const narrativeShortcodes = convertEditorHtmlToShortcodes(mainEditor.getHTML());
+    const fullContent = `${currentFichaBlock}\n\n${narrativeShortcodes}`;
+
+    currentCharacter.conteudo = fullContent;
+    await updateItem({ id: currentCharacterId }, { conteudo: fullContent });
+
+    // Recarrega a visualização (sem re-parsear o editor principal se possível)
+    loadCharacter(currentCharacterId);
+}
 async function saveContainerContent() {
     if (!currentCharacterId || !sideViewEditor) return;
 
@@ -779,16 +906,105 @@ async function saveContainerContent() {
         const newFullShortcode = `${headerMatch}\n${newInnerContent}\n[/container]`;
 
         const newConteudo = currentCharacter.conteudo.replace(oldFullMatch, newFullShortcode);
+
+        // Atualiza a ficha isolada se o container veio dela
+        if (currentFichaBlock && currentFichaBlock.includes(oldFullMatch)) {
+            currentFichaBlock = currentFichaBlock.replace(oldFullMatch, newFullShortcode);
+        }
+
         await updateItem({ id: currentCharacterId }, { conteudo: newConteudo });
         currentCharacter.conteudo = newConteudo;
 
-        // Atualizar o editor principal também para refletir a mudança
         if (mainEditor) {
             isProcessingUpdate = true;
-            mainEditor.commands.setContent(preParseShortcodesForEditor(newConteudo), false);
+            // Se mudou um container, precisamos regenerar a narrativa sem ficha
+            const narrative = currentCharacter.conteudo.replace(/\[ficha\]([\s\S]*?)\[\/ficha\]/i, "").trim();
+            mainEditor.commands.setContent(preParseShortcodesForEditor(narrative), false);
             isProcessingUpdate = false;
         }
 
         closeModal(modal);
     }
+}
+
+async function initializeFichaEditor() {
+    fichaEditor = new Editor({
+        element: document.querySelector("#ficha-tiptap-editor"),
+        extensions: [
+            StarterKit,
+            Highlight,
+            Underline,
+            Link.configure({ openOnClick: false }),
+            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            StatNode,
+            HpNode,
+            MoneyNode,
+            CountNode,
+            ContainerShortcode,
+        ],
+        editorProps: { attributes: { class: "ProseMirror" } }
+    });
+
+    // Injetar toolbar no modal de ficha (reutilizando a existente na tela)
+    const toolbarHTML = document.querySelector(".column-raw-editor .tiptap-toolbar").innerHTML;
+    const fichaToolbar = document.querySelector("#ficha-tiptap-container .tiptap-toolbar");
+    if (fichaToolbar) {
+        fichaToolbar.innerHTML = toolbarHTML;
+        fichaToolbar.onclick = (e) => {
+            const btn = e.target.closest("button[data-action]");
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const chain = fichaEditor.chain().focus();
+            if (action === "toggleBold") chain.toggleBold().run();
+            // ... (adicionar outros se necessário, ou unificar função de toolbar)
+        };
+        // Unificar botões comuns
+        fichaToolbar.querySelectorAll(".tiptap-button").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                const action = btn.dataset.action;
+                const val = btn.dataset.level || btn.dataset.align;
+                const chain = fichaEditor.chain().focus();
+                if (action === "undo") chain.undo().run();
+                else if (action === "redo") chain.redo().run();
+                else if (action === "toggleBold") chain.toggleBold().run();
+                else if (action === "toggleItalic") chain.toggleItalic().run();
+                else if (action === "toggleStrike") chain.toggleStrike().run();
+                else if (action === "toggleHighlight") chain.toggleHighlight().run();
+                else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
+                else if (action === "toggleBulletList") chain.toggleBulletList().run();
+                else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
+                else if (action === "setTextAlign") chain.setTextAlign(val).run();
+            });
+        });
+    }
+}
+
+function openSheetEditor() {
+    if (!fichaEditor) return;
+
+    // O conteúdo da ficha já está isolado em currentFichaBlock
+    // Removemos os wrappers para editar apenas o interior
+    let innerContent = currentFichaBlock.replace(/^\[ficha\]/i, "").replace(/\[\/ficha\]$/i, "").trim();
+
+    fichaEditor.commands.setContent(preParseShortcodesForEditor(innerContent));
+    openModal(document.getElementById("ficha-editor-modal"));
+}
+
+async function saveFichaEditorContent() {
+    if (!currentCharacterId || !fichaEditor) return;
+
+    const innerShortcodes = convertEditorHtmlToShortcodes(fichaEditor.getHTML());
+    currentFichaBlock = `[ficha]\n${innerShortcodes}\n[/ficha]`;
+
+    // Recombina com a narrativa do mainEditor
+    const narrativeShortcodes = convertEditorHtmlToShortcodes(mainEditor.getHTML());
+    const fullContent = `${currentFichaBlock}\n\n${narrativeShortcodes}`;
+
+    currentCharacter.conteudo = fullContent;
+    await updateItem({ id: currentCharacterId }, { conteudo: fullContent });
+
+    // Atualiza a visualização técnica na ficha (esquerda)
+    loadCharacter(currentCharacterId);
+
+    closeModal(document.getElementById("ficha-editor-modal"));
 }

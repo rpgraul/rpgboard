@@ -1,18 +1,18 @@
 import { Node, mergeAttributes, textInputRule } from "@tiptap/core";
+
 export default Node.create({
   name: "countNode",
   group: "inline",
-  inline: !0,
-  atom: !0,
+  inline: true,
+  atom: true,
   addAttributes: () => ({
     label: { default: "" },
     max: { default: 0 },
     current: { default: 0 },
     theme: { default: "number" },
     icon: { default: "" },
-    isOverlay: { default: !1 },
-    position: { default: "" },
-    isHidden: { default: !1 },
+    isOverlay: { default: false },
+    isHidden: { default: false },
   }),
   parseHTML: () => [
     {
@@ -24,7 +24,6 @@ export default Node.create({
         theme: t.getAttribute("data-theme"),
         icon: t.getAttribute("data-icon") || "",
         isOverlay: "true" === t.getAttribute("data-is-overlay"),
-        position: t.getAttribute("data-position") || "",
         isHidden: "true" === t.getAttribute("data-is-hidden"),
       }),
     },
@@ -39,7 +38,6 @@ export default Node.create({
       "data-theme": e.attrs.theme,
       "data-icon": e.attrs.icon,
       "data-is-overlay": e.attrs.isOverlay,
-      "data-position": e.attrs.position,
       "data-is-hidden": e.attrs.isHidden,
     }),
   ],
@@ -47,55 +45,31 @@ export default Node.create({
     return [
       textInputRule({
         find: /\[(\*?)count\s+([^\]]*?)\]\s*$/,
-        type: this.type,
         getAttributes: (t) => {
-          const e = "*" === t[1],
-            n = t[2],
-            a = /"([^"]+)"|\S+/g,
-            r = ((t) => {
-              const e = [];
-              let n;
-              for (; null !== (n = a.exec(t)); ) e.push(n[1] || n[0]);
-              return e;
-            })(n),
-            o = ((t) => {
-              const e = {};
-              return (
-                t.forEach((t) => {
-                  if (t.includes("=")) {
-                    const [n, a] = t.split("=");
-                    e[n.toLowerCase()] = a.replace(/^["']|["']$/g, "");
-                  }
-                }),
-                e
-              );
-            })(r),
-            i =
-              r.find(
-                (t) =>
-                  !t.includes("=") &&
-                  "checkbox" !== t &&
-                  "#" !== t &&
-                  !["left", "right", "bottom", "top"].includes(t.toLowerCase())
-              ) || "",
-            s = r.max ? parseInt(r.max, 10) : 0,
-            c = r.current ? parseInt(r.current, 10) : 0;
-          let d = r.theme || "number";
-          r.includes("checkbox") && (d = "checkbox");
-          const l =
-              ["left", "right", "bottom", "top"].find((t) =>
-                r.includes(t.toLowerCase())
-              ) || "",
-            u = r.includes("#");
+          const isOverlay = t[1] === "*";
+          const argsStr = t[2];
+          const matches = argsStr.match(/"([^"]+)"|\S+/g) || [];
+          const attrs = {};
+
+          matches.forEach(m => {
+            if (m.includes("=")) {
+              const [k, v] = m.split("=");
+              attrs[k.toLowerCase()] = v.replace(/^["']|["']$/g, "");
+            }
+          });
+
+          const label = matches.find(m => !m.includes("=") && m !== "#" && m !== "checkbox") || "";
+          const isHidden = argsStr.includes("#");
+          const theme = argsStr.includes("checkbox") ? "checkbox" : (attrs.theme || "number");
+
           return {
-            label: i.replace(/^["']|["']$/g, ""),
-            max: s,
-            current: c,
-            theme: d,
-            icon: o.icon || "",
-            isOverlay: e,
-            position: l,
-            isHidden: u,
+            label: label.replace(/^["']|["']$/g, ""),
+            max: parseInt(attrs.max || 0, 10),
+            current: parseInt(attrs.current || 0, 10),
+            theme,
+            icon: attrs.icon || "",
+            isOverlay,
+            isHidden,
           };
         },
       }),
@@ -104,146 +78,132 @@ export default Node.create({
   addNodeView() {
     return ({ node: t, getPos: e, editor: n }) => {
       const a = document.createElement("span");
-      (a.className = `shortcode-count is-interactive theme-${t.attrs.theme}`),
-        t.attrs.isHidden && a.classList.add("is-hidden-preview"),
-        (a.contentEditable = "false");
+      a.className = `shortcode-count is-interactive theme-${t.attrs.theme}`;
+      if (t.attrs.isHidden) a.classList.add("is-hidden-preview");
+      a.contentEditable = "false";
+
       const r = document.createElement("span");
-      if (
-        ((r.className = "count-representation"), "checkbox" === t.attrs.theme)
-      )
-        for (let o = 1; o <= t.attrs.max; o++) {
-          const i = document.createElement("span");
-          (i.className =
-            "count-checkbox " + (o <= t.attrs.current ? "is-checked" : "")),
-            (i.dataset.value = o),
-            (i.textContent = "✔"),
-            (i.style.cursor = "pointer"),
-            i.addEventListener("click", (a) => {
-              a.stopPropagation();
-              let r = parseInt(i.dataset.value, 10);
-              r === t.attrs.current && (r = 0),
-                "number" == typeof e() &&
-                  n.view.dispatch(
-                    n.view.state.tr.setNodeMarkup(e(), void 0, {
-                      ...t.attrs,
-                      current: r,
-                    })
-                  );
-            }),
-            r.appendChild(i);
+      r.className = "count-representation";
+
+      if (t.attrs.theme === "checkbox") {
+        for (let i = 1; i <= t.attrs.max; i++) {
+          const cb = document.createElement("span");
+          cb.className = "count-checkbox " + (i <= t.attrs.current ? "is-checked" : "");
+          cb.textContent = "✔";
+          cb.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            let newCurrent = i === t.attrs.current ? i - 1 : i;
+            if (typeof e === "function") {
+              n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
+                ...t.attrs,
+                current: newCurrent,
+              }));
+            }
+          });
+          r.appendChild(cb);
         }
-      else {
-        const o = document.createElement("button");
-        if (
-          ((o.className = "count-btn"),
-          (o.dataset.action = "decrement"),
-          (o.textContent = "-"),
-          o.addEventListener("click", (a) => {
-            a.stopPropagation();
-            const r = Math.max(0, t.attrs.current - 1);
-            "number" == typeof e() &&
-              n.view.dispatch(
-                n.view.state.tr.setNodeMarkup(e(), void 0, {
-                  ...t.attrs,
-                  current: r,
-                })
-              );
-          }),
-          r.appendChild(o),
-          t.attrs.icon)
-        ) {
-          const e = document.createElement("i");
-          (e.className = `fas fa-${t.attrs.icon}`), r.appendChild(e);
-        }
-        const i = document.createElement("span");
-        (i.className = "count-name"),
-          (i.textContent = t.attrs.label),
-          t.attrs.position &&
-            (i.textContent += ` (${t.attrs.position.toUpperCase()})`),
-          r.appendChild(i);
-        const s = document.createElement("span");
-        (s.className = "count-current-value"),
-          (s.textContent = t.attrs.current),
-          (s.style.cursor = "pointer"),
-          (s.style.borderBottom = "1px dashed rgba(255,255,255,0.3)");
-        const c = document.createElement("input");
-        (c.type = "number"),
-          (c.className = "count-value-input is-hidden"),
-          (c.style.width = "40px"),
-          (c.style.background = "transparent"),
-          (c.style.border = "none"),
-          (c.style.borderBottom = "1px solid #fff"),
-          (c.style.color = "#fff"),
-          (c.style.fontSize = "0.9em"),
-          (c.style.padding = "0"),
-          (c.style.outline = "none"),
-          (c.value = t.attrs.current);
-        const d = (a) => {
-          if ("number" == typeof e()) {
-            let r = parseInt(a, 10);
-            (r = Math.max(0, Math.min(r, t.attrs.max))),
-              isNaN(r) ||
-                n.view.dispatch(
-                  n.view.state.tr.setNodeMarkup(e(), void 0, {
-                    ...t.attrs,
-                    current: r,
-                  })
-                );
+      } else {
+        const btnDec = document.createElement("button");
+        btnDec.className = "count-btn";
+        btnDec.textContent = "-";
+        btnDec.onclick = (ev) => {
+          ev.stopPropagation();
+          if (typeof e === "function") {
+            const next = Math.max(0, t.attrs.current - 1);
+            n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
+              ...t.attrs,
+              current: next,
+            }));
           }
         };
-        s.addEventListener("click", (t) => {
-          t.stopPropagation(),
-            s.classList.add("is-hidden"),
-            c.classList.remove("is-hidden"),
-            c.focus(),
-            c.select();
-        }),
-          c.addEventListener("blur", () => {
-            d(c.value),
-              c.classList.add("is-hidden"),
-              s.classList.remove("is-hidden");
-          }),
-          c.addEventListener("keydown", (t) => {
-            "Enter" === t.key && (t.preventDefault(), c.blur());
-          }),
-          c.addEventListener("click", (t) => t.stopPropagation()),
-          r.appendChild(s),
-          r.appendChild(c);
-        const l = document.createElement("span");
-        (l.textContent = `/${t.attrs.max}`), r.appendChild(l);
-        const u = document.createElement("button");
-        (u.className = "count-btn"),
-          (u.dataset.action = "increment"),
-          (u.textContent = "+"),
-          u.addEventListener("click", (a) => {
-            a.stopPropagation();
-            const r = Math.min(t.attrs.max, t.attrs.current + 1);
-            "number" == typeof e() &&
-              n.view.dispatch(
-                n.view.state.tr.setNodeMarkup(e(), void 0, {
-                  ...t.attrs,
-                  current: r,
-                })
-              );
-          }),
-          r.appendChild(u);
-      }
-      return (
-        a.appendChild(r),
-        a.addEventListener("dblclick", () => {
-          document.dispatchEvent(
-            new CustomEvent("edit-shortcode", {
-              detail: { type: this.name, attrs: t.attrs, pos: e() },
-            })
-          );
-        }),
-        {
-          dom: a,
-          ignoreMutation: () => !0,
-          stopEvent: (t) =>
-            "INPUT" === t.target.tagName || "BUTTON" === t.target.tagName,
+
+        const btnInc = document.createElement("button");
+        btnInc.className = "count-btn";
+        btnInc.textContent = "+";
+        btnInc.onclick = (ev) => {
+          ev.stopPropagation();
+          if (typeof e === "function") {
+            const next = Math.min(t.attrs.max, t.attrs.current + 1);
+            n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
+              ...t.attrs,
+              current: next,
+            }));
+          }
+        };
+
+        const display = document.createElement("span");
+        display.className = "count-current-value";
+        display.textContent = t.attrs.current;
+        display.style.cursor = "pointer";
+        display.style.borderBottom = "1px dashed rgba(255,255,255,0.3)";
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.className = "count-value-input is-hidden";
+        input.style.width = "40px";
+        input.style.background = "transparent";
+        input.style.border = "none";
+        input.style.color = "#fff";
+        input.value = t.attrs.current;
+
+        const save = (val) => {
+          if (typeof e !== "function") return;
+          const next = Math.max(0, Math.min(t.attrs.max, parseInt(val, 10) || 0));
+          n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
+            ...t.attrs,
+            current: next,
+          }));
+        };
+
+        display.onclick = (ev) => {
+          ev.stopPropagation();
+          display.classList.add("is-hidden");
+          input.classList.remove("is-hidden");
+          input.focus();
+        };
+
+        input.onblur = () => {
+          save(input.value);
+          input.classList.add("is-hidden");
+          display.classList.remove("is-hidden");
+        };
+
+        input.onkeydown = (ev) => {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            input.blur();
+          }
+        };
+        input.onclick = (ev) => ev.stopPropagation();
+
+        if (t.attrs.icon) {
+          const icon = document.createElement("i");
+          icon.className = `fas fa-${t.attrs.icon} mr-1`;
+          r.appendChild(icon);
         }
-      );
+
+        const nameSpace = document.createElement("span");
+        nameSpace.className = "count-name mr-1";
+        nameSpace.textContent = t.attrs.label;
+
+        r.append(btnDec, nameSpace, display, input, document.createTextNode(` / ${t.attrs.max}`), btnInc);
+      }
+
+      a.appendChild(r);
+      a.addEventListener("dblclick", (ev) => {
+        ev.stopPropagation();
+        document.dispatchEvent(
+          new CustomEvent("edit-shortcode", {
+            detail: { type: this.name, attrs: t.attrs, pos: e() },
+          })
+        );
+      });
+
+      return {
+        dom: a,
+        ignoreMutation: () => true,
+        stopEvent: (e) => ["INPUT", "BUTTON"].includes(e.target.tagName),
+      };
     };
   },
 });

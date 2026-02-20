@@ -268,6 +268,23 @@
                                 Destacar no Overlay (*)
                             </label>
                         </div>
+                        <div class="field">
+                             <label class="label">Ícone (FontAwesome)</label>
+                             <div class="control">
+                                 <input class="input" type="text" id="count-icon" placeholder="Ex: flask, heart, star">
+                             </div>
+                        </div>
+                        <div class="field">
+                             <label class="label">Tema</label>
+                             <div class="control">
+                                 <div class="select is-fullwidth">
+                                     <select id="count-theme">
+                                         <option value="number">Número +/-</option>
+                                         <option value="checkbox">Checkbox (Slots)</option>
+                                     </select>
+                                 </div>
+                             </div>
+                        </div>
                     </div>
 
                     <div id="shortcode-options-money" class="shortcode-options is-hidden">
@@ -308,21 +325,7 @@
                     </div>
 
                     <div id="shortcode-common-options" class="is-hidden mt-4 pt-4" style="border-top: 1px solid #444;">
-                         <div class="field">
-                            <label class="label">Posição</label>
-                            <div class="control">
-                                <div class="select is-fullwidth">
-                                    <select id="shortcode-position">
-                                        <option value="">Padrão</option>
-                                        <option value="left">Esquerda (Overlay)</option>
-                                        <option value="right">Direita (Overlay)</option>
-                                        <option value="bottom">Baixo (Overlay)</option>
-                                        <option value="top">Topo (Overlay)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="field narrator-only is-hidden">
+                         <div class="field narrator-only is-hidden">
                             <label class="checkbox has-text-danger">
                                 <input type="checkbox" id="shortcode-hidden">
                                 Oculto dos Jogadores (#)
