@@ -61,7 +61,6 @@ function _parseHp(args, itemId, originalShortcode) {
     const finalCurrentHp = Math.max(-10, Math.min(currentHp, maxHp));
     const percent = finalCurrentHp > 0 ? Math.round((finalCurrentHp / maxHp) * 100) : 0;
 
-    // Create a safe shortcode string using calculated values to avoid 'undefined'
     const safeShortcode = `[hp current="${finalCurrentHp}" max="${maxHp}"]`;
 
     let colorClass = 'is-high';
@@ -148,24 +147,43 @@ function _parseCount(args, itemId, originalShortcode) {
           </div>`;
 }
 
-
+/**
+ * Renderiza o conteúdo principal para o Grid/Visualização Padrão.
+ * Transforma [container] em HTML colapsável simples.
+ */
 export function parseMainContent(content) {
     if (!content) return "";
     let processedContent = content;
 
-    processedContent = processedContent.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, '');
-    processedContent = processedContent.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, '');
+    // Novo Parser de Containers (Substitui [nota])
+    // Formato: [container label="Mochila" type="inventory" isHidden="false"]...[/container]
+    const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
 
-    processedContent = processedContent.replace(/\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi, (match, title, isHidden, noteContent) => {
-        return `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
-          <div class="nota-header" role="button" tabindex="0">
-              <span class="nota-title">${title}</span>
-              <span class="nota-icon"><i class="fas fa-plus"></i></span>
-          </div>
-          <div class="nota-content">${noteContent.trim()}</div>
-      </div>`;
+    processedContent = processedContent.replace(containerRegex, (match, argsStr, innerContent) => {
+        const args = _parseKeyValueArgs(_parseArguments(argsStr));
+        const label = args.label || "Container";
+        const type = args.type || "default";
+        const isHidden = args.ishidden === "true" || args.ishidden === true || argsStr.includes('#');
+
+        // Ícone baseado no tipo (pode ser expandido depois)
+        let icon = "fa-box";
+        if (type === 'inventory') icon = "fa-suitcase";
+        if (type === 'spells') icon = "fa-scroll";
+        if (type === 'skills') icon = "fa-fist-raised";
+
+        return `<div class="shortcode-container-view ${isHidden ? 'is-hidden-from-players' : ''} type-${type}">
+            <div class="container-header" onclick="this.parentElement.classList.toggle('is-open')">
+                <span class="icon"><i class="fas ${icon}"></i></span>
+                <span class="container-label">${label}</span>
+                <span class="icon toggle-icon"><i class="fas fa-chevron-down"></i></span>
+            </div>
+            <div class="container-body">
+                ${innerContent.trim()}
+            </div>
+        </div>`;
     });
 
+    // Remove tags de Hide isoladas, stats soltos, etc, que não devem aparecer no texto corrido
     processedContent = processedContent.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (match, startTag, hiddenContent, endTag) => {
         if (startTag.toLowerCase() !== endTag.toLowerCase()) return match;
         return `<div class="is-hidden-from-players">${hiddenContent}</div>`;
@@ -175,6 +193,32 @@ export function parseMainContent(content) {
     processedContent = processedContent.replace(/<p>\s*<\/p>/gi, '');
 
     return processedContent.trim();
+}
+
+/**
+ * Extrai apenas os containers para serem usados como botões/modais na Ficha.
+ * Retorna um array de objetos com label, type, content, isHidden.
+ */
+export function extractContainers(content) {
+    if (!content) return [];
+    const containers = [];
+    const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
+    let match;
+
+    while ((match = containerRegex.exec(content)) !== null) {
+        const argsStr = match[1];
+        const innerContent = match[2];
+        const args = _parseKeyValueArgs(_parseArguments(argsStr));
+
+        containers.push({
+            label: args.label || "Sem Título",
+            type: args.type || "default",
+            isHidden: args.ishidden === "true" || argsStr.includes('#'),
+            content: innerContent.trim(),
+            fullMatch: match[0] // Útil para substituição se necessário
+        });
+    }
+    return containers;
 }
 
 export function parseAllShortcodes(item, options = {}) {
@@ -188,7 +232,11 @@ export function parseAllShortcodes(item, options = {}) {
 
     const foundShortcodes = [];
     while ((match = shortcodeRegex.exec(content)) !== null) {
-        foundShortcodes.push({ full: match[0], inner: match[1], index: match.index });
+        // Ignorar se estiver dentro de um container (hack simples, ideal seria parser de árvore)
+        // Por enquanto, assumimos que shortcodes globais não estão aninhados profundamente em texto
+        if (!match[0].startsWith('[container') && !match[0].startsWith('[/container')) {
+            foundShortcodes.push({ full: match[0], inner: match[1], index: match.index });
+        }
     }
 
     const hiddenRanges = [];
@@ -293,7 +341,7 @@ export function parseAllShortcodes(item, options = {}) {
         }
 
         if (html) {
-            shortcodeData.html = html; // Store the unwrapped HTML
+            shortcodeData.html = html;
             result.all.push(shortcodeData);
         }
     });
@@ -307,7 +355,6 @@ export function parseAllShortcodes(item, options = {}) {
     };
 }
 
-
 export function extractRawShortcodes(content) {
     if (!content) return [];
     const regex = /\[(.*?)\]/g;
@@ -319,24 +366,7 @@ export function extractRawShortcodes(content) {
     return shortcodes;
 }
 
+// Legacy support (opcional, pode ser removido se migrarmos tudo)
 export function parseNotas(content) {
-    if (!content) return "";
-    let result = '';
-
-    // This regex finds all [nota] blocks and extracts their parts.
-    const notaRegex = /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi;
-
-    // Use replace to iterate over all matches, but build the result separately.
-    content.replace(notaRegex, (match, title, isHidden, noteContent) => {
-        result += `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
-              <div class="nota-header" role="button" tabindex="0">
-                  <span class="nota-title">${title}</span>
-                  <span class="nota-icon"><i class="fas fa-plus"></i></span>
-              </div>
-              <div class="nota-content">${noteContent.trim()}</div>
-          </div>`;
-        return ''; // Return empty string as we are not modifying the original content string here.
-    });
-
-    return result;
+    return "";
 }

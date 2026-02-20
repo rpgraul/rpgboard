@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="assets/css/layout.css">
     <link rel="stylesheet" href="assets/css/theme.css">
     <link rel="stylesheet" href="assets/css/text-mode.css">
+    <link rel="stylesheet" href="assets/css/shortcodes.css">
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
     <script type="importmap">
     {
@@ -212,7 +213,7 @@
                                     <option value="hp">HP ([hp])</option>
                                     <option value="count">Contador ([count])</option>
                                     <option value="money">Dinheiro ([money])</option>
-                                    <option value="nota">Nota ([nota])</option>
+                                    <option value="container">Container ()</option>
                                 </select>
                             </div>
                         </div>
@@ -290,11 +291,24 @@
                         </div>
                     </div>
 
-                     <div id="shortcode-options-nota" class="shortcode-options is-hidden">
+                     <div id="shortcode-options-container" class="shortcode-options is-hidden">
                         <div class="field">
-                            <label class="label">Título da Nota</label>
+                            <label class="label">Rótulo / Título</label>
                             <div class="control">
-                                <input class="input" type="text" id="nota-titulo" placeholder="Nota">
+                                <input class="input" type="text" id="container-label" placeholder="Ex: Mochila, Magias">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label class="label">Tipo (Ícone/Cor)</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select id="container-type">
+                                        <option value="default">Padrão</option>
+                                        <option value="inventory">Inventário</option>
+                                        <option value="spells">Magias</option>
+                                        <option value="skills">Habilidades</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
