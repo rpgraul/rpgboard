@@ -175,6 +175,7 @@
 .shortcode-container-editor svg {
     width: 1em;
     height: 1em;
+    pointer-events: none;
 }
 
 /* Estilo de visibilidade no Editor */

@@ -31,130 +31,134 @@ let isProcessingUpdate = false;
 
 // 1. ATUALIZAÇÃO DO PARSER DE ENTRADA (Texto -> Editor)
 function preParseShortcodesForEditor(content) {
-    if (!content) return "";
-    let t = content;
+  if (!content) return "";
+  let t = content;
 
-    // Regex corrigida para o Container
-    const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
-    t = t.replace(containerRegex, (match, argsStr, innerContent) => {
-        const unescapedArgsStr = argsStr.replace(/&quot;/g, '"').replace(/&apos;/g, "'");
-        
-        const args = {};
-        // Regex corrigida para capturar atributos como label="Mochila"
-        const argRegex = /(\w+)=["']?([^"']*)["']?/g;
-        let m;
-        while ((m = argRegex.exec(unescapedArgsStr)) !== null) {
-            args[m[1].toLowerCase()] = m[2];
-        }
-        
-        const label = args.label || "Container";
-        const type = args.type || "default";
-        const isHidden = args.ishidden === "true" || unescapedArgsStr.includes('#');
+  // Regex corrigida para o Container
+  const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
+  t = t.replace(containerRegex, (match, argsStr, innerContent) => {
+    const unescapedArgsStr = argsStr.replace(/&quot;/g, '"').replace(/&apos;/g, "'");
 
-        return `<div data-node-type="containerShortcode" data-label="${label}" data-type="${type}" data-is-hidden="${isHidden}">${innerContent}</div>`;
-    });
+    const args = {};
+    const argRegex = /(\w+)=["']?([^"']*)["']?/g;
+    let m;
+    while ((m = argRegex.exec(unescapedArgsStr)) !== null) {
+      args[m[1].toLowerCase()] = m[2];
+    }
 
-    // Mantém os outros parsers (stat, hp, money, count)
-    t = t.replace(/[\[]stat\s+"([^"]*)"\s+"([^"]*)"(?:\s+(.*?))?[\]]/gi, (e, t, i, s) => {
-        const o = s || "", a = o.includes("#"), n = ["left", "right", "bottom", "top"].find((e) => o.includes(e)) || "";
-        return `<span data-node-type="statNode" data-label="${t}" data-value="${i}" data-position="${n}" data-is-hidden="${a}"></span>`;
-    });
-    t = t.replace(/[\[]hp\s+max=(?:["']?)(\d+)(?:["']?)\s+current=(?:["']?)(\d+)(?:["']?)(?:\s+(.*?))?[\]]/gi, (e, t, i, s) => {
-        const o = s || "", a = o.includes("#"), n = ["left", "right", "bottom", "top"].find((e) => o.includes(e)) || "";
-        return `<span data-node-type="hpNode" data-max="${t}" data-current="${i}" data-position="${n}" data-is-hidden="${a}"></span>`;
-    });
-    t = t.replace(/[\[]money\s+current=(?:["']?)(-?\d+(?:\.\d+)?)(?:["']?)(?:\s+([^\]]*?))?[\]]/gi, (e, t, i = "") => {
-        let s = "", o = "", a = false;
-        if (i) {
-            const parts = i.trim().split(/\s+/), keywords = ["left", "right", "bottom", "top"];
-            o = parts.find((e) => keywords.includes(e.toLowerCase())) || "";
-            a = parts.includes("#");
-            s = parts.find((e) => !keywords.includes(e) && "#" !== e) || "";
-        }
-        return `<span data-node-type="moneyNode" data-current="${t}" data-currency="${s}" data-position="${o}" data-is-hidden="${a}"></span>`;
-    });
-    
-    const argRegexSimple = /"([^"]+)"|\S+/g;
-    t = t.replace(/[\[](\*?)count\s+([^\\]+)[\]]/gi, (match, overlayPrefix, rawArgs) => {
-        const isOverlay = "*" === overlayPrefix;
-        const args = [];
-        let m;
-        while ((m = argRegexSimple.exec(rawArgs)) !== null) args.push(m[1] || m[0]);
-        const params = {};
-        args.forEach(a => {
-            if (a.includes("=")) {
-                const [k, v] = a.split("=");
-                params[k.toLowerCase()] = v.replace(/^["']|["']$/g, "");
-            }
-        });
-        const label = args.find(a => !a.includes("=") && !a.includes("#") && !["left", "right", "bottom", "top"].includes(a.toLowerCase())) || "";
-        const max = params.max ? parseInt(params.max, 10) : 0;
-        const current = params.current ? parseInt(params.current, 10) : 0;
-        let theme = params.theme || (args.includes("checkbox") ? "checkbox" : "number");
-        const pos = ["left", "right", "bottom", "top"].find(a => args.includes(a.toLowerCase())) || "";
-        const hidden = args.includes("#");
-        return `<span data-node-type="countNode" data-label="${label.replace(/^["']|["']$/g, "")}" data-max="${max}" data-current="${current}" data-theme="${theme}" data-icon="${params.icon || ""}" data-is-overlay="${isOverlay}" data-position="${pos}" data-is-hidden="${hidden}"></span>`;
-    });
+    const label = args.label || "Container";
+    const type = args.type || "default";
 
-    return t;
+    // Verifica tokens de visibilidade (#) e estado (close)
+    const isHidden = unescapedArgsStr.includes('#') || args.ishidden === "true";
+    const isClosed = /\bclose\b/i.test(unescapedArgsStr);
+
+    return `<div data-node-type="containerShortcode" data-label="${label}" data-type="${type}" data-is-hidden="${isHidden}" data-is-closed="${isClosed}">${innerContent}</div>`;
+  });
+
+  // Mantém os outros parsers (stat, hp, money, count)
+  t = t.replace(/[\[]stat\s+"([^"]*)"\s+"([^"]*)"(?:\s+(.*?))?[\]]/gi, (e, t, i, s) => {
+    const o = s || "", a = o.includes("#"), n = ["left", "right", "bottom", "top"].find((e) => o.includes(e)) || "";
+    return `<span data-node-type="statNode" data-label="${t}" data-value="${i}" data-position="${n}" data-is-hidden="${a}"></span>`;
+  });
+  t = t.replace(/[\[]hp\s+max=(?:["']?)(\d+)(?:["']?)\s+current=(?:["']?)(\d+)(?:["']?)(?:\s+(.*?))?[\]]/gi, (e, t, i, s) => {
+    const o = s || "", a = o.includes("#"), n = ["left", "right", "bottom", "top"].find((e) => o.includes(e)) || "";
+    return `<span data-node-type="hpNode" data-max="${t}" data-current="${i}" data-position="${n}" data-is-hidden="${a}"></span>`;
+  });
+  t = t.replace(/[\[]money\s+current=(?:["']?)(-?\d+(?:\.\d+)?)(?:["']?)(?:\s+([^\]]*?))?[\]]/gi, (e, t, i = "") => {
+    let s = "", o = "", a = false;
+    if (i) {
+      const parts = i.trim().split(/\s+/), keywords = ["left", "right", "bottom", "top"];
+      o = parts.find((e) => keywords.includes(e.toLowerCase())) || "";
+      a = parts.includes("#");
+      s = parts.find((e) => !keywords.includes(e) && "#" !== e) || "";
+    }
+    return `<span data-node-type="moneyNode" data-current="${t}" data-currency="${s}" data-position="${o}" data-is-hidden="${a}"></span>`;
+  });
+
+  const argRegexSimple = /"([^"]+)"|\S+/g;
+  t = t.replace(/[\[](\*?)count\s+([^\\]+)[\]]/gi, (match, overlayPrefix, rawArgs) => {
+    const isOverlay = "*" === overlayPrefix;
+    const args = [];
+    let m;
+    while ((m = argRegexSimple.exec(rawArgs)) !== null) args.push(m[1] || m[0]);
+    const params = {};
+    args.forEach(a => {
+      if (a.includes("=")) {
+        const [k, v] = a.split("=");
+        params[k.toLowerCase()] = v.replace(/^["']|["']$/g, "");
+      }
+    });
+    const label = args.find(a => !a.includes("=") && !a.includes("#") && !["left", "right", "bottom", "top"].includes(a.toLowerCase())) || "";
+    const max = params.max ? parseInt(params.max, 10) : 0;
+    const current = params.current ? parseInt(params.current, 10) : 0;
+    let theme = params.theme || (args.includes("checkbox") ? "checkbox" : "number");
+    const pos = ["left", "right", "bottom", "top"].find(a => args.includes(a.toLowerCase())) || "";
+    const hidden = args.includes("#");
+    return `<span data-node-type="countNode" data-label="${label.replace(/^["']|["']$/g, "")}" data-max="${max}" data-current="${current}" data-theme="${theme}" data-icon="${params.icon || ""}" data-is-overlay="${isOverlay}" data-position="${pos}" data-is-hidden="${hidden}"></span>`;
+  });
+
+  return t;
 }
 
 // 2. ATUALIZAÇÃO DO PARSER DE SAÍDA (Editor -> Texto)
 function convertEditorHtmlToShortcodes(html) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    const body = doc.body;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const body = doc.body;
 
-    // Processa os containers de forma limpa
-    body.querySelectorAll('[data-node-type="containerShortcode"]').forEach((e) => {
-        const label = e.getAttribute("data-label") || "Container";
-        const type = e.getAttribute("data-type") || "default";
-        const isHidden = e.getAttribute("data-is-hidden") === "true";
-        
-        const openTag = `[container label="${label}" type="${type}"${isHidden ? ' isHidden="true"' : ''}]`;
-        const closeTag = `[/container]`;
-        
-        // O conteúdo real está dentro da div que o Tiptap usa como contentDOM
-        const contentArea = e.querySelector('.container-content-area') || e;
-        const innerHTML = contentArea.innerHTML;
-        
-        e.replaceWith(document.createTextNode(openTag), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode(closeTag));
-    });
+  // Processa os containers de forma limpa
+  body.querySelectorAll('[data-node-type="containerShortcode"]').forEach((e) => {
+    const label = e.getAttribute("data-label") || "Container";
+    const type = e.getAttribute("data-type") || "default";
+    const isHidden = e.getAttribute("data-is-hidden") === "true";
+    const isClosed = e.getAttribute("data-is-closed") === "true";
 
-    // Outros conversores (money, hp, stat, count) permanecem iguais aos que você já tinha.
-    body.querySelectorAll('[data-node-type="moneyNode"]').forEach((e) => {
-        const args = [];
-        const curr = e.getAttribute("data-currency"); if (curr) args.push(curr);
-        const pos = e.getAttribute("data-position"); if (pos) args.push(pos);
-        if (e.getAttribute("data-is-hidden") === "true") args.push("#");
-        e.replaceWith(document.createTextNode(`[money current="${e.getAttribute("data-current") || "0"}"${args.length ? " " + args.join(" ") : ""}]`));
-    });
-    body.querySelectorAll('[data-node-type="hpNode"]').forEach((e) => {
-        const args = [];
-        const pos = e.getAttribute("data-position"); if (pos) args.push(pos);
-        if (e.getAttribute("data-is-hidden") === "true") args.push("#");
-        e.replaceWith(document.createTextNode(`[hp max="${e.getAttribute("data-max") || "0"}" current="${e.getAttribute("data-current") || "0"}"${args.length ? " " + args.join(" ") : ""}]`));
-    });
-    body.querySelectorAll('[data-node-type="statNode"]').forEach((e) => {
-        const args = [];
-        const pos = e.getAttribute("data-position"); if (pos) args.push(pos);
-        if (e.getAttribute("data-is-hidden") === "true") args.push("#");
-        e.replaceWith(document.createTextNode(`[stat "${(e.getAttribute("data-label") || "").replace(/"/g, "'")}" "${(e.getAttribute("data-value") || "").replace(/"/g, "'")}"${args.length ? " " + args.join(" ") : ""}]`));
-    });
-    body.querySelectorAll('[data-node-type="countNode"]').forEach((e) => {
-        const c = [];
-        const label = e.getAttribute("data-label"); if (label) c.push(`"${label.trim()}"`);
-        c.push(`max=${e.getAttribute("data-max") || "0"}`);
-        c.push(`current=${e.getAttribute("data-current") || "0"}`);
-        const theme = e.getAttribute("data-theme"); if (theme && theme !== "number") c.push(theme);
-        const icon = e.getAttribute("data-icon"); if (icon) c.push(`icon="${icon.trim()}"`);
-        const pos = e.getAttribute("data-position"); if (pos) c.push(pos);
-        if (e.getAttribute("data-is-overlay") === "true") c.unshift("*");
-        if (e.getAttribute("data-is-hidden") === "true") c.push("#");
-        e.replaceWith(document.createTextNode(`[${c.join(" ")}]`));
-    });
+    // Constrói a tag usando a sintaxe de tokens (# e close)
+    const openTag = `[container label="${label}" type="${type}"${isClosed ? ' close' : ''}${isHidden ? ' #' : ''}]`;
+    const closeTag = `[/container]`;
 
-    return body.innerHTML;
+    // O conteúdo real está dentro da div que o Tiptap usa como contentDOM
+    const contentArea = e.querySelector('.container-content-area') || e;
+    const innerHTML = contentArea.innerHTML;
+
+    e.replaceWith(document.createTextNode(openTag), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode(closeTag));
+  });
+
+  // Outros conversores (money, hp, stat, count) permanecem iguais aos que você já tinha.
+  body.querySelectorAll('[data-node-type="moneyNode"]').forEach((e) => {
+    const args = [];
+    const curr = e.getAttribute("data-currency"); if (curr) args.push(curr);
+    const pos = e.getAttribute("data-position"); if (pos) args.push(pos);
+    if (e.getAttribute("data-is-hidden") === "true") args.push("#");
+    e.replaceWith(document.createTextNode(`[money current="${e.getAttribute("data-current") || "0"}"${args.length ? " " + args.join(" ") : ""}]`));
+  });
+  body.querySelectorAll('[data-node-type="hpNode"]').forEach((e) => {
+    const args = [];
+    const pos = e.getAttribute("data-position"); if (pos) args.push(pos);
+    if (e.getAttribute("data-is-hidden") === "true") args.push("#");
+    e.replaceWith(document.createTextNode(`[hp max="${e.getAttribute("data-max") || "0"}" current="${e.getAttribute("data-current") || "0"}"${args.length ? " " + args.join(" ") : ""}]`));
+  });
+  body.querySelectorAll('[data-node-type="statNode"]').forEach((e) => {
+    const args = [];
+    const pos = e.getAttribute("data-position"); if (pos) args.push(pos);
+    if (e.getAttribute("data-is-hidden") === "true") args.push("#");
+    e.replaceWith(document.createTextNode(`[stat "${(e.getAttribute("data-label") || "").replace(/"/g, "'")}" "${(e.getAttribute("data-value") || "").replace(/"/g, "'")}"${args.length ? " " + args.join(" ") : ""}]`));
+  });
+  body.querySelectorAll('[data-node-type="countNode"]').forEach((e) => {
+    const c = [];
+    const label = e.getAttribute("data-label"); if (label) c.push(`"${label.trim()}"`);
+    c.push(`max=${e.getAttribute("data-max") || "0"}`);
+    c.push(`current=${e.getAttribute("data-current") || "0"}`);
+    const theme = e.getAttribute("data-theme"); if (theme && theme !== "number") c.push(theme);
+    const icon = e.getAttribute("data-icon"); if (icon) c.push(`icon="${icon.trim()}"`);
+    const pos = e.getAttribute("data-position"); if (pos) c.push(pos);
+    if (e.getAttribute("data-is-overlay") === "true") c.unshift("*");
+    if (e.getAttribute("data-is-hidden") === "true") c.push("#");
+    e.replaceWith(document.createTextNode(`[${c.join(" ")}]`));
+  });
+
+  return body.innerHTML;
 }
 
 
@@ -360,66 +364,118 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   const shortcodeModal = document.getElementById("shortcode-generator-modal");
-    const typeSelect = document.getElementById("shortcode-type");
-    
-    // Mostra/Oculta campos no modal
-    typeSelect.addEventListener("change", (e) => {
-        document.querySelectorAll(".shortcode-options").forEach(el => el.classList.add("is-hidden"));
-        const target = document.getElementById(`shortcode-options-${e.target.value}`);
-        if(target) target.classList.remove("is-hidden");
-        document.getElementById("shortcode-common-options").classList.remove("is-hidden");
-    });
+  const typeSelect = document.getElementById("shortcode-type");
 
-    document.getElementById("shortcode-generator-btn").onclick = () => {
-        editingNodePos = null; // Zera a posição (indica que é criação nova)
-        document.getElementById("shortcode-generator-form").reset();
-        typeSelect.dispatchEvent(new Event("change"));
-        openModal(shortcodeModal);
+  // Mostra/Oculta campos no modal
+  typeSelect.addEventListener("change", (e) => {
+    document.querySelectorAll(".shortcode-options").forEach(el => el.classList.add("is-hidden"));
+    const target = document.getElementById(`shortcode-options-${e.target.value}`);
+    if (target) target.classList.remove("is-hidden");
+    document.getElementById("shortcode-common-options").classList.remove("is-hidden");
+  });
+
+  document.getElementById("shortcode-generator-btn").onclick = () => {
+    editingNodePos = null; // Zera a posição (indica que é criação nova)
+    document.getElementById("shortcode-generator-form").reset();
+    typeSelect.dispatchEvent(new Event("change"));
+    openModal(shortcodeModal);
+  };
+
+  // Escuta o duplo clique nas caixas
+  document.addEventListener("edit-shortcode", (e) => {
+    const { type, attrs, pos } = e.detail;
+    editingNodePos = pos;
+    document.getElementById("shortcode-generator-form").reset();
+
+    // Mapeamento de tipos internos para valores do select
+    const typeMap = {
+      'containerShortcode': 'container',
+      'statNode': 'stat',
+      'hpNode': 'hp',
+      'moneyNode': 'money',
+      'countNode': 'count'
     };
 
-    // Escuta o duplo clique nas caixas
-    document.addEventListener("edit-shortcode", (e) => {
-        const { type, attrs, pos } = e.detail;
-        editingNodePos = pos; // Guarda a posição para atualizar ao invés de inserir
-        document.getElementById("shortcode-generator-form").reset();
-        
-        typeSelect.value = type;
-        typeSelect.dispatchEvent(new Event("change"));
+    const mappedType = typeMap[type] || type;
+    typeSelect.value = mappedType;
+    typeSelect.dispatchEvent(new Event("change"));
 
-        if (type === "container") {
-            document.getElementById("container-label").value = attrs.label || "";
-            document.getElementById("container-type").value = attrs.type || "default";
-            document.getElementById("shortcode-hidden").checked = attrs.isHidden;
-        }
-        // ... (se quiser adicionar a lógica de preencher stat, hp, etc, faríamos aqui)
-        
-        openModal(shortcodeModal);
-    });
+    // Preenchimento de dados baseado no tipo
+    if (mappedType === "container") {
+      document.getElementById("container-label").value = attrs.label || "";
+      document.getElementById("container-type").value = attrs.type || "default";
+      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+    } else if (mappedType === "stat") {
+      document.getElementById("stat-label").value = attrs.label || "";
+      document.getElementById("stat-value").value = attrs.value || "";
+      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+    } else if (mappedType === "hp") {
+      document.getElementById("hp-max").value = attrs.max || "";
+      document.getElementById("hp-current").value = attrs.current || "";
+      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+    } else if (mappedType === "money") {
+      document.getElementById("money-value").value = attrs.current || "";
+      document.getElementById("money-currency").value = attrs.currency || "";
+      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+    } else if (mappedType === "count") {
+      document.getElementById("count-label").value = attrs.label || "";
+      document.getElementById("count-max").value = attrs.max || "";
+      document.getElementById("count-value").value = attrs.current || "";
+      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
+    }
 
-    // 3. LÓGICA DO BOTÃO SALVAR NO MODAL
-    // Dentro do DOMContentLoaded, certifique-se que o click do salvar está assim:
-    document.querySelector("#shortcode-generator-modal .button.is-success").onclick = (e) => {
-        e.preventDefault();
-        const type = document.getElementById("shortcode-type").value;
-        if (!type) return;
+    openModal(shortcodeModal);
+  });
 
-        if (type === "container") {
-            const label = document.getElementById("container-label").value || "Container";
-            const cType = document.getElementById("container-type").value || "default";
-            const isHidden = document.getElementById("shortcode-hidden").checked;
+  // 3. LÓGICA DO BOTÃO SALVAR NO MODAL
+  document.querySelector("#shortcode-generator-modal .button.is-success").onclick = (e) => {
+    e.preventDefault();
+    const type = document.getElementById("shortcode-type").value;
+    if (!type) return;
 
-            if (editingNodePos !== null) {
-                mainEditor.chain().focus().updateAttributes("containerShortcode", { label, type: cType, isHidden }).run();
-            } else {
-                // Insere um container com um parágrafo vazio dentro para ser editável
-                mainEditor.chain().focus().insertContent({
-                    type: 'containerShortcode',
-                    attrs: { label, type: cType, isHidden },
-                    content: [{ type: 'paragraph', text: 'Conteúdo aqui...' }]
-                }).run();
-            }
-        }
-        // Adicionar lógica para os outros tipos aqui conforme necessário
-        closeModal(document.getElementById("shortcode-generator-modal"));
-    };
+    let newAttrs = { isHidden: document.getElementById("shortcode-hidden").checked };
+    let nodeType = '';
+
+    if (type === "container") {
+      nodeType = 'containerShortcode';
+      newAttrs = {
+        ...newAttrs,
+        label: document.getElementById("container-label").value || "Container",
+        type: document.getElementById("container-type").value || "default"
+      };
+    } else if (type === "stat") {
+      nodeType = 'statNode';
+      newAttrs = { ...newAttrs, label: document.getElementById("stat-label").value, value: document.getElementById("stat-value").value };
+    } else if (type === "hp") {
+      nodeType = 'hpNode';
+      newAttrs = { ...newAttrs, max: document.getElementById("hp-max").value, current: document.getElementById("hp-current").value };
+    } else if (type === "money") {
+      nodeType = 'moneyNode';
+      newAttrs = { ...newAttrs, current: document.getElementById("money-value").value, currency: document.getElementById("money-currency").value };
+    } else if (type === "count") {
+      nodeType = 'countNode';
+      newAttrs = { ...newAttrs, label: document.getElementById("count-label").value, max: document.getElementById("count-max").value, current: document.getElementById("count-value").value };
+    }
+
+    if (editingNodePos !== null) {
+      // Edição segura via Transaction preservando atributos não editáveis no modal (como isOpen)
+      const currentNode = mainEditor.view.state.doc.nodeAt(editingNodePos);
+      if (currentNode) {
+        mainEditor.view.dispatch(mainEditor.view.state.tr.setNodeMarkup(editingNodePos, undefined, { ...currentNode.attrs, ...newAttrs }));
+      }
+    } else {
+      // Inserção nova
+      if (type === 'container') {
+        mainEditor.chain().focus().insertContent({
+          type: nodeType,
+          attrs: newAttrs,
+          content: [{ type: 'paragraph' }]
+        }).run();
+      } else {
+        mainEditor.chain().focus().insertContent({ type: nodeType, attrs: newAttrs }).run();
+      }
+    }
+
+    closeModal(document.getElementById("shortcode-generator-modal"));
+  };
 });

@@ -163,15 +163,16 @@ export function parseMainContent(content) {
         const args = _parseKeyValueArgs(_parseArguments(argsStr));
         const label = args.label || "Container";
         const type = args.type || "default";
-        const isHidden = args.ishidden === "true" || args.ishidden === true || argsStr.includes('#');
+        const isHidden = argsStr.includes('#') || args.ishidden === "true";
+        const isClosed = /\bclose\b/i.test(argsStr);
 
-        // Ícone baseado no tipo (pode ser expandido depois)
+        // Ícone baseado no tipo
         let icon = "fa-box";
         if (type === 'inventory') icon = "fa-suitcase";
         if (type === 'spells') icon = "fa-scroll";
         if (type === 'skills') icon = "fa-fist-raised";
 
-        return `<div class="shortcode-container-view ${isHidden ? 'is-hidden-from-players' : ''} type-${type}">
+        return `<div class="shortcode-container-view ${isHidden ? 'is-hidden-from-players' : ''} ${!isClosed ? 'is-open' : ''} type-${type}">
             <div class="container-header" onclick="this.parentElement.classList.toggle('is-open')">
                 <span class="icon"><i class="fas ${icon}"></i></span>
                 <span class="container-label">${label}</span>
@@ -202,6 +203,7 @@ export function parseMainContent(content) {
 export function extractContainers(content) {
     if (!content) return [];
     const containers = [];
+    // Regex aprimorada para capturar atributos e conteúdo de forma mais robusta
     const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
     let match;
 
@@ -210,12 +212,17 @@ export function extractContainers(content) {
         const innerContent = match[2];
         const args = _parseKeyValueArgs(_parseArguments(argsStr));
 
+        const type = args.type || "default";
+        // Fallback: se não houver label, usa o type com inicial maiúscula
+        const label = args.label || (type.charAt(0).toUpperCase() + type.slice(1));
+
         containers.push({
-            label: args.label || "Sem Título",
-            type: args.type || "default",
-            isHidden: args.ishidden === "true" || argsStr.includes('#'),
+            label: label,
+            type: type,
+            isHidden: argsStr.includes('#') || args.ishidden === "true",
+            isClosed: /\bclose\b/i.test(argsStr),
             content: innerContent.trim(),
-            fullMatch: match[0] // Útil para substituição se necessário
+            fullMatch: match[0]
         });
     }
     return containers;

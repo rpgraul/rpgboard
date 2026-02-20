@@ -207,6 +207,9 @@ function loadCharacter(id) {
 
         visualStatsContainer.innerHTML = parsed.all.filter(s => s.type === 'stat' || s.type === 'money').map(s => s.html).join('');
         if (visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
+
+        // Renderizar Containers Dinâmicos
+        renderContainers(char);
     }
 
     if (rawContentEditor && document.activeElement !== rawContentEditor) rawContentEditor.value = htmlToRaw(char.conteudo || '');
@@ -261,7 +264,13 @@ function setupSheetSpecificListeners() {
         closeBtn.addEventListener('click', () => closeModal(contentEditorModal));
         deleteBtn.addEventListener('click', () => closeModal(contentEditorModal));
         cancelBtn.addEventListener('click', () => closeModal(contentEditorModal));
-        saveBtn.addEventListener('click', saveContentEditor);
+        saveBtn.addEventListener('click', () => {
+            if (contentEditorModal.dataset.mode === 'container') {
+                saveContainerContent();
+            } else {
+                saveContentEditor();
+            }
+        });
     }
 
     const quickChatInput = document.getElementById('sheet-chat-input');
@@ -824,6 +833,87 @@ function updateShortcodeOptions() {
         case 'nota':
             document.getElementById('shortcode-options-nota').classList.remove('is-hidden');
             break;
+    }
+}
+
+/**
+ * Renderiza containers como botões interativos na ficha.
+ */
+function renderContainers(char) {
+    if (!visualStatsContainer) return;
+
+    const containers = shortcodeParser.extractContainers(char.conteudo);
+    if (containers.length === 0) return;
+
+    const containerList = document.createElement('div');
+    containerList.className = 'sheet-containers-list mt-4';
+    containerList.innerHTML = '<hr style="margin: 1rem 0; opacity: 0.3;">';
+
+    containers.forEach((c, index) => {
+        const btn = document.createElement('button');
+        btn.className = `button is-fullwidth mb-2 type-${c.type}`;
+
+        let icon = 'fa-box';
+        if (c.type === 'inventory') icon = 'fa-suitcase';
+        if (c.type === 'spells') icon = 'fa-scroll';
+        if (c.type === 'skills') icon = 'fa-fist-raised';
+
+        btn.innerHTML = `
+            <span class="icon"><i class="fas ${icon}"></i></span>
+            <span>${c.label}</span>
+            <span class="icon is-small ml-auto"><i class="fas fa-external-link-alt"></i></span>
+        `;
+
+        btn.onclick = () => openContainerEditor(c, index);
+        containerList.appendChild(btn);
+    });
+
+    visualStatsContainer.appendChild(containerList);
+}
+
+/**
+ * Abre o modal de edição para um container específico.
+ */
+function openContainerEditor(container, index) {
+    const modal = document.getElementById('content-editor-modal');
+    modal.dataset.mode = 'container';
+    modal.dataset.containerIndex = index;
+    modal.querySelector('.modal-card-title').textContent = `Editar: ${container.label}`;
+
+    if (!contentEditor) {
+        initializeContentEditor();
+    }
+
+    if (contentEditor) {
+        contentEditor.commands.setContent(container.content || '');
+    }
+
+    openModal(modal);
+}
+
+/**
+ * Salva o conteúdo editado de volta para o shortcode do container.
+ */
+async function saveContainerContent() {
+    if (!currentCharacterId || !contentEditor) return;
+
+    const modal = document.getElementById('content-editor-modal');
+    const index = parseInt(modal.dataset.containerIndex, 10);
+    const containers = shortcodeParser.extractContainers(currentCharacter.conteudo);
+
+    if (containers[index]) {
+        const newInnerContent = contentEditor.getHTML();
+        const oldFullMatch = containers[index].fullMatch;
+
+        // Reconstrói o shortcode com o novo conteúdo interno
+        // Usamos uma reconstrução simples baseada no original
+        const headerMatch = oldFullMatch.match(/\[container\s+[^\]]*\]/i)[0];
+        const newFullShortcode = `${headerMatch}\n${newInnerContent}\n[/container]`;
+
+        const newConteudo = currentCharacter.conteudo.replace(oldFullMatch, newFullShortcode);
+
+        await updateItem({ id: currentCharacterId }, { conteudo: newConteudo });
+        closeModal(modal);
     }
 }
 
