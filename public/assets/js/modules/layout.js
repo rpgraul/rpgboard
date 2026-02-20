@@ -168,13 +168,12 @@ export async function initializeLayout(config = {}) {
     fabHelp: document.getElementById('fab-help'),
 
     // User authentication
-    userLoginBtn: document.getElementById('user-login-btn'),
+    userLoginBtn: document.getElementById('nav-login'),
     userNameTag: document.getElementById('user-name'),
     userArea: document.getElementById('user-area'),
     userLoginModal: document.getElementById('user-login-modal'),
 
     // Narrator mode
-    narratorLoginBtn: document.getElementById('narrator-login-btn'),
     narratorModal: document.getElementById('narrator-modal'),
 
     // Dice system
@@ -229,9 +228,7 @@ export async function initializeLayout(config = {}) {
   const criticalElements = [
     'chatSidebar',
     'chatInput',
-    'helpModal',
-    'userLoginBtn',
-    'narratorLoginBtn'
+    'helpModal'
   ];
 
   const missingElements = criticalElements.filter(key => !layoutReferences[key]);

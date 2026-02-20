@@ -542,6 +542,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // Logic for HP Shortcode Click to Edit
+        const hpComponent = target.closest('.shortcode-hp');
+        if (hpComponent && !target.closest('.hp-current-input')) {
+            const displayMode = hpComponent.querySelector('.hp-display-mode');
+            const editMode = hpComponent.querySelector('.hp-edit-mode');
+            const input = hpComponent.querySelector('.hp-current-input');
+            if (displayMode && editMode && input) {
+                displayMode.classList.add('is-hidden');
+                editMode.classList.remove('is-hidden');
+                input.focus();
+                input.select();
+            }
+        }
+
         const cardLink = target.closest('.card-link');
         if (cardLink) {
             event.stopPropagation();
@@ -576,6 +590,88 @@ document.addEventListener('DOMContentLoaded', async () => {
             handleMoneyChange(event.target);
             event.target.closest('.shortcode-money').querySelector('.money-value-display').classList.remove('is-hidden');
             event.target.classList.add('is-hidden');
+        }
+
+        if (event.target.classList.contains('hp-current-input')) {
+            const hpComponent = event.target.closest('.shortcode-hp');
+            if (!hpComponent) return;
+
+            const maxHp = parseInt(hpComponent.dataset.maxHp, 10) || 100;
+            const decodedShortcode = decodeURIComponent(hpComponent.dataset.shortcode);
+            const originalParams = shortcodeParser._parseKeyValueArgs(shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1));
+            const originalValue = parseInt(originalParams.current, 10) || 0;
+
+            let cleanedInput = event.target.value.trim().replace(/\s+/g, '');
+            if (cleanedInput === '') return;
+
+            let newValue = originalValue;
+
+            // Math Expression Parser (similar to money but with HP specific rules)
+            const fullExpr = cleanedInput.match(/^(-?\d+)\s*([+\-*\/])\s*(-?\d+)$/);
+            if (fullExpr) {
+                const v1 = parseInt(fullExpr[1], 10), op = fullExpr[2], v2 = parseInt(fullExpr[3], 10);
+                if (!isNaN(v1) && !isNaN(v2)) {
+                    if (op === '+') newValue = v1 + v2;
+                    else if (op === '-') newValue = v1 - v2;
+                    else if (op === '*') newValue = v1 * v2;
+                    else if (op === '/' && v2 !== 0) newValue = Math.floor(v1 / v2);
+                }
+            }
+            // Priority 2: Absolute Integer (e.g., "-5", "50").
+            else if (/^-?\d+$/.test(cleanedInput)) {
+                newValue = parseInt(cleanedInput, 10);
+            }
+            // Priority 3: Relative Operation (e.g., "+10", "*2").
+            else {
+                const relExpr = cleanedInput.match(/^([+\-*\/])\s*(-?\d+)$/);
+                if (relExpr) {
+                    const op = relExpr[1], v = parseInt(relExpr[2], 10);
+                    if (!isNaN(v)) {
+                        if (op === '+') newValue = originalValue + v;
+                        else if (op === '-') newValue = originalValue - v;
+                        else if (op === '*') newValue = originalValue * v;
+                        else if (op === '/' && v !== 0) newValue = Math.floor(originalValue / v);
+                    }
+                }
+            }
+
+            // Boundary Check: [-10, maxHp]
+            newValue = Math.max(-10, Math.min(newValue, maxHp));
+            event.target.value = newValue;
+
+            // Optimistic UI Update
+            const hpText = hpComponent.querySelector('.hp-text');
+            const hpBarFill = hpComponent.querySelector('.hp-bar-fill');
+            if (hpText) hpText.textContent = `${newValue} / ${maxHp}`;
+
+            hpComponent.classList.toggle('is-unconscious', newValue <= 0);
+
+            if (hpBarFill) {
+                const percent = newValue > 0 ? Math.round((newValue / maxHp) * 100) : 0;
+                hpBarFill.style.width = `${percent}%`;
+                hpBarFill.classList.remove('is-low', 'is-medium', 'is-high', 'is-critical', 'is-dead');
+                if (newValue <= 0) hpBarFill.classList.add('is-dead');
+                else if (percent < 15) hpBarFill.classList.add('is-critical');
+                else if (percent < 30) hpBarFill.classList.add('is-low');
+                else if (percent < 60) hpBarFill.classList.add('is-medium');
+                else hpBarFill.classList.add('is-high');
+            }
+
+            // Switch back to display mode
+            hpComponent.querySelector('.hp-display-mode').classList.remove('is-hidden');
+            hpComponent.querySelector('.hp-edit-mode').classList.add('is-hidden');
+
+            handleShortcodeValueChange(hpComponent.dataset.itemId, hpComponent.dataset.shortcode, newValue, event.target);
+        }
+    });
+
+    // Enter to Save/Calculate for Money and HP Shortcodes
+    document.body.addEventListener('keydown', (event) => {
+        const isMoney = event.target.classList.contains('money-value-input');
+        const isHp = event.target.classList.contains('hp-current-input');
+        if ((isMoney || isHp) && event.key === 'Enter') {
+            event.preventDefault();
+            event.target.blur();
         }
     });
 

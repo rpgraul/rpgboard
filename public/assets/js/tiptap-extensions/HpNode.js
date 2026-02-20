@@ -52,8 +52,8 @@ export default Node.create({
   addNodeView() {
     return ({ node: t, editor: e, getPos: a }) => {
       const r =
-          e.view.dom.closest("[data-item-id]")?.dataset.itemId ||
-          "unknown-item",
+        e.view.dom.closest("[data-item-id]")?.dataset.itemId ||
+        "unknown-item",
         n = document.createElement("div");
       (n.className = "shortcode-hp"),
         t.attrs.isHidden && n.classList.add("is-hidden-preview"),
@@ -63,53 +63,93 @@ export default Node.create({
           `[hp max=${t.attrs.max} current=${t.attrs.current}]`
         )),
         (n.dataset.maxHp = t.attrs.max);
+
+      // Header with Label and Text
+      const header = document.createElement("div");
+      header.className = "hp-header";
+
       const o = document.createElement("strong");
-      (o.className = "hp-label"),
-        (o.textContent = `PV${
-          t.attrs.position ? ` (${t.attrs.position})` : ""
-        }`);
-      const s = document.createElement("div");
-      s.className = "hp-input-wrapper";
+      o.className = "hp-label";
+      o.textContent = `PV${t.attrs.position ? ` (${t.attrs.position})` : ""}`;
+
+      const hpText = document.createElement("span");
+      hpText.className = "hp-text";
+      hpText.textContent = `${t.attrs.current} / ${t.attrs.max}`;
+
+      header.append(o, hpText);
+
+      // Bar Container and Fill
+      const barContainer = document.createElement("div");
+      barContainer.className = "hp-bar-container";
+
+      const barFill = document.createElement("div");
+      barFill.className = "hp-bar-fill";
+
+      const updateBar = (current) => {
+        const percent = Math.round((current / t.attrs.max) * 100);
+        barFill.style.width = `${percent}%`;
+        barFill.classList.remove("is-low", "is-medium", "is-high");
+        if (percent < 25) barFill.classList.add("is-low");
+        else if (percent < 50) barFill.classList.add("is-medium");
+        else barFill.classList.add("is-high");
+        hpText.textContent = `${current} / ${t.attrs.max}`;
+      };
+
+      updateBar(t.attrs.current);
+      barContainer.appendChild(barFill);
+
+      // Hidden Input for editing
       const i = document.createElement("input");
       (i.type = "number"),
-        (i.className = "hp-current-input"),
+        (i.className = "hp-current-input is-hidden"),
         (i.value = t.attrs.current),
         (i.max = t.attrs.max),
         (i.min = "0");
-      const d = document.createElement("span");
-      return (
-        (d.className = "hp-max-value"),
-        (d.textContent = `/ ${t.attrs.max}`),
-        i.addEventListener("change", () => {
-          if ("number" == typeof a()) {
-            let r = parseInt(i.value, 10);
-            (r = Math.max(0, Math.min(r, t.attrs.max))),
-              (i.value = r),
-              e.view.dispatch(
-                e.view.state.tr.setNodeMarkup(a(), void 0, {
-                  ...t.attrs,
-                  current: r,
-                })
-              );
-          }
-        }),
-        i.addEventListener("click", (t) => t.stopPropagation()),
-        i.addEventListener("dblclick", (t) => t.stopPropagation()),
-        s.append(i, d),
-        n.append(o, s),
-        n.addEventListener("dblclick", () => {
-          document.dispatchEvent(
-            new CustomEvent("edit-shortcode", {
-              detail: { type: this.name, attrs: t.attrs, pos: a() },
+
+      i.addEventListener("input", (event) => {
+        let val = parseInt(event.target.value, 10) || 0;
+        val = Math.max(0, Math.min(val, t.attrs.max));
+        updateBar(val);
+      });
+
+      i.addEventListener("change", () => {
+        if ("number" == typeof a()) {
+          let r = parseInt(i.value, 10) || 0;
+          r = Math.max(0, Math.min(r, t.attrs.max)),
+            (i.value = r);
+          updateBar(r);
+          e.view.dispatch(
+            e.view.state.tr.setNodeMarkup(a(), void 0, {
+              ...t.attrs,
+              current: r,
             })
           );
-        }),
-        {
-          dom: n,
-          ignoreMutation: () => !0,
-          stopEvent: (t) => "INPUT" === t.target.tagName,
         }
-      );
+      });
+
+      n.addEventListener("click", (e) => {
+        e.stopPropagation();
+        i.classList.toggle("is-hidden");
+        if (!i.classList.contains("is-hidden")) i.focus();
+      });
+
+      i.addEventListener("click", (t) => t.stopPropagation());
+      i.addEventListener("dblclick", (t) => t.stopPropagation());
+
+      n.append(header, barContainer, i);
+      n.addEventListener("dblclick", () => {
+        document.dispatchEvent(
+          new CustomEvent("edit-shortcode", {
+            detail: { type: this.name, attrs: t.attrs, pos: a() },
+          })
+        );
+      });
+
+      return {
+        dom: n,
+        ignoreMutation: () => !0,
+        stopEvent: (t) => "INPUT" === t.target.tagName,
+      };
     };
   },
 });

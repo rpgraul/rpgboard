@@ -41,7 +41,7 @@ function _parseStat(args) {
         }
         return text;
     };
-    
+
     if (mainArgs.length === 1 || mainArgs[0].toLowerCase() === 'null') {
         const content = mainArgs.length === 1 ? mainArgs[0] : mainArgs.slice(1).join(' ');
         return `<div class="shortcode-stat">${addTooltip(content)}</div>`;
@@ -49,7 +49,7 @@ function _parseStat(args) {
 
     const value = mainArgs[mainArgs.length - 1];
     const label = mainArgs.slice(0, -1).join(' ');
-    
+
     return `<div class="shortcode-stat"><strong>${label}:</strong> ${addTooltip(value)}</div>`;
 }
 
@@ -58,13 +58,32 @@ function _parseHp(args, itemId, originalShortcode) {
     const params = _parseKeyValueArgs(args);
     const maxHp = parseInt(params.max, 10) || 100;
     const currentHp = params.current !== undefined ? parseInt(params.current, 10) : maxHp;
-    const finalCurrentHp = Math.max(0, Math.min(currentHp, maxHp));
+    const finalCurrentHp = Math.max(-10, Math.min(currentHp, maxHp));
+    const percent = finalCurrentHp > 0 ? Math.round((finalCurrentHp / maxHp) * 100) : 0;
 
-    return `<div class="shortcode-hp" data-item-id="${itemId}" data-shortcode="${encodeURIComponent(originalShortcode)}" data-max-hp="${maxHp}">
-              <strong class="hp-label">PV</strong>
-              <div class="hp-input-wrapper">
-                  <input type="number" class="hp-current-input" value="${finalCurrentHp}" max="${maxHp}" min="0">
-                  <span class="hp-max-value">/ ${maxHp}</span>
+    // Create a safe shortcode string using calculated values to avoid 'undefined'
+    const safeShortcode = `[hp current="${finalCurrentHp}" max="${maxHp}"]`;
+
+    let colorClass = 'is-high';
+    if (finalCurrentHp <= 0) colorClass = 'is-dead';
+    else if (percent < 15) colorClass = 'is-critical';
+    else if (percent < 30) colorClass = 'is-low';
+    else if (percent < 60) colorClass = 'is-medium';
+
+    const deadClass = finalCurrentHp <= 0 ? 'is-unconscious' : '';
+
+    return `<div class="shortcode-hp ${deadClass}" data-item-id="${itemId}" data-shortcode="${encodeURIComponent(safeShortcode)}" data-max-hp="${maxHp}">
+              <div class="hp-display-mode">
+                  <div class="hp-header">
+                      <strong class="hp-label">PV</strong>
+                      <span class="hp-text">${finalCurrentHp} / ${maxHp}</span>
+                  </div>
+                  <div class="hp-bar-container">
+                      <div class="hp-bar-fill ${colorClass}" style="width: ${percent}%"></div>
+                  </div>
+              </div>
+              <div class="hp-edit-mode is-hidden">
+                  <input type="text" class="hp-current-input" value="${finalCurrentHp}" placeholder="Add +/- or value">
               </div>
           </div>`;
 }
@@ -120,7 +139,7 @@ function _parseCount(args, itemId, originalShortcode) {
       <button class="count-btn" data-action="increment" aria-label="Aumentar">+</button>
       </span>`.replace(/\s+/g, ' ');
     }
-    
+
     representation = `<div class="count-representation">${representation}</div>`;
 
     return `<div class="shortcode-count is-interactive" ${dataAttrs}>
@@ -133,10 +152,10 @@ function _parseCount(args, itemId, originalShortcode) {
 export function parseMainContent(content) {
     if (!content) return "";
     let processedContent = content;
-    
+
     processedContent = processedContent.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, '');
     processedContent = processedContent.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, '');
-    
+
     processedContent = processedContent.replace(/\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi, (match, title, isHidden, noteContent) => {
         return `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
           <div class="nota-header" role="button" tabindex="0">
@@ -154,7 +173,7 @@ export function parseMainContent(content) {
 
     processedContent = processedContent.replace(/\[(\*?)(stat|hp|count|money)\s.*?\]/gi, '');
     processedContent = processedContent.replace(/<p>\s*<\/p>/gi, '');
-    
+
     return processedContent.trim();
 }
 
@@ -193,7 +212,7 @@ export function parseAllShortcodes(item, options = {}) {
         const isHashHidden = commandRaw.startsWith('#');
         const isArgHidden = args.includes('#');
         const isInsideHideBlock = hiddenRanges.some(range => sc.index >= range.start && sc.index < range.end);
-        
+
         let finalArgs = args.slice(1);
         if (isArgHidden) {
             finalArgs = finalArgs.filter(arg => arg !== '#');
@@ -217,7 +236,7 @@ export function parseAllShortcodes(item, options = {}) {
         if (sc.args.includes("left")) position = "left";
         else if (sc.args.includes("right")) position = "right";
         else if (sc.args.includes("bottom")) position = "bottom";
-        
+
         let html = '';
         let shortcodeData = {
             type: sc.command,
@@ -278,7 +297,7 @@ export function parseAllShortcodes(item, options = {}) {
             result.all.push(shortcodeData);
         }
     });
-    
+
     return {
         all: result.all,
         left: result.left.join(''),
@@ -297,28 +316,27 @@ export function extractRawShortcodes(content) {
     while ((match = regex.exec(content)) !== null) {
         shortcodes.push(match[0]);
     }
-        return shortcodes;
-    }
-    
-    export function parseNotas(content) {
-        if (!content) return "";
-        let result = '';
-        
-        // This regex finds all [nota] blocks and extracts their parts.
-        const notaRegex = /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi;
-        
-        // Use replace to iterate over all matches, but build the result separately.
-        content.replace(notaRegex, (match, title, isHidden, noteContent) => {
-            result += `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
+    return shortcodes;
+}
+
+export function parseNotas(content) {
+    if (!content) return "";
+    let result = '';
+
+    // This regex finds all [nota] blocks and extracts their parts.
+    const notaRegex = /\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi;
+
+    // Use replace to iterate over all matches, but build the result separately.
+    content.replace(notaRegex, (match, title, isHidden, noteContent) => {
+        result += `<div class="shortcode-nota ${isHidden ? 'is-hidden-from-players' : ''}">
               <div class="nota-header" role="button" tabindex="0">
                   <span class="nota-title">${title}</span>
                   <span class="nota-icon"><i class="fas fa-plus"></i></span>
               </div>
               <div class="nota-content">${noteContent.trim()}</div>
           </div>`;
-          return ''; // Return empty string as we are not modifying the original content string here.
-        });
-    
-        return result;
-    }
-    
+        return ''; // Return empty string as we are not modifying the original content string here.
+    });
+
+    return result;
+}

@@ -388,18 +388,80 @@ outline: none;
 /* Ensure the hide utility for money inputs is explicit and won't be overridden */
 .shortcode-money .is-hidden { display: none !important; }
 .shortcode-hp {
-display: flex;
-align-items: center;
-gap: 0.5rem;
-pointer-events: auto;
-user-select: text;
-max-width: fit-content;
-background-color: #363636;
-border: 1px solid #4a4a4a;
-padding: 0.25rem 0.6rem;
-border-radius: 5px;
-font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    pointer-events: auto;
+    user-select: none;
+    min-width: 120px;
+    background-color: rgba(20, 24, 33, 0.9);
+    border: 1px solid #4a4a4a;
+    padding: 0.4rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.1s ease, border-color 0.2s ease;
 }
+.shortcode-hp:hover {
+    border-color: #666;
+    transform: translateY(-1px);
+}
+.hp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.hp-label {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-transform: uppercase;
+}
+.hp-text {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #fff;
+}
+.hp-bar-container {
+    width: 100%;
+    height: 6px;
+    background-color: #222;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.hp-bar-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+}
+.hp-bar-fill.is-high { background-color: #48c774; }
+.hp-bar-fill.is-medium { background-color: #ffdd57; }
+.hp-bar-fill.is-low { background-color: #f14668; }
+.hp-bar-fill.is-critical { 
+    background-color: #d32f2f; 
+    animation: hp-pulse 1.5s infinite;
+}
+.hp-bar-fill.is-dead { background-color: #7a5c91; } /* Deep purple for death/unconscious */
+@keyframes hp-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+.shortcode-hp.is-unconscious {
+    background-color: rgba(60, 20, 80, 0.4);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+}
+.hp-edit-mode .hp-current-input {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid var(--link-color);
+    border-radius: 4px;
+    color: #fff;
+    text-align: center;
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 2px 0;
+}
+.shortcode-hp .is-hidden { display: none !important; }
 .shortcode-count.is-interactive {
 display: flex;
 font-size: 0.85rem;
