@@ -11,6 +11,7 @@ import MoneyNode from "./tiptap-extensions/MoneyNode.js";
 import CountNode from "./tiptap-extensions/CountNode.js";
 // REMOVIDO: import NotaShortcode from "./tiptap-extensions/notaShortcode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js"; // NOVO
+import FichaShortcode from "./tiptap-extensions/fichaShortcode.js"; // NOVO
 
 import { listenToItems, updateItem, addItem, removeImageFromItem, deleteItem, deleteItems, updateItemsVisibility, addTagsToItems, getSettings, } from "./modules/firebaseService.js";
 import { isNarrator, initializeAuth } from "./modules/auth.js";
@@ -54,6 +55,12 @@ function preParseShortcodesForEditor(content) {
     const isClosed = /\bclose\b/i.test(unescapedArgsStr);
 
     return `<div data-node-type="containerShortcode" data-label="${label}" data-type="${type}" data-is-hidden="${isHidden}" data-is-closed="${isClosed}">${innerContent}</div>`;
+  });
+
+  // Parser de Ficha
+  const fichaRegex = /\[ficha\]([\s\S]*?)\[\/ficha\]/gi;
+  t = t.replace(fichaRegex, (match, innerContent) => {
+    return `<div data-node-type="fichaShortcode">${innerContent}</div>`;
   });
 
   // Mantém os outros parsers (stat, hp, money, count)
@@ -123,6 +130,13 @@ function convertEditorHtmlToShortcodes(html) {
     const innerHTML = contentArea.innerHTML;
 
     e.replaceWith(document.createTextNode(openTag), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode(closeTag));
+  });
+
+  // Processa Wrapper de Ficha
+  body.querySelectorAll('[data-node-type="fichaShortcode"]').forEach((e) => {
+    const contentArea = e.querySelector('.ficha-content-area') || e;
+    const innerHTML = contentArea.innerHTML;
+    e.replaceWith(document.createTextNode("[ficha]"), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode("[/ficha]"));
   });
 
   // Outros conversores (money, hp, stat, count) permanecem iguais aos que você já tinha.
@@ -212,6 +226,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       MoneyNode,
       CountNode,
       ContainerShortcode, // ADICIONADO AQUI
+      FichaShortcode, // NOVO
     ],
     editorProps: {
       attributes: { class: "ProseMirror" },
@@ -219,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (event.key === "]" || (event.key === "/" && event.shiftKey)) {
           setTimeout(() => {
             const html = mainEditor.getHTML();
-            if (html.includes("[stat") || html.includes("[hp") || html.includes("[money") || html.includes("[count") || html.includes("[container") || html.includes("[#")) {
+            if (html.includes("[stat") || html.includes("[hp") || html.includes("[money") || html.includes("[count") || html.includes("[container") || html.includes("[#") || html.includes("[ficha")) {
               forceEditorReparse(mainEditor, html);
             }
           }, 10);

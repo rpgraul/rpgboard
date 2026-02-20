@@ -184,6 +184,15 @@ export function parseMainContent(content) {
         </div>`;
     });
 
+    // Novo Parser de Ficha (Isola no editor, omite no grid)
+    const fichaRegex = /\[ficha\]([\s\S]*?)\[\/ficha\]/gi;
+    processedContent = processedContent.replace(fichaRegex, () => {
+        return `<div class="shortcode-ficha-placeholder">
+            <span class="icon"><i class="fas fa-id-card"></i></span>
+            <em>Mecânicas da ficha (ocultas no mural)</em>
+        </div>`;
+    });
+
     // Remove tags de Hide isoladas, stats soltos, etc, que não devem aparecer no texto corrido
     processedContent = processedContent.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (match, startTag, hiddenContent, endTag) => {
         if (startTag.toLowerCase() !== endTag.toLowerCase()) return match;
@@ -226,6 +235,15 @@ export function extractContainers(content) {
         });
     }
     return containers;
+}
+
+/**
+ * Extrai apenas o conteúdo dentro das tags [ficha].
+ */
+export function extractFichaContent(content) {
+    if (!content) return "";
+    const match = content.match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i);
+    return match ? match[1].trim() : "";
 }
 
 export function parseAllShortcodes(item, options = {}) {

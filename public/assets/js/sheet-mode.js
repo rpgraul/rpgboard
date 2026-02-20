@@ -203,13 +203,18 @@ function loadCharacter(id) {
     if (visualStatsContainer) {
         visualStatsContainer.innerHTML = '';
         if (visualCountsContainer) visualCountsContainer.innerHTML = '';
-        const parsed = shortcodeParser.parseAllShortcodes(char, { isPlayerSheet: true });
+
+        // Extrai apenas o conteúdo dentro de [ficha] para a lógica técnica
+        const fichaContent = shortcodeParser.extractFichaContent(char.conteudo || "");
+        const finalTechContent = fichaContent || char.conteudo || ""; // Fallback para conteúdo completo se não houver wrapper
+
+        const parsed = shortcodeParser.parseAllShortcodes({ conteudo: finalTechContent }, { isPlayerSheet: true });
 
         visualStatsContainer.innerHTML = parsed.all.filter(s => s.type === 'stat' || s.type === 'money').map(s => s.html).join('');
         if (visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
 
-        // Renderizar Containers Dinâmicos
-        renderContainers(char);
+        // Renderizar Containers Dinâmicos (passando o conteúdo técnico)
+        renderContainers({ conteudo: finalTechContent });
     }
 
     if (rawContentEditor && document.activeElement !== rawContentEditor) rawContentEditor.value = htmlToRaw(char.conteudo || '');

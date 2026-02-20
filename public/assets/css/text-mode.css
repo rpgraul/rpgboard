@@ -506,3 +506,30 @@ html {
 .type-inventory .container-header { border-left: 3px solid #3e8ed0; }
 .type-spells .container-header { border-left: 3px solid #9b59b6; }
 .type-skills .container-header { border-left: 3px solid #e67e22; }
+
+/* Ficha Wrapper dentro do Editor Tiptap */
+.shortcode-ficha-editor {
+    border: 2px double var(--link-color);
+    border-radius: 8px;
+    background: rgba(72, 153, 241, 0.05);
+    margin: 1.5em 0;
+    overflow: hidden;
+}
+
+.shortcode-ficha-editor .ficha-header {
+    background: var(--link-color);
+    padding: 0.4em 1em;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    user-select: none;
+    display: flex;
+    align-items: center;
+}
+
+.shortcode-ficha-editor .ficha-content-area {
+    padding: 1em;
+    min-height: 3em;
+}
