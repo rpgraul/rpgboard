@@ -17,6 +17,7 @@ let allItems = [];
 let isInitialGridLoaded = false;
 let appSettings = {};
 let tagSuggestionsContainer = null;
+let editingCardItem = null;
 
 const VISIBILITY_FILTERS = { VISIBLE: 'visible', HIDDEN: 'hidden' };
 
@@ -129,29 +130,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. TERCEIRO: Referências aos Elementos (DEPOIS do layout pronto)
     const addCardButton = document.getElementById('fab-add-card');
-    const fabHelp = document.getElementById('fab-help');
-    const fabBulkEdit = document.getElementById('fab-bulk-edit');
     const searchInput = document.getElementById('search-input');
     const activeFiltersContainer = document.getElementById('active-filters-container');
     const clearFiltersBtn = document.getElementById('clear-filters-btn');
     const tagFiltersContainer = document.getElementById('tag-filters');
     const viewWrapper = document.getElementById('view-wrapper');
-    const topBarTitle = document.querySelector('.top-bar-title');
     const detailModal = document.getElementById('detail-modal');
     const addCardModal = document.getElementById('add-card-modal');
-    const helpModal = document.getElementById('help-modal');
     const formAddCard = document.getElementById('form-add-card');
     const cardFileInput = document.getElementById('card-arquivo');
     const cardTagsInput = document.getElementById('card-tags');
-    const gridViewContainer = document.getElementById('grid-view-container');
     const userLoginBtn = document.getElementById('user-login-btn');
     const userLoginModal = document.getElementById('user-login-modal');
     const formUserLogin = document.getElementById('form-user-login');
     const userNameInput = document.getElementById('user-name-input');
-    const diceFabWrapper = document.getElementById('dice-fab-wrapper');
-    const diceMainBtn = document.getElementById('dice-main-btn');
-    const diceQuickBtns = document.querySelectorAll('.dice-quick-btn');
-    const toggleChatBtn = document.getElementById('toggle-chat-btn');
 
     // 4. Inicializar Autenticação (Precisa dos modais gerados pelo layout)
     await auth.initializeAuth();
@@ -180,11 +172,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Removed event listeners for diceQuickBtns, diceMainBtn, and toggleChatBtn
-    // as they are now handled globally in layout.js
-
-
-
     injectDragDropStyles();
 
     try {
@@ -194,7 +181,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }
-        // Re-renderizar header para garantir título correto
         if (typeof import('./modules/components/header.js').then === 'function') {
             import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
         }
@@ -233,30 +219,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilters();
     });
 
-    // 8. Handlers para Editar/Salvar/Detalhes (Lógica Completa)
-    function handleEditCard(card, item, container) {
-        container.classList.add('is-editing-item');
-        cardRenderer.renderCardEditMode(card, item, cardActionHandlers);
-        const imageInput = card.querySelector('.edit-image-input');
-        if (imageInput) {
-            imageInput.addEventListener('change', () => {
-                if (imageInput.files && imageInput.files[0]) {
-                    const file = imageInput.files[0];
-                    const reader = new FileReader();
-                    const figure = card.querySelector('.card-image .image');
-                    const img = figure.querySelector('img');
-                    card.querySelector('.card-image').classList.remove('is-placeholder');
-                    reader.onload = (e) => { img.src = e.target.result; };
-                    reader.readAsDataURL(file);
-                    cardRenderer.getImageDimensions(file).then(dimensions => {
-                        const newAspectRatio = (dimensions.height / dimensions.width) * 100;
-                        figure.style.paddingBottom = `${newAspectRatio}%`;
-                        grid.refreshLayout();
-                    });
-                    card._newImageFile = file;
-                }
-            });
-        }
+    // 8. Handlers para Editar/Salvar/Detalhes
+
+    function handleEditCard(card, item) {
+        // Preenche os campos do modal com os dados do item
+        document.getElementById('card-titulo').value = item.titulo || '';
+        document.getElementById('card-conteudo').value = item.conteudo || '';
+        document.getElementById('card-tags').value = (item.tags || []).join(', ');
+
+        const visibilityField = document.getElementById('card-visibility');
+        if (visibilityField) visibilityField.checked = item.isVisibleToPlayers !== false;
+
+        // Limpa o input de arquivo
+        cardFileInput.value = '';
+        grid.updateFileName(cardFileInput);
+
+        // Muda título do modal e botão
+        const modalTitle = addCardModal.querySelector('.modal-card-title');
+        if (modalTitle) modalTitle.textContent = 'Editar Card';
+        const submitBtn = formAddCard.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Salvar Alterações';
+
+        editingCardItem = item;
+        openModal(addCardModal);
     }
 
     async function handleSaveCard(cardElement, item) {
@@ -265,7 +250,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             if (newImageFile) {
                 const dimensions = await cardRenderer.getImageDimensions(newImageFile);
-                updatedData.width = dimensions.width; updatedData.height = dimensions.height;
+                updatedData.width = dimensions.width;
+                updatedData.height = dimensions.height;
             }
             await firebaseService.updateItem(item, updatedData, newImageFile);
             if (cardElement._newImageFile) delete cardElement._newImageFile;
@@ -382,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilters();
     });
 
-    // 10. Filtros e Pesquisa (Lógica Completa)
+    // 10. Filtros e Pesquisa
     function applyFilters() {
         const searchTerm = searchInput.value.trim();
         const selectedTags = Array.from(tagFiltersContainer.querySelectorAll('input:not([value="visible"]):not([value="hidden"]):checked')).map(checkbox => checkbox.value);
@@ -407,7 +393,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (viewWrapper.classList.contains('view-grid')) {
             grid.setItems(filteredItems, selectedTags);
         }
-        updateClearButtonVisibility(); updateActiveFiltersDisplay();
+        updateClearButtonVisibility();
+        updateActiveFiltersDisplay();
     }
 
     function updateClearButtonVisibility() {
@@ -440,7 +427,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 11. Tags e Adição de Card (Lógica Completa)
+    // 11. Tags e Modal de Card (Criação + Edição)
+
     function initializeTagInput(inputElement, options = {}) {
         const { isMultiTag = true, suggestions = [], showRecsOnFocus = true } = options;
         if (!tagSuggestionsContainer) {
@@ -452,7 +440,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tagSuggestionsContainer.innerHTML = '';
             if (list.length === 0) { tagSuggestionsContainer.style.display = 'none'; return; }
             list.forEach(tag => {
-                const item = document.createElement('div'); item.className = 'tag-suggestion-item'; item.textContent = tag;
+                const item = document.createElement('div');
+                item.className = 'tag-suggestion-item';
+                item.textContent = tag;
                 item.onmousedown = (e) => {
                     e.preventDefault();
                     if (isMultiTag) {
@@ -460,7 +450,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         parts[parts.length - 1] = tag;
                         inputElement.value = parts.join(', ') + ', ';
                     } else { inputElement.value = tag; }
-                    tagSuggestionsContainer.style.display = 'none'; inputElement.focus();
+                    tagSuggestionsContainer.style.display = 'none';
+                    inputElement.focus();
                 };
                 tagSuggestionsContainer.appendChild(item);
             });
@@ -478,9 +469,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputElement.onblur = () => setTimeout(() => { tagSuggestionsContainer.style.display = 'none'; }, 200);
     }
 
+    function resetAddCardModal() {
+        editingCardItem = null;
+        const modalTitle = addCardModal.querySelector('.modal-card-title');
+        if (modalTitle) modalTitle.textContent = 'Adicionar Novo Card';
+        const submitBtn = formAddCard.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.textContent = 'Adicionar Card';
+        formAddCard.reset();
+        grid.updateFileName(cardFileInput);
+    }
+
+    // Observer para resetar o modal ao fechar
+    new MutationObserver(() => {
+        if (!addCardModal.classList.contains('is-active')) {
+            resetAddCardModal();
+        }
+    }).observe(addCardModal, { attributes: true, attributeFilter: ['class'] });
+
     if (addCardButton) {
         addCardButton.addEventListener('click', () => {
-            formAddCard.reset(); grid.updateFileName(cardFileInput);
+            resetAddCardModal();
             openModal(addCardModal);
         });
     }
@@ -489,17 +497,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         const btn = formAddCard.querySelector('button[type="submit"]');
         btn.classList.add('is-loading');
+
         const data = {
             titulo: document.getElementById('card-titulo').value,
             conteudo: document.getElementById('card-conteudo').value,
             tags: cardTagsInput.value.split(',').map(t => t.trim()).filter(Boolean),
             isVisibleToPlayers: auth.isNarrator() ? document.getElementById('card-visibility').checked : true
         };
+
         try {
-            const id = await firebaseService.addItem(data, cardFileInput.files[0]);
-            closeModal(addCardModal); grid.scrollToCard(id);
-        } catch (error) { console.error(error); alert("Falha ao adicionar."); }
-        finally { btn.classList.remove('is-loading'); }
+            if (editingCardItem) {
+                // ── Modo Edição ──────────────────────────────────────────
+                const newImageFile = cardFileInput.files[0] || null;
+                if (newImageFile) {
+                    const dimensions = await cardRenderer.getImageDimensions(newImageFile);
+                    data.width = dimensions.width;
+                    data.height = dimensions.height;
+                }
+                await firebaseService.updateItem(editingCardItem, data, newImageFile);
+                try {
+                    const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+                    chat.logSystemMessage(`${userName} atualizou o card "${data.titulo || editingCardItem.titulo}"`);
+                } catch (_) { }
+                closeModal(addCardModal);
+            } else {
+                // ── Modo Criação ─────────────────────────────────────────
+                const id = await firebaseService.addItem(data, cardFileInput.files[0]);
+                closeModal(addCardModal);
+                grid.scrollToCard(id);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Falha ao salvar.");
+        } finally {
+            btn.classList.remove('is-loading');
+        }
     });
 
     // 12. Modal Detalhes e Eventos Globais
@@ -518,10 +550,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="content modal-shortcodes">${allShortcodes}</div>
             </div>
         `;
-        content.appendChild(box); openModal(detailModal);
+        content.appendChild(box);
+        openModal(detailModal);
     }
 
-    // Global Click para Dinheiro e Links
     document.body.addEventListener('click', (event) => {
         const target = event.target;
         const activeMoneyInput = document.querySelector('.money-value-input:not(.is-hidden)');
@@ -535,12 +567,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const display = moneyComponent.querySelector('.money-value-display');
             const input = moneyComponent.querySelector('.money-value-input');
             if (display && input) {
-                display.classList.add('is-hidden'); input.classList.remove('is-hidden');
-                input.focus(); input.select();
+                display.classList.add('is-hidden');
+                input.classList.remove('is-hidden');
+                input.focus();
+                input.select();
             }
         }
 
-        // Logic for HP Shortcode Click to Edit
         const hpComponent = target.closest('.shortcode-hp');
         if (hpComponent && !target.closest('.hp-current-input')) {
             const displayMode = hpComponent.querySelector('.hp-display-mode');
@@ -604,7 +637,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let newValue = originalValue;
 
-            // Math Expression Parser (similar to money but with HP specific rules)
             const fullExpr = cleanedInput.match(/^(-?\d+)\s*([+\-*\/])\s*(-?\d+)$/);
             if (fullExpr) {
                 const v1 = parseInt(fullExpr[1], 10), op = fullExpr[2], v2 = parseInt(fullExpr[3], 10);
@@ -614,13 +646,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     else if (op === '*') newValue = v1 * v2;
                     else if (op === '/' && v2 !== 0) newValue = Math.floor(v1 / v2);
                 }
-            }
-            // Priority 2: Absolute Integer (e.g., "-5", "50").
-            else if (/^-?\d+$/.test(cleanedInput)) {
+            } else if (/^-?\d+$/.test(cleanedInput)) {
                 newValue = parseInt(cleanedInput, 10);
-            }
-            // Priority 3: Relative Operation (e.g., "+10", "*2").
-            else {
+            } else {
                 const relExpr = cleanedInput.match(/^([+\-*\/])\s*(-?\d+)$/);
                 if (relExpr) {
                     const op = relExpr[1], v = parseInt(relExpr[2], 10);
@@ -633,11 +661,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Boundary Check: [-10, maxHp]
             newValue = Math.max(-10, Math.min(newValue, maxHp));
             event.target.value = newValue;
 
-            // Optimistic UI Update
             const hpText = hpComponent.querySelector('.hp-text');
             const hpBarFill = hpComponent.querySelector('.hp-bar-fill');
             if (hpText) hpText.textContent = `${newValue} / ${maxHp}`;
@@ -655,7 +681,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 else hpBarFill.classList.add('is-high');
             }
 
-            // Switch back to display mode
             hpComponent.querySelector('.hp-display-mode').classList.remove('is-hidden');
             hpComponent.querySelector('.hp-edit-mode').classList.add('is-hidden');
 
@@ -663,7 +688,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Enter to Save/Calculate for Money and HP Shortcodes
     document.body.addEventListener('keydown', (event) => {
         const isMoney = event.target.classList.contains('money-value-input');
         const isHp = event.target.classList.contains('hp-current-input');
