@@ -12,6 +12,7 @@
 import { openModal, closeModal } from './modal.js';
 import { isNarrator } from './auth.js';
 import { getImageDimensions } from './cardRenderer.js';
+import { setupShortcodeMenu } from './shortcodeInserter.js';
 
 // ── Estado interno ────────────────────────────────────────────────────────────
 let _editor = null;           // instância Tiptap
@@ -26,16 +27,7 @@ let _modal, _form, _titleInput, _tagsInput, _visibilityField,
     _visibilityWrap, _imagePreview, _imageEl, _imagePlaceholder,
     _fileInput, _removeBtn, _editorArea, _submitBtn;
 
-// ── Shortcodes disponíveis no toolbar ────────────────────────────────────────
-const SHORTCODES = [
-    { label: 'HP / Vida', icon: 'fa-heart', preview: '[hp max=10]', template: '[hp max="10" current="10"]' },
-    { label: 'Atributo / Stat', icon: 'fa-dice-d20', preview: '[stat nome="FOR"]', template: '[stat nome="FOR" valor="10" posicao="left"]' },
-    { label: 'Contador', icon: 'fa-list-ol', preview: '[count max=5]', template: '[count nome="Contador" max="5" current="0"]' },
-    { label: 'Dinheiro', icon: 'fa-coins', preview: '[money]', template: '[money moeda="GP" current="0" posicao="bottom"]' },
-    { label: 'Nota Recolhível', icon: 'fa-sticky-note', preview: '[nota titulo="..."]', template: '[nota titulo="Nota"]Texto aqui[/nota]' },
-    { label: 'Link de Card', icon: 'fa-link', preview: '[link card="Nome"]', template: '[link card="Nome do Card"]' },
-    { label: 'Ficha (Sheet)', icon: 'fa-id-card', preview: '[ficha]', template: '[ficha]' },
-];
+// (Shortcodes migrados para shortcodeInserter.js)
 
 // ── Carrega Tiptap via CDN (ESM) ──────────────────────────────────────────────
 async function loadTiptap() {
@@ -266,29 +258,10 @@ export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
     const toolbar = document.getElementById('card-modal-toolbar');
     if (toolbar) toolbar.addEventListener('mousedown', handleToolbarClick);
 
-    // Shortcodes dropdown
-    const scBtn = document.getElementById('tiptap-shortcode-btn');
-    const scMenu = document.getElementById('tiptap-shortcode-menu');
-    if (scBtn && scMenu) {
-        scBtn.addEventListener('mousedown', e => {
-            e.preventDefault();
-            scMenu.classList.toggle('is-open');
-        });
-        document.addEventListener('click', e => {
-            if (!e.target.closest('#tiptap-shortcode-btn') && !e.target.closest('#tiptap-shortcode-menu')) {
-                scMenu.classList.remove('is-open');
-            }
-        });
-        scMenu.querySelectorAll('[data-shortcode]').forEach(item => {
-            item.addEventListener('mousedown', e => {
-                e.preventDefault();
-                const tpl = item.dataset.shortcode;
-                if (_editor) {
-                    _editor.chain().focus().insertContent(tpl).run();
-                }
-                scMenu.classList.remove('is-open');
-            });
-        });
+    // Configura o menu de shortcodes extraído
+    const scContainer = document.getElementById('card-modal-shortcode-container');
+    if (scContainer) {
+        setupShortcodeMenu(scContainer, _editor);
     }
 
     // Imagem: clique no preview abre file input

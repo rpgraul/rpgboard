@@ -11,6 +11,7 @@ import MoneyNode from "./tiptap-extensions/MoneyNode.js";
 import CountNode from "./tiptap-extensions/CountNode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
+import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
 import { listenToItems, updateItem, listenToDiceRolls, addChatMessage } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName } from './modules/auth.js';
@@ -167,9 +168,7 @@ function injectSheetLayoutHTML() {
                                 <button class="tiptap-button" data-action="setTextAlign" data-align="right" data-tooltip="Alinhar à Direita"><i class="fas fa-align-right"></i></button>
                             </div>
                              <div class="tiptap-separator"></div>
-                             <div role="group" class="tiptap-toolbar-group">
-                                <button id="shortcode-generator-btn" class="tiptap-button" data-tooltip="Gerador de Shortcodes"><i class="fas fa-magic"></i></button>
-                            </div>
+                             <div role="group" class="tiptap-toolbar-group" id="sheet-mode-shortcode-container"></div>
                         </div>
                         <div id="editor" style="flex: 1; overflow-y: auto; padding: 1rem;"></div>
                     </div>
@@ -430,29 +429,15 @@ async function initializeMainEditor() {
         else if (action === "setTextAlign") chain.setTextAlign(val).run();
     };
 
-    const shortcodeModal = document.getElementById("shortcode-generator-modal");
-    const typeSelect = document.getElementById("shortcode-type");
-
-    typeSelect.addEventListener("change", (e) => {
-        document.querySelectorAll(".shortcode-options").forEach(el => el.classList.add("is-hidden"));
-        const target = document.getElementById(`shortcode-options-${e.target.value}`);
-        if (target) target.classList.remove("is-hidden");
-        document.getElementById("shortcode-common-options").classList.remove("is-hidden");
-    });
-
-    document.getElementById("shortcode-generator-btn").onclick = () => {
-        editingNodePos = null;
-        document.getElementById("shortcode-generator-form").reset();
-        typeSelect.dispatchEvent(new Event("change"));
-        openModal(shortcodeModal);
-    };
+    const scContainer = document.getElementById('sheet-mode-shortcode-container');
+    if (scContainer) {
+        setupShortcodeMenu(scContainer, mainEditor);
+    }
 
     // Re-bind shortcode editing
     document.addEventListener("edit-shortcode", (e) => {
-        const { type, attrs, pos } = e.detail;
-        editingNodePos = pos;
-        document.getElementById("shortcode-generator-form").reset();
-
+        const { type, attrs, pos, editor } = e.detail;
+        const targetEditor = editor || mainEditor;
         const typeMap = {
             'containerShortcode': 'container',
             'statNode': 'stat',
@@ -460,42 +445,8 @@ async function initializeMainEditor() {
             'moneyNode': 'money',
             'countNode': 'count'
         };
-
         const mappedType = typeMap[type] || type;
-        typeSelect.value = mappedType;
-        typeSelect.dispatchEvent(new Event("change"));
-
-        if (mappedType === "container") {
-            document.getElementById("container-label").value = attrs.label || "";
-            document.getElementById("container-type").value = attrs.type || "default";
-            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-        } else if (mappedType === "stat") {
-            document.getElementById("stat-label").value = attrs.label || "";
-            document.getElementById("stat-value").value = attrs.value || "";
-            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-            document.getElementById("shortcode-position").value = attrs.position || "";
-        } else if (mappedType === "hp") {
-            document.getElementById("hp-max").value = attrs.max || "";
-            document.getElementById("hp-current").value = attrs.current || "";
-            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-            document.getElementById("shortcode-position").value = attrs.position || "";
-        } else if (mappedType === "money") {
-            document.getElementById("money-value").value = attrs.current || "";
-            document.getElementById("money-currency").value = attrs.currency || "";
-            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-            document.getElementById("shortcode-position").value = attrs.position || "";
-        } else if (mappedType === "count") {
-            document.getElementById("count-label").value = attrs.label || "";
-            document.getElementById("count-value").value = attrs.current || 0;
-            document.getElementById("count-max").value = attrs.max || 0;
-            document.getElementById("count-icon").value = attrs.icon || "";
-            document.getElementById("count-theme").value = attrs.theme || "number";
-            document.getElementById("count-overlay").checked = !!attrs.isOverlay;
-            document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-            document.getElementById("shortcode-position").value = attrs.position || "";
-        }
-
-        openModal(shortcodeModal);
+        openConfigModal(mappedType, targetEditor, { pos, attrs, nodeType: type });
     });
 }
 
@@ -596,112 +547,6 @@ async function handleCharImageUpload(event) {
         console.error('Erro ao fazer upload da imagem:', error);
         alert('Erro ao fazer upload da imagem: ' + error.message);
         event.target.value = '';
-    }
-}
-
-// Shortcode Generator Integration
-async function handleShortcodeGeneration() {
-    const type = document.getElementById('shortcode-type').value;
-    if (!type) return;
-
-    let nodeType = '';
-    let attrs = {
-        isHidden: document.getElementById('shortcode-hidden').checked
-    };
-
-    if (type === 'stat') {
-        nodeType = 'statNode';
-        attrs.label = document.getElementById('stat-label').value.trim();
-        attrs.value = document.getElementById('stat-value').value.trim();
-    } else if (type === 'hp') {
-        nodeType = 'hpNode';
-        attrs.max = document.getElementById('hp-max').value.trim();
-        attrs.current = document.getElementById('hp-current').value.trim();
-    } else if (type === 'money') {
-        nodeType = 'moneyNode';
-        attrs.current = document.getElementById('money-value').value.trim();
-        attrs.currency = document.getElementById('money-currency').value;
-    } else if (type === 'count') {
-        nodeType = 'countNode';
-        attrs.label = document.getElementById('count-label').value.trim();
-        attrs.max = parseInt(document.getElementById('count-max').value, 10) || 0;
-        attrs.current = parseInt(document.getElementById('count-value').value, 10) || 0;
-        attrs.isOverlay = document.getElementById('count-overlay').checked;
-        attrs.icon = document.getElementById('count-icon').value.trim();
-        attrs.theme = document.getElementById('count-theme').value || "number";
-    } else if (type === 'container') {
-        nodeType = 'containerShortcode';
-        attrs.label = document.getElementById('container-label').value.trim();
-        attrs.type = document.getElementById('container-type').value;
-    }
-
-    if (editingNodePos !== null) {
-        mainEditor.chain().focus().insertContentAt(editingNodePos, { type: nodeType, attrs }).run();
-    } else {
-        mainEditor.chain().focus().insertContent({ type: nodeType, attrs }).run();
-    }
-
-    closeModal(document.getElementById('shortcode-generator-modal'));
-}
-
-function openShortcodeGeneratorModal() {
-    const modal = document.getElementById('shortcode-generator-modal');
-    if (modal) {
-        // Reset form
-        document.getElementById('shortcode-type').value = '';
-        document.getElementById('stat-label').value = '';
-        document.getElementById('stat-value').value = '';
-        document.getElementById('hp-max').value = '';
-        document.getElementById('hp-current').value = '';
-        document.getElementById('count-label').value = '';
-        document.getElementById('count-value').value = '';
-        document.getElementById('count-max').value = '';
-        document.getElementById('money-value').value = '';
-        document.getElementById('money-currency').value = 'ouro';
-        document.getElementById('nota-titulo').value = '';
-
-        document.getElementById('count-icon').value = '';
-        document.getElementById('count-theme').value = 'number';
-        document.getElementById('count-overlay').checked = false;
-
-        // Hide all form sections
-        document.getElementById('shortcode-options-stat').classList.add('is-hidden');
-        document.getElementById('shortcode-options-hp').classList.add('is-hidden');
-        document.getElementById('shortcode-options-count').classList.add('is-hidden');
-        document.getElementById('shortcode-options-money').classList.add('is-hidden');
-        document.getElementById('shortcode-options-container').classList.add('is-hidden');
-
-        openModal(modal);
-    }
-}
-
-function updateShortcodeOptions() {
-    const type = document.getElementById('shortcode-type').value;
-
-    // Hide all sections
-    document.getElementById('shortcode-options-stat').classList.add('is-hidden');
-    document.getElementById('shortcode-options-hp').classList.add('is-hidden');
-    document.getElementById('shortcode-options-count').classList.add('is-hidden');
-    document.getElementById('shortcode-options-money').classList.add('is-hidden');
-    document.getElementById('shortcode-options-nota').classList.add('is-hidden');
-
-    // Show the selected type section
-    switch (type) {
-        case 'stat':
-            document.getElementById('shortcode-options-stat').classList.remove('is-hidden');
-            break;
-        case 'hp':
-            document.getElementById('shortcode-options-hp').classList.remove('is-hidden');
-            break;
-        case 'count':
-            document.getElementById('shortcode-options-count').classList.remove('is-hidden');
-            break;
-        case 'money':
-            document.getElementById('shortcode-options-money').classList.remove('is-hidden');
-            break;
-        case 'nota':
-            document.getElementById('shortcode-options-nota').classList.remove('is-hidden');
-            break;
     }
 }
 
@@ -950,6 +795,15 @@ async function initializeFichaEditor() {
     const fichaToolbar = document.querySelector("#ficha-tiptap-container .tiptap-toolbar");
     if (fichaToolbar) {
         fichaToolbar.innerHTML = toolbarHTML;
+
+        // Fix duplicate ID para o shortcode button container
+        const copiedScContainer = fichaToolbar.querySelector('#sheet-mode-shortcode-container');
+        if (copiedScContainer) {
+            copiedScContainer.id = 'ficha-mode-shortcode-container';
+            copiedScContainer.innerHTML = '';
+            setupShortcodeMenu(copiedScContainer, fichaEditor);
+        }
+
         fichaToolbar.onclick = (e) => {
             const btn = e.target.closest("button[data-action]");
             if (!btn) return;

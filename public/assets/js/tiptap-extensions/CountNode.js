@@ -194,7 +194,7 @@ export default Node.create({
         ev.stopPropagation();
         document.dispatchEvent(
           new CustomEvent("edit-shortcode", {
-            detail: { type: this.name, attrs: t.attrs, pos: e() },
+            detail: { type: this.name, attrs: t.attrs, pos: e(), editor: n },
           })
         );
       });

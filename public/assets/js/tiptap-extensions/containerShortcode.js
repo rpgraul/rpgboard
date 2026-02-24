@@ -119,7 +119,7 @@ export default Node.create({
         const latestNode = editor.view.state.doc.nodeAt(getPos());
         if (latestNode) {
           document.dispatchEvent(new CustomEvent("edit-shortcode", {
-            detail: { type: "containerShortcode", attrs: latestNode.attrs, pos: getPos() }
+            detail: { type: "containerShortcode", attrs: latestNode.attrs, pos: getPos(), editor: editor }
           }));
         }
       };

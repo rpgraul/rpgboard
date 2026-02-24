@@ -495,3 +495,125 @@ body.is-bulk-editing .bulk-edit-bar {
     color: #f14668; /* Vermelho Bulma */
     pointer-events: auto;
 }
+
+/* ========== TIPTAP TOOLBAR (Global) ========== */
+.tiptap-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    background-color: var(--card-background-color);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.tiptap-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.tiptap-toolbar-divider {
+    width: 1px;
+    height: 18px;
+    background-color: var(--border-color);
+    margin: 0 4px;
+}
+
+.tiptap-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.tiptap-btn:hover {
+    background-color: var(--border-color);
+}
+
+.tiptap-btn.is-active {
+    background-color: var(--link-color);
+    color: #fff;
+}
+
+.tiptap-btn-text {
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+    padding: 0 6px;
+    width: auto;
+}
+
+/* ── Shortcode Dropdown (Global) ─────────────────────────────────────── */
+.tiptap-shortcode-wrap {
+    position: relative;
+}
+
+.tiptap-shortcode-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background-color: var(--card-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    min-width: 220px;
+    z-index: 9999;
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tiptap-shortcode-menu.is-open {
+    display: flex;
+}
+
+.shortcode-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-color);
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    transition: background-color 0.15s;
+}
+
+.shortcode-menu-item:hover {
+    background-color: var(--border-color);
+}
+
+.shortcode-menu-item .icon {
+    width: 20px;
+    text-align: center;
+    color: var(--link-color);
+    flex-shrink: 0;
+}
+
+.shortcode-menu-item .sc-label {
+    font-weight: 600;
+}
+
+.shortcode-menu-item .sc-preview {
+    font-size: 0.72rem;
+    color: var(--input-border-color);
+    font-family: monospace;
+    margin-left: auto;
+}

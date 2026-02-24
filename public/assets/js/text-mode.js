@@ -13,6 +13,7 @@ import CountNode from "./tiptap-extensions/CountNode.js";
 // REMOVIDO: import NotaShortcode from "./tiptap-extensions/notaShortcode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js"; // NOVO
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js"; // NOVO
+import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
 import { listenToItems, updateItem, addItem, removeImageFromItem, deleteItem, deleteItems, updateItemsVisibility, addTagsToItems, getSettings, } from "./modules/firebaseService.js";
 import { isNarrator, initializeAuth } from "./modules/auth.js";
@@ -231,29 +232,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (action === "setTextAlign") chain.setTextAlign(val).run();
   };
 
-  const shortcodeModal = document.getElementById("shortcode-generator-modal");
-  const typeSelect = document.getElementById("shortcode-type");
+  // Configura o menu de shortcodes extraído
+  const scContainer = document.getElementById('text-mode-shortcode-container');
+  if (scContainer) {
+    setupShortcodeMenu(scContainer, mainEditor);
+  }
 
-  // Mostra/Oculta campos no modal
-  typeSelect.addEventListener("change", (e) => {
-    document.querySelectorAll(".shortcode-options").forEach(el => el.classList.add("is-hidden"));
-    const target = document.getElementById(`shortcode-options-${e.target.value}`);
-    if (target) target.classList.remove("is-hidden");
-    document.getElementById("shortcode-common-options").classList.remove("is-hidden");
-  });
-
-  document.getElementById("shortcode-generator-btn").onclick = () => {
-    editingNodePos = null; // Zera a posição (indica que é criação nova)
-    document.getElementById("shortcode-generator-form").reset();
-    typeSelect.dispatchEvent(new Event("change"));
-    openModal(shortcodeModal);
-  };
-
-  // Escuta o duplo clique nas caixas
   document.addEventListener("edit-shortcode", (e) => {
-    const { type, attrs, pos } = e.detail;
-    editingNodePos = pos;
-    document.getElementById("shortcode-generator-form").reset();
+    const { type, attrs, pos, editor } = e.detail;
+    const targetEditor = editor || mainEditor;
 
     // Mapeamento de tipos internos para valores do select
     const typeMap = {
@@ -265,85 +252,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     const mappedType = typeMap[type] || type;
-    typeSelect.value = mappedType;
-    typeSelect.dispatchEvent(new Event("change"));
-
-    // Preenchimento de dados baseado no tipo
-    if (mappedType === "container") {
-      document.getElementById("container-label").value = attrs.label || "";
-      document.getElementById("container-type").value = attrs.type || "default";
-      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-    } else if (mappedType === "stat") {
-      document.getElementById("stat-label").value = attrs.label || "";
-      document.getElementById("stat-value").value = attrs.value || "";
-      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-    } else if (mappedType === "hp") {
-      document.getElementById("hp-max").value = attrs.max || "";
-      document.getElementById("hp-current").value = attrs.current || "";
-      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-    } else if (mappedType === "money") {
-      document.getElementById("money-value").value = attrs.current || "";
-      document.getElementById("money-currency").value = attrs.currency || "";
-      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-    } else if (mappedType === "count") {
-      document.getElementById("count-label").value = attrs.label || "";
-      document.getElementById("count-max").value = attrs.max || "";
-      document.getElementById("count-value").value = attrs.current || "";
-      document.getElementById("shortcode-hidden").checked = !!attrs.isHidden;
-    }
-
-    openModal(shortcodeModal);
+    openConfigModal(mappedType, targetEditor, { pos, attrs, nodeType: type });
   });
-
-  // 3. LÓGICA DO BOTÃO SALVAR NO MODAL
-  document.querySelector("#shortcode-generator-modal .button.is-success").onclick = (e) => {
-    e.preventDefault();
-    const type = document.getElementById("shortcode-type").value;
-    if (!type) return;
-
-    let newAttrs = { isHidden: document.getElementById("shortcode-hidden").checked };
-    let nodeType = '';
-
-    if (type === "container") {
-      nodeType = 'containerShortcode';
-      newAttrs = {
-        ...newAttrs,
-        label: document.getElementById("container-label").value || "Container",
-        type: document.getElementById("container-type").value || "default"
-      };
-    } else if (type === "stat") {
-      nodeType = 'statNode';
-      newAttrs = { ...newAttrs, label: document.getElementById("stat-label").value, value: document.getElementById("stat-value").value };
-    } else if (type === "hp") {
-      nodeType = 'hpNode';
-      newAttrs = { ...newAttrs, max: document.getElementById("hp-max").value, current: document.getElementById("hp-current").value };
-    } else if (type === "money") {
-      nodeType = 'moneyNode';
-      newAttrs = { ...newAttrs, current: document.getElementById("money-value").value, currency: document.getElementById("money-currency").value };
-    } else if (type === "count") {
-      nodeType = 'countNode';
-      newAttrs = { ...newAttrs, label: document.getElementById("count-label").value, max: document.getElementById("count-max").value, current: document.getElementById("count-value").value };
-    }
-
-    if (editingNodePos !== null) {
-      // Edição segura via Transaction preservando atributos não editáveis no modal (como isOpen)
-      const currentNode = mainEditor.view.state.doc.nodeAt(editingNodePos);
-      if (currentNode) {
-        mainEditor.view.dispatch(mainEditor.view.state.tr.setNodeMarkup(editingNodePos, undefined, { ...currentNode.attrs, ...newAttrs }));
-      }
-    } else {
-      // Inserção nova
-      if (type === 'container') {
-        mainEditor.chain().focus().insertContent({
-          type: nodeType,
-          attrs: newAttrs,
-          content: [{ type: 'paragraph' }]
-        }).run();
-      } else {
-        mainEditor.chain().focus().insertContent({ type: nodeType, attrs: newAttrs }).run();
-      }
-    }
-
-    closeModal(document.getElementById("shortcode-generator-modal"));
-  };
 });

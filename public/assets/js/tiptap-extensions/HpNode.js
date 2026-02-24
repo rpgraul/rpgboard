@@ -121,7 +121,7 @@ export default Node.create({
       n.addEventListener("dblclick", () => {
         document.dispatchEvent(
           new CustomEvent("edit-shortcode", {
-            detail: { type: this.name, attrs: t.attrs, pos: a() },
+            detail: { type: this.name, attrs: t.attrs, pos: a(), editor: e },
           })
         );
       });

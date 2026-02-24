@@ -169,9 +169,7 @@ body, html {
     min-height: 0;
 }
 
-.tiptap-toolbar {
-    flex-shrink: 0;
-}
+
 
 #desc-editor.tiptap-editor-content {
     flex: 1;
@@ -303,7 +301,7 @@ h3.title.is-6 {
     background-color: #1a1a1a;
     border: 1px solid #333;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #content-editor.tiptap-editor-content .ProseMirror {
