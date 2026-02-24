@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="assets/css/shortcodes.css">
     <link rel="stylesheet" href="assets/css/chat.css">
     <link rel="stylesheet" href="assets/css/rpg-dice.css">
+    <link rel="stylesheet" href="assets/css/modalcard.css">
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
     <script type="importmap">
     {
@@ -32,7 +33,6 @@
             <div class="container">
                 <div id="view-wrapper">
                     <div id="grid-view-wrapper">
-                        <!-- Conteúdo Específico da Página (Filtros e Grid) -->
                         <div class="field is-grouped mb-4">
                             <p class="control has-icons-left is-expanded">
                                 <input class="input is-medium" type="text" id="search-input" placeholder="Buscar por título, conteúdo ou tag...">
@@ -65,36 +65,224 @@
         </section>
     </div>
 
-    <!-- Modais Específicos desta Página (Detalhes e Adicionar Card) -->
-    <!-- Os modais globais (Login, Narrador, Ajuda) foram para commonHTML.js -->
-    
+    <!-- Modal de Detalhes -->
     <div id="detail-modal" class="modal">
         <div class="modal-background"></div>
         <div class="modal-content"></div>
         <button class="modal-close is-large" aria-label="close"></button>
     </div>
 
+    <!-- =====================================================================
+         Modal de Criação / Edição de Card
+         Standalone: funciona em qualquer página junto com card-modal.css
+         e cardModal.js
+         ===================================================================== -->
     <div id="add-card-modal" class="modal">
         <div class="modal-background"></div>
         <div class="modal-card">
+
+            <!-- Cabeçalho -->
             <header class="modal-card-head">
                 <p class="modal-card-title">Adicionar Novo Card</p>
                 <button class="delete" aria-label="close"></button>
             </header>
+
+            <!-- Corpo -->
             <section class="modal-card-body">
-                <form id="form-add-card">
-                    <div class="field"><label class="label">Título</label><div class="control"><input class="input" id="card-titulo" placeholder="Título do card" required></div></div>
-                    <div class="field"><label class="label">Conteúdo Principal</label><div class="control"><textarea class="textarea" id="card-conteudo" placeholder="Digite o conteúdo..."></textarea></div></div>
-                    <div class="field"><label class="label">Imagem</label><div class="file is-boxed has-name is-fullwidth"><label class="file-label"><input class="file-input" type="file" id="card-arquivo" accept="image/*"><span class="file-cta"><span class="file-icon"><i class="fas fa-upload"></i></span><span class="file-label">Escolher imagem…</span></span><span class="file-name">Nenhuma imagem selecionada</span></label></div></div>
-                    <div class="field"><label class="label">Tags</label><div class="control"><input class="input" id="card-tags" placeholder="Tags (separadas por vírgula)"></div></div>
-                    <div class="field narrator-only is-hidden"><label class="checkbox narrator-control"><input type="checkbox" id="card-visibility"><span class="switch-track"></span><span class="switch-label-text">Visível para jogadores</span></label></div>
+                <form id="form-add-card" autocomplete="off">
+                    <div class="card-modal-layout">
+
+                        <!-- ── Sidebar: Imagem + Metadados ──────────────── -->
+                        <aside class="card-modal-sidebar">
+
+                            <!-- Preview de imagem -->
+                            <div id="card-modal-image-preview" class="card-modal-image-preview">
+                                <img id="card-modal-image-el" src="" alt="Preview" class="is-empty">
+                                <div class="card-modal-image-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <span>Clique para adicionar imagem</span>
+                                </div>
+                                <div class="card-modal-image-overlay">
+                                    <i class="fas fa-camera" style="font-size:1.5rem"></i>
+                                    <span>Trocar imagem</span>
+                                </div>
+                                <button type="button" id="card-modal-image-remove" class="card-modal-image-remove" title="Remover imagem">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <input type="file" id="card-modal-file-input" accept="image/*">
+                            </div>
+
+                            <!-- Metadados -->
+                            <div class="card-modal-meta">
+                                <!-- Tags -->
+                                <div class="field">
+                                    <label class="label" for="card-tags">Tags</label>
+                                    <div class="control">
+                                        <input class="input is-small" id="card-tags" placeholder="rpg, personagem, item…" autocomplete="off">
+                                    </div>
+                                </div>
+
+                                <!-- Visibilidade (só narrador) -->
+                                <div class="card-modal-visibility narrator-only is-hidden">
+                                    <label class="checkbox narrator-control">
+                                        <input type="checkbox" id="card-visibility" checked>
+                                        <span class="switch-track"></span>
+                                        <span class="switch-label-text">Visível para jogadores</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <!-- ── Main: Título + Editor ─────────────────────── -->
+                        <div class="card-modal-main">
+
+                            <!-- Título -->
+                            <div class="field card-modal-title-field">
+                                <label class="label" for="card-titulo">Título</label>
+                                <div class="control">
+                                    <input class="input" id="card-titulo" placeholder="Nome do card" required autocomplete="off">
+                                </div>
+                            </div>
+
+                            <!-- Editor Tiptap -->
+                            <div class="field" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                                <label class="label">Conteúdo</label>
+                                <div class="card-modal-editor-wrap">
+
+                                    <!-- Toolbar -->
+                                    <div id="card-modal-toolbar" class="tiptap-toolbar">
+
+                                        <!-- Histórico -->
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="undo" title="Desfazer (Ctrl+Z)">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="redo" title="Refazer (Ctrl+Y)">
+                                                <i class="fas fa-redo"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="tiptap-toolbar-divider"></div>
+
+                                        <!-- Títulos -->
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="1" title="Título 1">H1</button>
+                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="2" title="Título 2">H2</button>
+                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="3" title="Título 3">H3</button>
+                                        </div>
+
+                                        <div class="tiptap-toolbar-divider"></div>
+
+                                        <!-- Formatação inline -->
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="bold" title="Negrito (Ctrl+B)">
+                                                <i class="fas fa-bold"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="italic" title="Itálico (Ctrl+I)">
+                                                <i class="fas fa-italic"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="strike" title="Tachado">
+                                                <i class="fas fa-strikethrough"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="code" title="Código inline">
+                                                <i class="fas fa-code"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="tiptap-toolbar-divider"></div>
+
+                                        <!-- Blocos -->
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="bulletList" title="Lista com marcadores">
+                                                <i class="fas fa-list-ul"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="orderedList" title="Lista numerada">
+                                                <i class="fas fa-list-ol"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="blockquote" title="Citação">
+                                                <i class="fas fa-quote-right"></i>
+                                            </button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="hr" title="Linha divisória">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="tiptap-toolbar-divider"></div>
+
+                                        <!-- Shortcodes RPG -->
+                                        <div class="tiptap-toolbar-group tiptap-shortcode-wrap">
+                                            <button type="button" id="tiptap-shortcode-btn" class="tiptap-btn tiptap-btn-text" title="Inserir shortcode RPG" style="width:auto; gap:5px; padding:0 8px;">
+                                                <i class="fas fa-magic"></i>
+                                                <span>Shortcode</span>
+                                                <i class="fas fa-chevron-down" style="font-size:0.6rem"></i>
+                                            </button>
+                                            <div id="tiptap-shortcode-menu" class="tiptap-shortcode-menu">
+                                                <button type="button" class="shortcode-menu-item" data-shortcode='[hp max="10" current="10"]'>
+                                                    <span class="icon"><i class="fas fa-heart"></i></span>
+                                                    <span class="sc-label">HP / Vida</span>
+                                                    <span class="sc-preview">[hp max=10]</span>
+                                                </button>
+                                                <button type="button" class="shortcode-menu-item" data-shortcode='[stat nome="FOR" valor="10" posicao="left"]'>
+                                                    <span class="icon"><i class="fas fa-dice-d20"></i></span>
+                                                    <span class="sc-label">Atributo / Stat</span>
+                                                    <span class="sc-preview">[stat nome="FOR"]</span>
+                                                </button>
+                                                <button type="button" class="shortcode-menu-item" data-shortcode='[count nome="Contador" max="5" current="0"]'>
+                                                    <span class="icon"><i class="fas fa-list-ol"></i></span>
+                                                    <span class="sc-label">Contador</span>
+                                                    <span class="sc-preview">[count max=5]</span>
+                                                </button>
+                                                <button type="button" class="shortcode-menu-item" data-shortcode='[money moeda="GP" current="0" posicao="bottom"]'>
+                                                    <span class="icon"><i class="fas fa-coins"></i></span>
+                                                    <span class="sc-label">Dinheiro</span>
+                                                    <span class="sc-preview">[money]</span>
+                                                </button>
+                                                <button type="button" class="shortcode-menu-item" data-shortcode='[nota titulo="Nota"]Texto aqui[/nota]'>
+                                                    <span class="icon"><i class="fas fa-sticky-note"></i></span>
+                                                    <span class="sc-label">Nota Recolhível</span>
+                                                    <span class="sc-preview">[nota titulo="…"]</span>
+                                                </button>
+                                                <button type="button" class="shortcode-menu-item" data-shortcode='[link card="Nome do Card"]'>
+                                                    <span class="icon"><i class="fas fa-link"></i></span>
+                                                    <span class="sc-label">Link de Card</span>
+                                                    <span class="sc-preview">[link card="Nome"]</span>
+                                                </button>
+                                                <button type="button" class="shortcode-menu-item" data-shortcode="[ficha]">
+                                                    <span class="icon"><i class="fas fa-id-card"></i></span>
+                                                    <span class="sc-label">Ficha (Sheet)</span>
+                                                    <span class="sc-preview">[ficha]</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Limpar formatação -->
+                                        <div class="tiptap-toolbar-group" style="margin-left:auto">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="clearFormat" title="Limpar formatação">
+                                                <i class="fas fa-remove-format"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Área editável do Tiptap -->
+                                    <div id="card-modal-editor" class="tiptap-editor-area"></div>
+                                </div>
+                            </div>
+
+                        </div><!-- /.card-modal-main -->
+                    </div><!-- /.card-modal-layout -->
                 </form>
             </section>
-            <footer class="modal-card-foot"><button class="button is-link" form="form-add-card" type="submit">Adicionar Card</button><button class="button modal-cancel">Cancelar</button></footer>
-        </div>
-    </div>
 
-    <!-- Toolbar de Edição em Massa (Específico desta página) -->
+            <!-- Rodapé -->
+            <footer class="modal-card-foot">
+                <button class="button modal-cancel">Cancelar</button>
+                <button class="button is-link" form="form-add-card" type="submit">Adicionar Card</button>
+            </footer>
+
+        </div><!-- /.modal-card -->
+    </div><!-- /#add-card-modal -->
+
+    <!-- Toolbar de Edição em Massa -->
     <div id="bulk-edit-toolbar" class="bulk-edit-bar">
         <div class="container">
             <div class="bulk-edit-actions">
@@ -107,7 +295,6 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/web-animations-js@2.3.2/web-animations.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/muuri@0.9.5/dist/muuri.min.js"></script>
     <script type="module" src="./assets/js/firebase-config.js"></script>

@@ -7,17 +7,15 @@ import * as settings from './modules/settings.js';
 import * as grid from './modules/grid.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
-import { visualizeDiceRoll } from './modules/dice3d.js';
 import * as chat from './modules/chat.js';
 import * as cardManager from './modules/cardManager.js';
-import { processRoll } from './modules/diceLogic.js';
 import { initializeLayout } from './modules/layout.js';
+import { initializeCardModal, openCardModal } from './modules/cardModal.js';
 
 let allItems = [];
 let isInitialGridLoaded = false;
 let appSettings = {};
 let tagSuggestionsContainer = null;
-let editingCardItem = null;
 
 const VISIBILITY_FILTERS = { VISIBLE: 'visible', HIDDEN: 'hidden' };
 
@@ -81,7 +79,6 @@ async function updateUserState(userName) {
             userNameSpan.style.display = 'inline-block';
         }
         if (userNameInput) userNameInput.value = userName;
-
         try {
             await firebaseService.saveUser(userName);
         } catch (error) {
@@ -93,8 +90,6 @@ async function updateUserState(userName) {
         if (userNameSpan) userNameSpan.style.display = 'none';
     }
 }
-
-// --- Listeners de Ações de Card ---
 
 function handleDeleteItem(item) {
     firebaseService.deleteItem(item).then(() => {
@@ -120,15 +115,15 @@ async function handleReorder(orderedIds) {
 // INICIALIZAÇÃO PRINCIPAL
 document.addEventListener('DOMContentLoaded', async () => {
 
-    // 1. PRIMEIRO: Construir o Layout (Menu, FAB, Chat, Modais)
+    // 1. Layout
     await initializeLayout({
         fabActions: ['settings', 'bulk-edit', 'converter', 'help', 'chat', 'dice', 'add-card']
     });
 
-    // 2. SEGUNDO: Inicializar o Chat agora que o container existe
+    // 2. Chat
     chat.initializeChat();
 
-    // 3. TERCEIRO: Referências aos Elementos (DEPOIS do layout pronto)
+    // 3. Referências
     const addCardButton = document.getElementById('fab-add-card');
     const searchInput = document.getElementById('search-input');
     const activeFiltersContainer = document.getElementById('active-filters-container');
@@ -136,30 +131,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tagFiltersContainer = document.getElementById('tag-filters');
     const viewWrapper = document.getElementById('view-wrapper');
     const detailModal = document.getElementById('detail-modal');
-    const addCardModal = document.getElementById('add-card-modal');
-    const formAddCard = document.getElementById('form-add-card');
-    const cardFileInput = document.getElementById('card-arquivo');
-    const cardTagsInput = document.getElementById('card-tags');
     const userLoginBtn = document.getElementById('user-login-btn');
     const userLoginModal = document.getElementById('user-login-modal');
     const formUserLogin = document.getElementById('form-user-login');
     const userNameInput = document.getElementById('user-name-input');
 
-    // 4. Inicializar Autenticação (Precisa dos modais gerados pelo layout)
+    // 4. Auth + módulos
     await auth.initializeAuth();
     bulkEdit.initializeBulkEdit();
     settings.initializeSettings();
     initializeModals();
 
-    // 5. Configurar Estado do Usuário
+    // 5. Usuário
     let savedUserName = localStorage.getItem('rpgboard_user_name');
     if (!savedUserName) {
         savedUserName = await fetchRandomFantasyName();
         localStorage.setItem('rpgboard_user_name', savedUserName);
     }
     updateUserState(savedUserName);
-
-    // --- Listeners de UI ---
 
     if (userLoginBtn) userLoginBtn.addEventListener('click', () => openModal(userLoginModal));
     if (formUserLogin) formUserLogin.addEventListener('submit', (e) => {
@@ -174,26 +163,57 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     injectDragDropStyles();
 
+    // 6. Settings
     try {
         appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
         window.IMGBB_API_KEY = appSettings.imgbbApiKey;
-        if (appSettings.siteTitle) {
-            document.title = `${appSettings.siteTitle} - GameBoard`;
-        }
-        if (typeof import('./modules/components/header.js').then === 'function') {
-            import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
-        }
+        if (appSettings.siteTitle) document.title = `${appSettings.siteTitle} - GameBoard`;
         cardRenderer.initializeCardRenderer(appSettings);
         generateTagFilters(appSettings.filters, tagFiltersContainer);
     } catch (error) {
         console.error("Falha ao carregar as configurações do site:", error);
     }
 
+    // 7. Card Modal (Tiptap) ─────────────────────────────────────────────────
+    await initializeCardModal({
+        onSave: async (data, newImageFile, editingItem) => {
+            const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+            if (editingItem) {
+                await firebaseService.updateItem(editingItem, data, newImageFile || null);
+                try { chat.logSystemMessage(`${userName} atualizou o card "${data.titulo || editingItem.titulo}"`); } catch (_) { }
+            } else {
+                const id = await firebaseService.addItem(data, newImageFile || null);
+                grid.scrollToCard(id);
+            }
+        },
+        onTagInputInit: (inputEl) => initializeTagInput(inputEl, { suggestions: appSettings.recommendedTags || [] }),
+    });
+
+    // 8. Handlers de card (grid)
     const cardActionHandlers = {
         onDelete: handleDeleteItem,
-        onEdit: handleEditCard,
-        onSave: handleSaveCard,
+        // onEdit abre o modal de edição via cardModal.js
+        onEdit: (card, item) => openCardModal(item),
+        // onSave mantido para compatibilidade com sheet-mode e outros contextos inline
+        onSave: async (cardElement, item) => {
+            const updatedData = cardRenderer.getCardFormData(cardElement);
+            const newImageFile = cardElement._newImageFile || null;
+            try {
+                if (newImageFile) {
+                    const dims = await cardRenderer.getImageDimensions(newImageFile);
+                    updatedData.width = dims.width;
+                    updatedData.height = dims.height;
+                }
+                await firebaseService.updateItem(item, updatedData, newImageFile);
+                if (cardElement._newImageFile) delete cardElement._newImageFile;
+                try {
+                    const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+                    chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
+                } catch (e) { }
+                return { ...item, ...updatedData };
+            } catch (error) { console.error(error); alert("Falha ao salvar."); throw error; }
+        },
         onView: showDetailModal,
         onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
         onPositionChange: handlePositionChange,
@@ -205,7 +225,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     viewWrapper.classList.add('view-grid');
     grid.show();
 
-    // 7. Sincronização do Modo Narrador
+    // FAB → abre modal de criação
+    if (addCardButton) {
+        addCardButton.addEventListener('click', () => openCardModal());
+    }
+
+    // 9. Narrador
     function updateMasterView(isNarrator) {
         narrator.updateNarratorUI(isNarrator);
         document.body.classList.toggle('master-view', isNarrator);
@@ -219,50 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilters();
     });
 
-    // 8. Handlers para Editar/Salvar/Detalhes
-
-    function handleEditCard(card, item) {
-        // Preenche os campos do modal com os dados do item
-        document.getElementById('card-titulo').value = item.titulo || '';
-        document.getElementById('card-conteudo').value = item.conteudo || '';
-        document.getElementById('card-tags').value = (item.tags || []).join(', ');
-
-        const visibilityField = document.getElementById('card-visibility');
-        if (visibilityField) visibilityField.checked = item.isVisibleToPlayers !== false;
-
-        // Limpa o input de arquivo
-        cardFileInput.value = '';
-        grid.updateFileName(cardFileInput);
-
-        // Muda título do modal e botão
-        const modalTitle = addCardModal.querySelector('.modal-card-title');
-        if (modalTitle) modalTitle.textContent = 'Editar Card';
-        const submitBtn = formAddCard.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.textContent = 'Salvar Alterações';
-
-        editingCardItem = item;
-        openModal(addCardModal);
-    }
-
-    async function handleSaveCard(cardElement, item) {
-        const updatedData = cardRenderer.getCardFormData(cardElement);
-        const newImageFile = cardElement._newImageFile || null;
-        try {
-            if (newImageFile) {
-                const dimensions = await cardRenderer.getImageDimensions(newImageFile);
-                updatedData.width = dimensions.width;
-                updatedData.height = dimensions.height;
-            }
-            await firebaseService.updateItem(item, updatedData, newImageFile);
-            if (cardElement._newImageFile) delete cardElement._newImageFile;
-            try {
-                const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
-                chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
-            } catch (e) { }
-            return { ...item, ...updatedData };
-        } catch (error) { console.error(error); alert("Falha ao salvar."); throw error; }
-    }
-
+    // 10. Shortcode value handlers
     async function handleShortcodeValueChange(itemId, encodedShortcode, newCurrentValue, triggerElement = null) {
         const item = allItems.find(i => i.id === itemId);
         if (!item || !item.conteudo) return;
@@ -328,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
     }
 
-    // 9. Listeners Realtime Firebase
+    // 11. Firebase Realtime
     firebaseService.listenToItems(async (snapshot) => {
         try {
             if (!isInitialGridLoaded) {
@@ -368,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilters();
     });
 
-    // 10. Filtros e Pesquisa
+    // 12. Filtros
     function applyFilters() {
         const searchTerm = searchInput.value.trim();
         const selectedTags = Array.from(tagFiltersContainer.querySelectorAll('input:not([value="visible"]):not([value="hidden"]):checked')).map(checkbox => checkbox.value);
@@ -381,7 +363,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (loadingIndicator) loadingIndicator.style.display = 'none';
 
         const filteredItems = allItems.filter(dataItem => {
-            const textMatch = !normalizedSearchTerm || [dataItem.titulo, dataItem.conteudo].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) || dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
+            const textMatch = !normalizedSearchTerm ||
+                [dataItem.titulo, dataItem.conteudo].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) ||
+                dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
             const tagMatch = selectedTags.length === 0 || selectedTags.every(selectedTag => dataItem.tags.some(itemTag => normalizeString(itemTag) === selectedTag));
             let visibilityMatch = true;
             if (auth.isNarrator() && (visibilityFilters.visible || visibilityFilters.hidden)) {
@@ -390,6 +374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             return textMatch && tagMatch && visibilityMatch;
         });
+
         if (viewWrapper.classList.contains('view-grid')) {
             grid.setItems(filteredItems, selectedTags);
         }
@@ -410,9 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tagPill = document.createElement('div');
             tagPill.className = 'tags has-addons';
             tagPill.innerHTML = `<span class="tag is-link">${checkbox.nextElementSibling.textContent}</span><a class="tag is-delete" data-value="${checkbox.value}"></a>`;
-            tagPill.querySelector('.is-delete').onclick = () => {
-                checkbox.checked = false; applyFilters();
-            };
+            tagPill.querySelector('.is-delete').onclick = () => { checkbox.checked = false; applyFilters(); };
             activeFiltersContainer.appendChild(tagPill);
         });
     }
@@ -427,8 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 11. Tags e Modal de Card (Criação + Edição)
-
+    // 13. Tag suggestions
     function initializeTagInput(inputElement, options = {}) {
         const { isMultiTag = true, suggestions = [], showRecsOnFocus = true } = options;
         if (!tagSuggestionsContainer) {
@@ -469,72 +451,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputElement.onblur = () => setTimeout(() => { tagSuggestionsContainer.style.display = 'none'; }, 200);
     }
 
-    function resetAddCardModal() {
-        editingCardItem = null;
-        const modalTitle = addCardModal.querySelector('.modal-card-title');
-        if (modalTitle) modalTitle.textContent = 'Adicionar Novo Card';
-        const submitBtn = formAddCard.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.textContent = 'Adicionar Card';
-        formAddCard.reset();
-        grid.updateFileName(cardFileInput);
-    }
+    initializeTagInput(searchInput, { isMultiTag: false, showRecsOnFocus: false });
 
-    // Observer para resetar o modal ao fechar
-    new MutationObserver(() => {
-        if (!addCardModal.classList.contains('is-active')) {
-            resetAddCardModal();
-        }
-    }).observe(addCardModal, { attributes: true, attributeFilter: ['class'] });
-
-    if (addCardButton) {
-        addCardButton.addEventListener('click', () => {
-            resetAddCardModal();
-            openModal(addCardModal);
-        });
-    }
-
-    formAddCard.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = formAddCard.querySelector('button[type="submit"]');
-        btn.classList.add('is-loading');
-
-        const data = {
-            titulo: document.getElementById('card-titulo').value,
-            conteudo: document.getElementById('card-conteudo').value,
-            tags: cardTagsInput.value.split(',').map(t => t.trim()).filter(Boolean),
-            isVisibleToPlayers: auth.isNarrator() ? document.getElementById('card-visibility').checked : true
-        };
-
-        try {
-            if (editingCardItem) {
-                // ── Modo Edição ──────────────────────────────────────────
-                const newImageFile = cardFileInput.files[0] || null;
-                if (newImageFile) {
-                    const dimensions = await cardRenderer.getImageDimensions(newImageFile);
-                    data.width = dimensions.width;
-                    data.height = dimensions.height;
-                }
-                await firebaseService.updateItem(editingCardItem, data, newImageFile);
-                try {
-                    const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
-                    chat.logSystemMessage(`${userName} atualizou o card "${data.titulo || editingCardItem.titulo}"`);
-                } catch (_) { }
-                closeModal(addCardModal);
-            } else {
-                // ── Modo Criação ─────────────────────────────────────────
-                const id = await firebaseService.addItem(data, cardFileInput.files[0]);
-                closeModal(addCardModal);
-                grid.scrollToCard(id);
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Falha ao salvar.");
-        } finally {
-            btn.classList.remove('is-loading');
-        }
-    });
-
-    // 12. Modal Detalhes e Eventos Globais
+    // 14. Modal Detalhes
     function showDetailModal(item) {
         if (!item || !detailModal) return;
         const content = detailModal.querySelector('.modal-content');
@@ -554,6 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         openModal(detailModal);
     }
 
+    // 15. Eventos globais (money, HP, card-link, count)
     document.body.addEventListener('click', (event) => {
         const target = event.target;
         const activeMoneyInput = document.querySelector('.money-value-input:not(.is-hidden)');
@@ -569,8 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (display && input) {
                 display.classList.add('is-hidden');
                 input.classList.remove('is-hidden');
-                input.focus();
-                input.select();
+                input.focus(); input.select();
             }
         }
 
@@ -582,8 +501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (displayMode && editMode && input) {
                 displayMode.classList.add('is-hidden');
                 editMode.classList.remove('is-hidden');
-                input.focus();
-                input.select();
+                input.focus(); input.select();
             }
         }
 
@@ -626,17 +544,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (event.target.classList.contains('hp-current-input')) {
             const hpComponent = event.target.closest('.shortcode-hp');
             if (!hpComponent) return;
-
             const maxHp = parseInt(hpComponent.dataset.maxHp, 10) || 100;
             const decodedShortcode = decodeURIComponent(hpComponent.dataset.shortcode);
             const originalParams = shortcodeParser._parseKeyValueArgs(shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1));
             const originalValue = parseInt(originalParams.current, 10) || 0;
-
             let cleanedInput = event.target.value.trim().replace(/\s+/g, '');
             if (cleanedInput === '') return;
-
             let newValue = originalValue;
-
             const fullExpr = cleanedInput.match(/^(-?\d+)\s*([+\-*\/])\s*(-?\d+)$/);
             if (fullExpr) {
                 const v1 = parseInt(fullExpr[1], 10), op = fullExpr[2], v2 = parseInt(fullExpr[3], 10);
@@ -660,16 +574,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
             }
-
             newValue = Math.max(-10, Math.min(newValue, maxHp));
             event.target.value = newValue;
-
             const hpText = hpComponent.querySelector('.hp-text');
             const hpBarFill = hpComponent.querySelector('.hp-bar-fill');
             if (hpText) hpText.textContent = `${newValue} / ${maxHp}`;
-
             hpComponent.classList.toggle('is-unconscious', newValue <= 0);
-
             if (hpBarFill) {
                 const percent = newValue > 0 ? Math.round((newValue / maxHp) * 100) : 0;
                 hpBarFill.style.width = `${percent}%`;
@@ -680,10 +590,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 else if (percent < 60) hpBarFill.classList.add('is-medium');
                 else hpBarFill.classList.add('is-high');
             }
-
             hpComponent.querySelector('.hp-display-mode').classList.remove('is-hidden');
             hpComponent.querySelector('.hp-edit-mode').classList.add('is-hidden');
-
             handleShortcodeValueChange(hpComponent.dataset.itemId, hpComponent.dataset.shortcode, newValue, event.target);
         }
     });
@@ -696,7 +604,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             event.target.blur();
         }
     });
-
-    initializeTagInput(cardTagsInput, { suggestions: appSettings.recommendedTags || [] });
-    initializeTagInput(searchInput, { isMultiTag: false, showRecsOnFocus: false });
 });
