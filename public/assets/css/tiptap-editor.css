@@ -31,11 +31,18 @@ color: #f8f9fa;
 background-color: #3273e2;
 color: white;
 }
-.tiptap-editor-content .ProseMirror {
-padding: 1rem;
-min-height: 100%;
-height: 100%;
-outline: none;
+/* Cursor e Foco do Editor */
+.tiptap-editor .ProseMirror {
+    padding: 1rem;
+    min-height: 100%;
+    height: 100%;
+    outline: none;
+    caret-color: #fff; /* Cursor branco para o tema Cyborg */
+}
+
+.tiptap-editor:focus-within {
+    border-color: #3273dc !important;
+    box-shadow: 0 0 8px rgba(50, 115, 220, 0.3);
 }
 .tiptap-editor-content .ProseMirror > * + * { margin-top: 0.75em; }
 .tiptap-editor-content .ProseMirror p { line-height: 1.6; }
@@ -45,3 +52,13 @@ outline: none;
 .tiptap-editor-content .ProseMirror ul, .tiptap-editor-content .ProseMirror ol { padding-left: 1.5rem; }
 .tiptap-editor-content .ProseMirror a { color: #55b2de; text-decoration: underline; cursor: pointer; }
 .tiptap-editor-content .ProseMirror mark { background-color: rgba(255, 221, 87, 0.4); border-radius: 3px; }
+
+.tiptap-container #editor{
+    padding: 0px !important;
+}
+.tiptap{
+    min-height: 100%;
+}
+.ProseMirror-focused{
+    border:none !important;
+}

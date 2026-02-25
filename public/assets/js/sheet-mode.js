@@ -14,7 +14,7 @@ import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
 import { listenToItems, updateItem, listenToDiceRolls, addChatMessage } from './modules/firebaseService.js';
-import { initializeAuth, getCurrentUserName } from './modules/auth.js';
+import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
 import { initializeLayout } from './modules/layout.js'; // Importação do Orquestrador
 import { uploadImage } from './imgbbService.js';
 import { openModal, closeModal, initializeModals } from './modules/modal.js';
@@ -23,6 +23,7 @@ import * as chat from './modules/chat.js';
 import { visualizeDiceRoll } from './modules/dice3d.js';
 import { processRoll } from './modules/diceLogic.js';
 import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes } from './modules/editorUtils.js';
+import { showToast } from './modules/ui.js';
 
 let allItems = [];
 let currentCharacterId = null;
@@ -78,10 +79,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         fabChangeChar.addEventListener('click', openCharSelection);
     }
 
-    const editSheetBtn = document.getElementById('edit-sheet-btn');
-    if (editSheetBtn) {
-        editSheetBtn.addEventListener('click', openSheetEditor);
-    }
 
     document.getElementById('ficha-save-btn').addEventListener('click', saveFichaEditorContent);
 
@@ -314,6 +311,11 @@ function htmlToRaw(html) {
 }
 
 function setupSheetSpecificListeners() {
+    const editSheetBtn = document.getElementById('edit-sheet-btn');
+    if (editSheetBtn) {
+        editSheetBtn.addEventListener('click', openSheetEditor);
+    }
+
     if (notesEditor) notesEditor.addEventListener('input', (e) => handleAutoSave('playerNotes', e.target.value, false));
 
     // Listener para upload de imagem do personagem
@@ -476,7 +478,7 @@ async function initializeMainEditor() {
 }
 
 function saveMainEditorContent() {
-    if (!currentCharacterId) return;
+    if (!currentCharacterId || isProcessingUpdate) return;
     const html = mainEditor.getHTML();
     const narrativeShortcodes = convertEditorHtmlToShortcodes(html);
 
@@ -954,31 +956,60 @@ function showDetailModal(item) {
 }
 
 function openSheetEditor() {
-    if (!fichaEditor) return;
+    if (!fichaEditor || !currentCharacter) return;
 
-    // O conteúdo da ficha já está isolado em currentFichaBlock
-    // Removemos os wrappers para editar apenas o interior
-    let innerContent = currentFichaBlock.replace(/^\[ficha\]/i, "").replace(/\[\/ficha\]$/i, "").trim();
+    // Extração via Regex: Localize o bloco [ficha]([\s\S]*?)[\/ficha] dentro de currentCharacter.conteudo
+    const fichaMatch = (currentCharacter.conteudo || "").match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i);
+    const innerContent = fichaMatch ? fichaMatch[1].trim() : "";
 
-    fichaEditor.commands.setContent(preParseShortcodesForEditor(innerContent));
+    // Parse para Editor: Transforma conteúdo extraído em HTML compatível
+    const parsed = preParseShortcodesForEditor(innerContent);
+
+    // Carga no Editor
+    fichaEditor.commands.setContent(parsed);
+
+    // UI: Abre o modal
     openModal(document.getElementById("ficha-editor-modal"));
+
+    // Foco automático para visibilidade do cursor
+    setTimeout(() => fichaEditor.commands.focus(), 100);
 }
 
 async function saveFichaEditorContent() {
-    if (!currentCharacterId || !fichaEditor) return;
+    if (!currentCharacterId || !fichaEditor || !currentCharacter) return;
 
+    // Conversão de Saída: HTML -> Shortcodes brutos
     const innerShortcodes = convertEditorHtmlToShortcodes(fichaEditor.getHTML());
-    currentFichaBlock = `[ficha]\n${innerShortcodes}\n[/ficha]`;
+    const newFichaBlock = `[ficha]\n${innerShortcodes}\n[/ficha]`;
 
-    // Recombina com a narrativa do mainEditor
-    const narrativeShortcodes = convertEditorHtmlToShortcodes(mainEditor.getHTML());
-    const fullContent = `${currentFichaBlock}\n\n${narrativeShortcodes}`;
+    // Reconstrução do Card: Substitui apenas o bloco [ficha] preservando narrativa via Regex
+    let newFullContent = "";
+    const regex = /\[ficha\]([\s\S]*?)\[\/ficha\]/i;
 
-    currentCharacter.conteudo = fullContent;
-    await updateItem({ id: currentCharacterId }, { conteudo: fullContent });
+    if (regex.test(currentCharacter.conteudo || "")) {
+        newFullContent = currentCharacter.conteudo.replace(regex, newFichaBlock);
+    } else {
+        // Fallback: Se não houver bloco, adicionamos no topo
+        newFullContent = `${newFichaBlock}\n\n${currentCharacter.conteudo || ""}`;
+    }
 
-    // Atualiza a visualização técnica na ficha (esquerda)
-    loadCharacter(currentCharacterId);
+    // Persistência: Firestore
+    try {
+        await updateItem({ id: currentCharacterId }, { conteudo: newFullContent });
 
-    closeModal(document.getElementById("ficha-editor-modal"));
+        // Sincronização Local: Atualiza referências locais para refletir a mudança imediata
+        currentCharacter.conteudo = newFullContent;
+        // Atualiza no array allItems para garantir que loadCharacter pegue os dados novos
+        const itemIdx = allItems.findIndex(i => i.id === currentCharacterId);
+        if (itemIdx !== -1) allItems[itemIdx].conteudo = newFullContent;
+
+        loadCharacter(currentCharacterId);
+
+        // UI Feedback e Fechamento
+        showToast("Ficha atualizada com sucesso!", "is-success");
+        closeModal(document.getElementById("ficha-editor-modal"));
+    } catch (error) {
+        console.error("Erro ao salvar ficha:", error);
+        showToast("Erro ao salvar ficha técnica.", "is-danger");
+    }
 }
