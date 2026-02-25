@@ -161,6 +161,23 @@
         <button class="modal-close is-large" aria-label="close"></button>
     </div>
 
+    <!-- Modal de Detalhes do Card (para navegação via @mention) -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card" style="width: 90%; max-width: 800px;">
+            <header class="modal-card-head">
+                <p id="detail-title" class="modal-card-title"></p>
+                <button class="delete modal-cancel" aria-label="close"></button>
+            </header>
+            <section id="detail-body" class="modal-card-body">
+                <!-- Conteúdo preenchido via JS -->
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button modal-cancel">Fechar</button>
+            </footer>
+        </div>
+    </div>
+
     <script type="module" src="./assets/js/firebase-config.js"></script>
     <script type="module" src="./assets/js/text-mode.js"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>

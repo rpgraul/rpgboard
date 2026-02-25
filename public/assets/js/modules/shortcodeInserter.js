@@ -167,15 +167,16 @@ export function openConfigModal(type, editor, existingNodeInfo = null) {
         money: {
             title: existingNodeInfo ? 'Editar: Dinheiro' : 'Configurar: Dinheiro',
             fields: [
-                { id: 'sc_moeda', label: 'Moeda', type: 'select', options: ['gold', 'silver', 'copper'], default: getDef('sc_moeda', 'gold') },
+                { id: 'sc_moeda', label: 'Moeda', type: 'text', default: getDef('sc_moeda', window.appSettings?.defaultCurrency || 'gold'), placeholder: 'ex: gold, silver, GP...' },
                 { id: 'sc_current', label: 'Quantidade', type: 'number', default: getDef('sc_current', '0'), req: true },
                 ...naratorOnlyField('sc_hidden', 'Oculto para Jogadores', false)
             ],
             build: (data) => {
-                let s = `[money ${data.sc_moeda} current="${data.sc_current}"`;
+                const currency = data.sc_moeda || window.appSettings?.defaultCurrency || 'gold';
+                let s = `[money ${currency} current="${data.sc_current}"`;
                 if (data.sc_hidden) s += ' #';
                 s += ']';
-                return { text: s, attrs: { currency: data.sc_moeda, current: data.sc_current, isHidden: data.sc_hidden } };
+                return { text: s, attrs: { currency: currency, current: data.sc_current, isHidden: data.sc_hidden } };
             }
         },
         count: {

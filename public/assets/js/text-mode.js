@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       CardLink.configure({
         suggestion: {
-          items: ({ query }) => allCards.filter(c => c.titulo.toLowerCase().startsWith(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
+          items: ({ query }) => allCards.filter(c => c.titulo.toLowerCase().includes(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
         },
       }),
       StatNode,
@@ -100,7 +100,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     },
     onUpdate: () => {
       clearTimeout(mainEditorSaveTimeout);
-      mainEditorSaveTimeout = setTimeout(saveCurrentCard, 800);
+      mainEditorSaveTimeout = setTimeout(saveCurrentCard, 3000);
+    },
+    onBlur: () => {
+      clearTimeout(mainEditorSaveTimeout);
+      saveCurrentCard();
     }
   });
 
@@ -175,7 +179,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (isNarrator()) cardVisibility.checked = card.isVisibleToPlayers !== false;
 
     const parsedContent = preParseShortcodesForEditor(card.conteudo || "");
-    mainEditor.commands.setContent(parsedContent, false);
+    if (!mainEditor.isFocused) {
+      mainEditor.commands.setContent(parsedContent, false);
+    }
 
     renderCardList();
     history.pushState({ cardId: id }, "", `#${id}`);
@@ -254,4 +260,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     const mappedType = typeMap[type] || type;
     openConfigModal(mappedType, targetEditor, { pos, attrs, nodeType: type });
   });
+
+  // Listener global para CardLinks (@mentions)
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('.card-link');
+    if (target) {
+      e.preventDefault();
+      const cardName = target.dataset.cardName;
+      const found = allCards.find(it => normalizeString(it.titulo) === normalizeString(cardName));
+      if (found) showDetailModal(found);
+    }
+  });
 });
+
+function normalizeString(str) {
+  if (!str) return "";
+  return str.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function showDetailModal(item) {
+  const modal = document.getElementById('detail-modal');
+  if (!modal) return;
+
+  document.getElementById('detail-title').textContent = item.titulo;
+  const body = document.getElementById('detail-body');
+
+  let html = "";
+  if (item.url) {
+    html += `<figure class="image mb-4"><img src="${item.url}" alt="${item.titulo}" style="max-height: 400px; object-fit: contain;"></figure>`;
+  }
+  html += `<div class="content">${shortcodeParser.parseMainContent(item.conteudo)}</div>`;
+
+  const sc = shortcodeParser.parseAllShortcodes(item);
+  if (sc.all.length > 0) {
+    html += `<div class="box mt-4 has-background-dark">
+            <div class="columns is-multiline is-mobile">
+                <div class="column is-narrow">${sc.left}</div>
+                <div class="column is-narrow">${sc.right}</div>
+                <div class="column is-12">${sc.bottom}</div>
+            </div>
+        </div>`;
+  }
+
+  body.innerHTML = html;
+  openModal(modal);
+}

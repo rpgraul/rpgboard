@@ -35,16 +35,15 @@ export default Node.create({
   addInputRules() {
     return [
       textInputRule({
-        find: /\[money\s+current=(?:["']?)([\d.]+)(?:["']?)(?:\s+([^\]]*?))?\s*\]\s*$/,
+        find: /\[money\s+([^\]]*?)\s*current=(?:["']?)([\d.]+)(?:["']?)(?:\s+([^\]]*?))?\s*\]\s*$/,
         getAttributes: (t) => {
-          const e = parseFloat(t[1]) || 0;
-          let currency = "", isHidden = false;
-          if (t[2]) {
-            const parts = t[2].trim().split(/\s+/);
-            isHidden = parts.includes("#");
-            currency = parts.find(p => p !== "#") || "";
+          const currency = t[1].trim();
+          const current = parseFloat(t[2]) || 0;
+          let isHidden = false;
+          if (t[3]) {
+            isHidden = t[3].includes("#");
           }
-          return { current: e, currency, isHidden };
+          return { current, currency, isHidden };
         },
       }),
     ];

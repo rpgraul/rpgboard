@@ -101,6 +101,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 5.1 INICIALIZAR EDITOR TIPTAP (após injeção)
     await initializeMainEditor();
+    await initializeFichaEditor();
+
+    // Listener global para CardLinks (@mentions)
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('.card-link');
+        if (target) {
+            e.preventDefault();
+            const cardName = target.dataset.cardName;
+            const found = allItems.find(it => normalizeString(it.titulo) === normalizeString(cardName));
+            if (found) showDetailModal(found);
+        }
+    });
 
 
     // 6. CARREGAMENTO DE DADOS (FIREBASE)
@@ -279,7 +291,9 @@ function loadCharacter(id) {
         }
 
         const parsed = preParseShortcodesForEditor(narrativeContent);
-        mainEditor.commands.setContent(parsed, false);
+        if (!mainEditor.isFocused) {
+            mainEditor.commands.setContent(parsed, false);
+        }
         isProcessingUpdate = false;
     }
 
@@ -306,6 +320,11 @@ function setupSheetSpecificListeners() {
     const imgUploadInput = document.getElementById('char-image-upload');
     if (imgUploadInput) {
         imgUploadInput.addEventListener('change', handleCharImageUpload);
+    }
+
+    const saveContentBtn = document.getElementById('save-content-btn');
+    if (saveContentBtn) {
+        saveContentBtn.addEventListener('click', saveContainerContent);
     }
 
 
@@ -379,7 +398,7 @@ async function initializeMainEditor() {
             TextAlign.configure({ types: ["heading", "paragraph"] }),
             CardLink.configure({
                 suggestion: {
-                    items: ({ query }) => allItems.filter(c => c.titulo.toLowerCase().startsWith(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
+                    items: ({ query }) => allItems.filter(c => c.titulo.toLowerCase().includes(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
                 },
             }),
             StatNode,
@@ -406,7 +425,13 @@ async function initializeMainEditor() {
         onUpdate: () => {
             if (isProcessingUpdate) return;
             clearTimeout(mainEditorSaveTimeout);
-            mainEditorSaveTimeout = setTimeout(saveMainEditorContent, 800);
+            mainEditorSaveTimeout = setTimeout(saveMainEditorContent, 3000);
+        },
+        onBlur: () => {
+            if (!isProcessingUpdate) {
+                clearTimeout(mainEditorSaveTimeout);
+                saveMainEditorContent();
+            }
         }
     });
 
@@ -566,11 +591,6 @@ function renderContainers(char) {
     const containerList = document.createElement('div');
     containerList.className = 'sheet-containers-list mt-4 mb-4';
 
-    // Título discreto
-    const title = document.createElement('p');
-    title.className = 'is-size-7 has-text-centered has-text-grey mb-2';
-    title.innerHTML = '<i class="fas fa-boxes"></i> ACESSÓRIOS E CONTEÚDOS';
-    containerList.appendChild(title);
 
     const buttonsWrapper = document.createElement('div');
     buttonsWrapper.className = 'buttons are-small is-centered';
@@ -640,6 +660,45 @@ function initializeSideViewEditor() {
         ],
         editorProps: { attributes: { class: "ProseMirror" } }
     });
+
+    // Injetar toolbar se houver container
+    const toolbarWrap = document.createElement('div');
+    toolbarWrap.className = 'tiptap-toolbar mb-2';
+    // Reutiliza HTML da toolbar principal
+    const mainToolbar = document.querySelector(".column-raw-editor .tiptap-toolbar");
+    if (mainToolbar) {
+        toolbarWrap.innerHTML = mainToolbar.innerHTML;
+        // Limpa shortcode menu se não quiser em containers ou configura novo
+        const scMenu = toolbarWrap.querySelector('#sheet-mode-shortcode-container');
+        if (scMenu) {
+            scMenu.id = 'container-shortcode-container';
+            scMenu.innerHTML = '';
+            setupShortcodeMenu(scMenu, sideViewEditor);
+        }
+
+        toolbarWrap.onclick = (e) => {
+            const btn = e.target.closest("button[data-action]");
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const val = btn.dataset.level || btn.dataset.align;
+            const chain = sideViewEditor.chain().focus();
+            if (action === "undo") chain.undo().run();
+            else if (action === "redo") chain.redo().run();
+            else if (action === "toggleBold") chain.toggleBold().run();
+            else if (action === "toggleItalic") chain.toggleItalic().run();
+            else if (action === "toggleStrike") chain.toggleStrike().run();
+            else if (action === "toggleHighlight") chain.toggleHighlight().run();
+            else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
+            else if (action === "toggleBulletList") chain.toggleBulletList().run();
+            else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
+            else if (action === "setTextAlign") chain.setTextAlign(val).run();
+        };
+    }
+
+    const containerWrapper = document.querySelector("#content-tiptap-wrapper");
+    if (containerWrapper) {
+        containerWrapper.prepend(toolbarWrap);
+    }
 }
 
 /**
@@ -680,33 +739,61 @@ function setupInteractiveSheetListeners() {
             }
         };
 
-        container.onchange = async (e) => {
+        container.addEventListener('focusout', async (e) => {
             const input = e.target;
+            if (input.tagName !== 'INPUT') return;
             const interactive = input.closest('.is-interactive');
             if (!interactive || !interactive.dataset.shortcode) return;
 
             const oldShortcode = decodeURIComponent(interactive.dataset.shortcode);
-            let newValue = input.value.trim();
+            const args = shortcodeParser._parseArguments(oldShortcode.slice(1, -1));
+            const params = shortcodeParser._parseKeyValueArgs(args);
+            const newValue = input.value.trim();
+
             let newShortcode = "";
 
             if (interactive.classList.contains('shortcode-hp')) {
-                const max = interactive.dataset.maxHp;
-                newShortcode = `[hp max="${max}" current="${newValue}"]`;
+                if (params.current === newValue) {
+                    interactive.querySelector('.hp-display-mode').classList.remove('is-hidden');
+                    interactive.querySelector('.hp-edit-mode').classList.add('is-hidden');
+                    return;
+                }
+                newShortcode = `[hp max="${params.max || 10}" current="${newValue}"]`;
             } else if (interactive.classList.contains('shortcode-stat')) {
-                // Regex para pegar o rótulo do shortcode antigo e manter o novo valor
-                const labelMatch = oldShortcode.match(/\[stat\s+"([^"]*)"/i);
-                const label = labelMatch ? labelMatch[1] : "";
+                const label = args[1] || "";
+                const oldValue = args[2] || "";
+                if (oldValue === newValue) {
+                    interactive.querySelector('.stat-value-display').classList.remove('is-hidden');
+                    input.classList.add('is-hidden');
+                    return;
+                }
                 newShortcode = `[stat "${label}" "${newValue}"]`;
             } else if (interactive.classList.contains('shortcode-money')) {
-                const currencyMatch = oldShortcode.match(/\[money\s+current=".*?"\s*(.*?)\]/i);
-                const currency = currencyMatch ? currencyMatch[1].trim() : "";
-                newShortcode = `[money current="${newValue}" ${currency}]`.replace(/\s+\]/, ']');
+                if (params.current === newValue) {
+                    interactive.querySelector('.money-value-display').classList.remove('is-hidden');
+                    input.classList.add('is-hidden');
+                    return;
+                }
+                // Tenta pegar a moeda do primeiro argumento ou do param
+                let currency = params.currency || "";
+                if (!currency) {
+                    currency = args.find(a => !a.includes('=') && a.toLowerCase() !== 'money') || "";
+                }
+                newShortcode = `[money ${currency} current="${newValue}"]`.replace(/\s+\]/, ']');
             }
 
-            if (newShortcode) {
+            if (newShortcode && newShortcode !== oldShortcode) {
                 await updateFichaShortcode(oldShortcode, newShortcode);
+            } else {
+                // Se não mudou mas o input sumiu (por algum motivo manual), garantimos o reset visual
+                const display = interactive.querySelector('.hp-display-mode, .stat-value-display, .money-value-display');
+                const edit = interactive.querySelector('.hp-edit-mode, input');
+                if (display && edit) {
+                    display.classList.remove('is-hidden');
+                    edit.classList.add('is-hidden');
+                }
             }
-        };
+        });
 
         // Atalhos de teclado para inputs
         container.onkeydown = (e) => {
@@ -831,6 +918,39 @@ async function initializeFichaEditor() {
             });
         });
     }
+}
+
+function normalizeString(str) {
+    if (!str) return "";
+    return str.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function showDetailModal(item) {
+    const modal = document.getElementById('detail-modal');
+    if (!modal) return;
+
+    document.getElementById('detail-title').textContent = item.titulo;
+    const body = document.getElementById('detail-body');
+
+    let html = "";
+    if (item.url) {
+        html += `<figure class="image mb-4"><img src="${item.url}" alt="${item.titulo}" style="max-height: 400px; object-fit: contain;"></figure>`;
+    }
+    html += `<div class="content">${shortcodeParser.parseMainContent(item.conteudo)}</div>`;
+
+    const sc = shortcodeParser.parseAllShortcodes(item);
+    if (sc.all.length > 0) {
+        html += `<div class="box mt-4 has-background-dark">
+            <div class="columns is-multiline is-mobile">
+                <div class="column is-narrow">${sc.left}</div>
+                <div class="column is-narrow">${sc.right}</div>
+                <div class="column is-12">${sc.bottom}</div>
+            </div>
+        </div>`;
+    }
+
+    body.innerHTML = html;
+    openModal(modal);
 }
 
 function openSheetEditor() {

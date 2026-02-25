@@ -33,7 +33,8 @@ color: white;
 }
 .tiptap-editor-content .ProseMirror {
 padding: 1rem;
-min-height: 300px;
+min-height: 100%;
+height: 100%;
 outline: none;
 }
 .tiptap-editor-content .ProseMirror > * + * { margin-top: 0.75em; }

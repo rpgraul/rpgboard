@@ -21,6 +21,7 @@ let _newImageFile = null;     // arquivo de imagem novo (se trocado)
 let _removeImage = false;     // usuário pediu para remover a imagem
 let _onSave = null;           // callback: async (data, newImageFile, editingItem) => void
 let _onTagInputInit = null;   // callback para inicializar sugestões de tags
+let _saveTimeout = null;
 
 // ── Elementos do DOM (preenchidos em init) ────────────────────────────────────
 let _modal, _form, _titleInput, _tagsInput, _visibilityField,
@@ -75,7 +76,17 @@ async function createEditor(content = '') {
             Placeholder.configure({ placeholder: 'Conteúdo do card (suporta shortcodes, markdown, etc.)…' }),
         ],
         content,
-        onUpdate: () => { /* pode disparar preview futuro */ },
+        onUpdate: () => {
+            if (!_editingItem) return;
+            clearTimeout(_saveTimeout);
+            _saveTimeout = setTimeout(triggerAutoSave, 3000);
+        },
+    });
+
+    _editor.on('blur', () => {
+        if (!_editingItem) return;
+        clearTimeout(_saveTimeout);
+        triggerAutoSave();
     });
 
     // Ao mudar o conteúdo, atualiza estado dos botões do toolbar
@@ -225,6 +236,13 @@ export function getCardModalData() {
         newImageFile: _newImageFile,
         removeImage: _removeImage,
     };
+}
+
+async function triggerAutoSave() {
+    if (!_editingItem || !_onSave) return;
+    const data = getCardModalData();
+    // Auto-save não envia nova imagem para evitar overhead
+    await _onSave(data, null, _editingItem);
 }
 
 // ── Inicialização principal ───────────────────────────────────────────────────
