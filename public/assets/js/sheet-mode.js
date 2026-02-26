@@ -13,15 +13,14 @@ import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
-import { listenToItems, updateItem, listenToDiceRolls, addChatMessage } from './modules/firebaseService.js';
+import { listenToItems, updateItem, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
-import { initializeLayout } from './modules/layout.js'; // Importação do Orquestrador
-import { uploadImage } from './imgbbService.js';
+import { initializeLayout } from './modules/layout.js';
 import { openModal, closeModal, initializeModals } from './modules/modal.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as chat from './modules/chat.js';
 import { visualizeDiceRoll } from './modules/dice3d.js';
-import { processRoll } from './modules/diceLogic.js';
+import { processRoll, initializeDice } from './modules/diceLogic.js';
 import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes } from './modules/editorUtils.js';
 import { showToast } from './modules/ui.js';
 
@@ -52,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const firebaseService = await import('./modules/firebaseService.js');
         const appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
-        window.IMGBB_API_KEY = appSettings.imgbbApiKey;
+        initFirebaseService();
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }
@@ -68,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeAuth();
     initializeModals();
     chat.initializeChat();
+    initializeDice(layout);
 
     // 3. VINCULAÇÃO DE EVENTOS DOS COMPONENTES INJETADOS
     // Os botões FAB e elementos globais já foram criados pelo layout.js
@@ -400,7 +400,16 @@ async function initializeMainEditor() {
             TextAlign.configure({ types: ["heading", "paragraph"] }),
             CardLink.configure({
                 suggestion: {
-                    items: ({ query }) => allItems.filter(c => c.titulo.toLowerCase().includes(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
+                    items: ({ query }) => {
+                        const cleanQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                        return allItems
+                            .filter(c => {
+                                const cleanTitle = (c.titulo || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                return cleanTitle.includes(cleanQuery);
+                            })
+                            .map(c => ({ id: c.titulo, title: c.titulo }))
+                            .slice(0, 10);
+                    },
                 },
             }),
             StatNode,
@@ -556,7 +565,7 @@ async function handleCharImageUpload(event) {
         imgEl.style.opacity = '0.5';
 
         // Fazer upload da imagem
-        const result = await uploadImage(file);
+        const result = await uploadImageToImgBB(file);
 
         // Atualizar Firebase com a nova URL
         await updateItem({ id: currentCharacterId }, { url: result.url });

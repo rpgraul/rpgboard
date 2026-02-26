@@ -23,8 +23,8 @@
 <p>Para cada card, use o formato <code>chave: valor</code>. As chaves válidas são:</p>
 <ul>
 <li><code>titulo</code>: O título do card (obrigatório).</li>
-<li><code>conteudo</code>: O conteúdo principal, incluindo shortcodes.</li>
-<li><code>descricao</code>: O texto que aparece no tooltip/detalhes.</li>
+<li><code>conteudo</code>: O conteúdo principal, incluindo shortcodes e descrições narrativas.</li>
+<li><code>tags</code>: Tags separadas por vírgula.</li>
 <li><code>tags</code>: Tags separadas por vírgula.</li>
 <li><code>imagem</code>: A URL completa de uma imagem para ser importada.</li>
 <li><code>isVisibleToPlayers</code>: Use <code>false</code> para ocultar dos jogadores. Se omitido, será visível.</li>
@@ -40,9 +40,8 @@
 <h4 class="title is-6 mt-4">Exemplo:</h4>
 <pre><code>titulo: Gandalf, o Cinzento
 imagem: https://i.pinimg.com/1200x/9f/ce/b5/9fceb5d0391ce50f5e439f2299429a43.jpg
-conteudo: [stat "Classe" "Mago"] [stat "Nível" "5"]
+conteudo: [stat "Classe" "Mago"] [stat "Nível" "5"] <br><br> Um mago poderoso e sábio de uma ordem antiga.
 tags: mago, istari, personagem
-descricao: Um mago poderoso e sábio.
 ---
 titulo: Anel do Poder
 imagem: https://miro.medium.com/v2/resize:fit:640/format:webp/1*4zWXKgj98mhqXytiHajxgQ.jpeg
@@ -109,35 +108,25 @@ Cada card deve ser separado por uma linha contendo três traços (---).
 Para cada card, use o formato chave: valor. As chaves válidas são:
 titulo: O título do card (obrigatório). Remova quaisquer valores entre colchetes ([]) do título.
 imagem: A URL completa de uma imagem para ser importada. Use https://www.revixpert.ch/app/uploads/portrait-placeholder.jpg como placeholder se não houver uma imagem específica.
-conteudo: O conteúdo principal do card, onde você deve inserir os shortcodes.
+conteudo: O conteúdo principal do card, onde você deve inserir os shortcodes e toda a descrição narrativa (Ataques, Habilidades, Equipamentos).
 tags: Tags separadas por vírgula.
-Para Personagens Jogadores (PJ), use: PJ, Piratas Tatsumaki (e Capitão apenas para o Capitão).
-Para Personagens Não Jogadores (NPC), use: NPC, Piratas Tatsumaki.
-Para o Barco, use: Barco, Piratas Tatsumaki.
-isVisibleToPlayers: Use true para tornar o card visível aos jogadores. Se omitido ou false, o card será oculto. Para todos os cards que você me enviar, use true.
-descricao: O texto que aparece no tooltip/detalhes.
-Deve conter Ataques Especiais (se houver), Habilidades (se houver) e Equipamentos/Itens (se houver).
+Deve conter Ataques Especiais, Habilidades e Equipamentos diretamente em 'conteudo'.
 Use &lt;br&gt; para quebrar a linha entre cada item, ataque, ou habilidade.
-Use &lt;hr&gt; para separar visualmente as seções de Ataques/Habilidades e Equipamentos/Itens.
-Não inclua o prefixo "Equipamentos:" ou "Ataques Especiais:". Apenas "Equipamentos:" seguido de &lt;br&gt; para a lista.
+Use &lt;hr&gt; para separar visualmente as seções no 'conteudo'.
 Remova itens ou informações duplicadas.
 Mapeamento de Shortcodes e Regras Específicas
-As informações do seu texto serão transformadas em shortcodes ou incluídas na descricao seguindo estas regras:
 conteudo:
 Ocupação: A primeira ocupação mencionada, no formato [stat "Ocupação" "Valor"]. Para o Capitão, use apenas Capitão dos Piratas Tatsumaki.
 Recompensa: [stat "Recompensa" "Valor Berry"].
 Akuma no Mi: [stat "Akuma no Mi" "Nome da Akuma no Mi"].
 Dinheiro: Utilize [money current=[valor no texto] berries bottom] para definir o valor, tipo e posição.
 Tipo Sanguíneo: [stat "Tipo Sanguíneo" "Valor"].
-Eternal Poses (para o Barco): Cada Eternal Pose deve ser um [stat "Eternal Pose" "Destino"].
-descricao:
-Ataques Especiais, Habilidades, Características, Itens e Equipamentos: Todos estes devem ser listados dentro do campo descricao, utilizando &lt;br&gt; para separar os itens e &lt;hr&gt; para separar as seções (Ex: ataques, depois equipamentos). Não use "Equipamentos:" ou "Ataques Especiais:" como títulos na descrição. Use "Ataques Especiais: " e "Equipamentos: ".
+Ataques Especiais, Habilidades, Características, Itens e Equipamentos: Todos estes devem ser incluídos no campo conteudo, utilizando &lt;br&gt; para separar os itens e &lt;hr&gt; para separar as seções.
 Contadores de Vida/Cargas:
 Para Pontos de Vida, use [hp max=VALOR current=VALOR].
 Para Contadores de itens ou condições (como as "vidas" da Violet), use [*count "Nome" max=VALOR current=VALOR skull] (se for um tema de crânio) ou theme=potion ou checkbox conforme aplicável.
-Regras de Conteúdo Adicionais:
-Informações de História do Personagem: Se houver detalhes específicos da história que não se encaixam em shortcodes ou categorias de descricao (como "O kejin está vivo como pirata"), coloque-os na descricao em uma seção separada (ex: "Notas:").
-Remoção de Duplicatas: Garanta que nenhuma informação seja repetida entre conteudo e descricao ou dentro da própria descricao.
+Informações de História do Personagem: Coloque-os no conteudo em uma seção separada (ex: "Notas:").
+Regra de Ouro: Garanta que nenhuma informação seja repetida entre o que está em shortcodes e o texto puro no conteudo.
 Exemplo de Como Fornecer os Dados:
 Nome do Personagem/Item [Ocupação/Tipo]
 Informações da Akuma no Mi

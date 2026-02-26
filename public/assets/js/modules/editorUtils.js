@@ -1,26 +1,27 @@
+import { parseArguments, parseKeyValueArgs, shortcodeRegexes } from './parserUtils.js';
 
 // 1. ATUALIZAÇÃO DO PARSER DE ENTRADA (Texto -> Editor)
 export function preParseShortcodesForEditor(t) {
     if (!t) return "";
 
     // ContainerShortcode: [container label="..." type="..." # close]...[/container]
-    t = t.replace(/\[container\s+([^\]]+)\]([\s\S]*?)\[\/container\]/gi, (match, args, content) => {
-        const params = _parseKeyValueArgs(args);
+    t = t.replace(shortcodeRegexes.container, (match, argsStr, content) => {
+        const params = parseKeyValueArgs(argsStr);
         const label = params.label || "Container";
         const type = params.type || "default";
-        const isHidden = args.includes("#");
-        const isClosed = args.includes("close");
+        const isHidden = argsStr.includes("#") || params.ishidden === "true";
+        const isClosed = /\bclose\b/i.test(argsStr);
         return `<div data-node-type="containerShortcode" data-label="${label}" data-type="${type}" data-is-hidden="${isHidden}" data-is-closed="${isClosed}"><div class="container-content-area">${content}</div></div>`;
     });
 
     // Ficha Wrapper: [ficha]...[/ficha]
-    t = t.replace(/\[ficha\]([\s\S]*?)\[\/ficha\]/gi, (match, content) => {
+    t = t.replace(shortcodeRegexes.ficha, (match, content) => {
         return `<div data-node-type="fichaShortcode"><div class="ficha-content-area">${content}</div></div>`;
     });
 
     // Money: [money current="100" gold #]
-    t = t.replace(/\[money\s+([^\]]+)\]/gi, (match, args) => {
-        const params = _parseKeyValueArgs(args);
+    t = t.replace(shortcodeRegexes.money, (match, args) => {
+        const params = parseKeyValueArgs(args);
         const hidden = args.includes("#");
         const pos = ["left", "right", "bottom", "top"].find(a => args.toLowerCase().includes(a)) || "";
         const curr = args.toLowerCase().includes("gold") ? "gold" : (args.toLowerCase().includes("silver") ? "silver" : "copper");
@@ -28,28 +29,28 @@ export function preParseShortcodesForEditor(t) {
     });
 
     // HP: [hp max="20" current="15" #]
-    t = t.replace(/\[hp\s+([^\]]+)\]/gi, (match, args) => {
-        const params = _parseKeyValueArgs(args);
+    t = t.replace(shortcodeRegexes.hp, (match, args) => {
+        const params = parseKeyValueArgs(args);
         const hidden = args.includes("#");
         const pos = ["left", "right", "bottom", "top"].find(a => args.toLowerCase().includes(a)) || "";
         return `<span data-node-type="hpNode" data-max="${params.max || "0"}" data-current="${params.current || "0"}" data-is-hidden="${hidden}" data-position="${pos}"></span>`;
     });
 
     // Stat: [stat "Força" "18" #]
-    t = t.replace(/\[stat\s+([^\]]+)\]/gi, (match, args) => {
+    t = t.replace(shortcodeRegexes.stat, (match, args) => {
         const hidden = args.includes("#");
         const pos = ["left", "right", "bottom", "top"].find(a => args.toLowerCase().includes(a)) || "";
-        const parts = _splitArgs(args);
+        const parts = parseArguments(args);
         const label = parts[0] || "Stat";
         const value = parts[1] || "0";
         return `<span data-node-type="statNode" data-label="${label.replace(/^["']|["']$/g, "")}" data-value="${value.replace(/^["']|["']$/g, "")}" data-is-hidden="${hidden}" data-position="${pos}"></span>`;
     });
 
     // Count: [* "Flechas" max=20 current=10 #] ou [count "Peso" max=50 current=20 #]
-    t = t.replace(/\[(\*|count)\s+([^\]]+)\]/gi, (match, type, args) => {
+    t = t.replace(shortcodeRegexes.count, (match, type, args) => {
         const isOverlay = type === "*";
-        const params = _parseKeyValueArgs(args);
-        const splitted = _splitArgs(args);
+        const params = parseKeyValueArgs(args);
+        const splitted = parseArguments(args);
         let label = "";
         if (splitted[0] && !splitted[0].includes("=")) {
             label = splitted[0];
@@ -127,22 +128,4 @@ export function convertEditorHtmlToShortcodes(html) {
     });
 
     return body.innerHTML;
-}
-
-// Helpers privados para o parser (copiados de shortcodeParser.js ou similares)
-function _parseKeyValueArgs(t) {
-    const r = {};
-    const e = t.match(/(\w+)=(?:(["'])(.*?)\2|(\S+))/g);
-    if (e) e.forEach(t => { const [e, n] = t.split("="); r[e] = n.replace(/^["']|["']$/g, ""); });
-    return r;
-}
-
-function _splitArgs(t) {
-    const r = [];
-    let e = "", n = !1;
-    for (let s = 0; s < t.length; s++) {
-        const i = t[s];
-        '"' === i || "'" === i ? (n = !n, e += i) : " " !== i || n ? (e += i) : (r.push(e), e = "");
-    }
-    return e && r.push(e), r.filter(t => t.trim().length > 0);
 }

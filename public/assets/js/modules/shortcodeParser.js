@@ -1,24 +1,4 @@
-export function _parseArguments(str) {
-    const regex = /"([^"]+)"|\S+/g;
-    const args = [];
-    let match;
-    while ((match = regex.exec(str)) !== null) {
-        args.push(match[1] || match[0]);
-    }
-    return args;
-}
-
-export function _parseKeyValueArgs(args) {
-    const params = {};
-    if (!args) return params;
-    args.forEach(arg => {
-        const parts = arg.split('=');
-        if (parts.length === 2) {
-            params[parts[0].toLowerCase()] = parts[1].replace(/^['"]|['"]$/g, '');
-        }
-    });
-    return params;
-}
+import { parseArguments, parseKeyValueArgs, shortcodeRegexes } from './parserUtils.js';
 
 function formatNumber(num) {
     if (typeof num !== 'number' && typeof num !== 'string') return num;
@@ -56,7 +36,7 @@ function _parseStat(args, originalShortcode) {
 
 
 function _parseHp(args, itemId, originalShortcode) {
-    const params = _parseKeyValueArgs(args);
+    const params = parseKeyValueArgs(args);
     const maxHp = parseInt(params.max, 10) || 100;
     const currentHp = params.current !== undefined ? parseInt(params.current, 10) : maxHp;
     const finalCurrentHp = Math.max(-10, Math.min(currentHp, maxHp));
@@ -90,9 +70,9 @@ function _parseHp(args, itemId, originalShortcode) {
 
 export function parseHpShortcode(item) {
     if (!item || !item.conteudo) return "";
-    const match = item.conteudo.match(/\[hp\s+(.*?)\]/i);
+    const match = item.conteudo.match(new RegExp(shortcodeRegexes.hp.source, "i"));
     if (match) {
-        const args = _parseArguments(match[1]);
+        const args = parseArguments(match[1]);
         return _parseHp(args, item.id, match[0]);
     }
     return "";
@@ -103,7 +83,7 @@ function _parseCount(args, itemId, originalShortcode) {
     const isCheckbox = args.includes("checkbox");
     const mainArgs = args.filter(arg => arg !== "checkbox" && !positionKeywords.includes(arg));
 
-    const params = _parseKeyValueArgs(mainArgs.filter(arg => arg.includes('=')));
+    const params = parseKeyValueArgs(mainArgs.filter(arg => arg.includes('=')));
     let theme = 'number';
     if (params.icon) theme = 'custom-icon';
     else if (params.theme) theme = params.theme;
@@ -158,10 +138,10 @@ export function parseMainContent(content) {
 
     // Novo Parser de Containers (Substitui [nota])
     // Formato: [container label="Mochila" type="inventory" isHidden="false"]...[/container]
-    const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
+    const containerRegex = new RegExp(shortcodeRegexes.container.source, 'gi');
 
     processedContent = processedContent.replace(containerRegex, (match, argsStr, innerContent) => {
-        const args = _parseKeyValueArgs(_parseArguments(argsStr));
+        const args = parseKeyValueArgs(parseArguments(argsStr));
         const label = args.label || "Container";
         const type = args.type || "default";
         const isHidden = argsStr.includes('#') || args.ishidden === "true";
@@ -186,7 +166,7 @@ export function parseMainContent(content) {
     });
 
     // Novo Parser de Ficha (Isola no editor, remove no grid para narrativa pura)
-    const fichaRegex = /\[ficha\]([\s\S]*?)\[\/ficha\]/gi;
+    const fichaRegex = new RegExp(shortcodeRegexes.ficha.source, 'gi');
     processedContent = processedContent.replace(fichaRegex, "");
 
     // Remove tags de Hide isoladas, stats soltos, etc, que não devem aparecer no texto corrido
@@ -209,13 +189,13 @@ export function extractContainers(content) {
     if (!content) return [];
     const containers = [];
     // Regex aprimorada para capturar atributos e conteúdo de forma mais robusta
-    const containerRegex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
+    const containerRegex = new RegExp(shortcodeRegexes.container.source, 'gi');
     let match;
 
     while ((match = containerRegex.exec(content)) !== null) {
         const argsStr = match[1];
         const innerContent = match[2];
-        const args = _parseKeyValueArgs(_parseArguments(argsStr));
+        const args = parseKeyValueArgs(parseArguments(argsStr));
 
         const type = args.type || "default";
         // Fallback: se não houver label, usa o type com inicial maiúscula
@@ -238,7 +218,7 @@ export function extractContainers(content) {
  */
 export function extractFichaContent(content) {
     if (!content) return "";
-    const match = content.match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i);
+    const match = content.match(new RegExp(shortcodeRegexes.ficha.source, "i"));
     return match ? match[1].trim() : "";
 }
 
@@ -272,7 +252,7 @@ export function parseAllShortcodes(item, options = {}) {
     }
 
     const parsedShortcodes = foundShortcodes.map(sc => {
-        const args = _parseArguments(sc.inner);
+        const args = parseArguments(sc.inner);
         const commandRaw = args[0] || '';
         const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
 
@@ -325,7 +305,7 @@ export function parseAllShortcodes(item, options = {}) {
                 result[position || 'bottom'].push(wrapIfHidden(html, sc.isHidden));
                 break;
             case "money":
-                const params = _parseKeyValueArgs(finalArgs);
+                const params = parseKeyValueArgs(finalArgs);
                 const currentRaw = (params.current || "").replace(/[^\d.\-]/g, '');
                 const currentValue = parseFloat(currentRaw) || 0;
                 let currency = params.currency || '';

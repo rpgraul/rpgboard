@@ -72,6 +72,14 @@ body {
         display: none;
     }
     
+    .top-bar .container {
+        gap: 0.5rem !important; /* Adjust gap for smaller screens */
+    }
+
+    .main-nav {
+        gap: 0.25rem !important; /* Compact nav buttons */
+    }
+    
     body .fab-container {
         bottom: 0rem;
         right: 0rem;
@@ -340,6 +348,9 @@ body.is-bulk-editing .fab-container {
     visibility: hidden;
     transform: translateX(20px);
     transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    position: absolute; /* prevent taking up invisible space */
+    right: 100%; /* Position left of the main button */
+    pointer-events: none; /* Do not block clicks when hidden */
 }
 
 .dice-wrapper:hover .dice-list,
@@ -347,6 +358,7 @@ body.is-bulk-editing .fab-container {
     opacity: 1;
     visibility: visible;
     transform: translateX(0);
+    pointer-events: auto; /* Enable clicks when visible */
 }
 
 .dice-quick-btn {

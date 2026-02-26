@@ -11,7 +11,7 @@ function renderMessage(doc) {
     const data = doc.data ? doc.data() : doc;
     const el = document.createElement('div');
     el.className = `chat-message ${data.type === 'system' ? 'is-system' : 'is-user'}`;
-    
+
     let timeStr = '';
     if (data.createdAt && data.createdAt.toDate) {
         const date = data.createdAt.toDate();
@@ -96,35 +96,37 @@ function initNotifications() {
 
 // --- Inicialização ---
 export function initializeChat() {
+    const btnToggle = document.getElementById('toggle-chat-btn');
     const btnClose = closeBtn();
+
+    if (btnToggle) btnToggle.onclick = (e) => {
+        e.stopPropagation();
+        toggleChat();
+    };
+
     if (btnClose) btnClose.onclick = () => sidebar()?.classList.add('is-hidden');
-    
-    const defaultToggleBtn = document.getElementById('toggle-chat-btn');
-    if (defaultToggleBtn) defaultToggleBtn.onclick = toggleChat;
-    
+
     const form = inputForm();
     if (form) {
         form.onsubmit = async (e) => {
             e.preventDefault();
             const input = inputField();
             if (!input) return;
-            
+
             const text = input.value.trim();
             if (!text) return;
-            
+
             const user = localStorage.getItem('rpgboard_user_name') || 'Anônimo';
             input.value = '';
-            
-            // CHAMA A FUNÇÃO CENTRALIZADA
-            // Contexto é null pois o chat geral não sabe qual ficha está aberta
-            await sendMessage(text, user, null); 
+
+            await sendMessage(text, user, null);
         };
     }
 
     listenToChat((snapshot) => {
         const container = messagesContainer();
         if (!container) return;
-        
+
         container.innerHTML = '';
         snapshot.docs.forEach(doc => container.appendChild(renderMessage(doc)));
         scrollToBottom();

@@ -1,138 +1,93 @@
-import { writeBatch, collection, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
+import { initializeLayout } from './modules/layout.js';
+import { getSettings, initFirebaseService, importCards } from './modules/firebaseService.js';
+import { initializeAuth } from './modules/auth.js';
+import * as chat from './modules/chat.js';
+import { initializeModals } from './modules/modal.js';
 
-// Obtém a instância do DB do objeto global inicializado pelo firebase-config.js
-const { db, storage } = window.firebaseInstances;
+export async function initializeUpload() {
+    // 1. Inicializar Interface Global (Header, FAB, Modais)
+    await initializeLayout({
+        fabActions: ['settings', 'chat', 'help']
+    });
 
-/**
- * Fetches an image from a URL, uploads it to Firebase Storage, and returns its data.
- * @param {string} imageUrl The URL of the image to process.
- * @returns {Promise<object|null>} An object with url, storagePath, width, and height, or null on failure.
- */
-async function processImageFromUrl(imageUrl) {
+    // 2. Inicializar Módulos Globais (Autenticação, Modais, Chat)
+    initializeAuth();
+    initializeModals();
+    chat.initializeChat();
+
+    // 3. Carregar Configurações e Título Original via Firebase
     try {
-        // AVISO: A busca direta de imagens pode falhar devido a políticas de CORS do site de origem.
-        // SOLUÇÃO: Usamos um proxy CORS para contornar essa restrição.
-        // Este é um serviço público e gratuito.
-        const proxyUrl = 'https://corsproxy.io/?';
-        const response = await fetch(proxyUrl + encodeURIComponent(imageUrl));
-        if (!response.ok) throw new Error(`Falha ao buscar imagem: ${response.statusText}`);
-
-        const blob = await response.blob();
-        if (!blob.type.startsWith('image/')) {
-            // URL não aponta para uma imagem válida
-            return null;
+        const appSettings = await getSettings();
+        window.appSettings = appSettings;
+        initFirebaseService();
+        if (appSettings.siteTitle) {
+            document.title = `${appSettings.siteTitle} - Upload | GameBoard`;
         }
 
-        // Obtém as dimensões da imagem
-        const dimensions = await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => { URL.revokeObjectURL(img.src); resolve({ width: img.width, height: img.height }); };
-            img.onerror = reject;
-            img.src = URL.createObjectURL(blob);
-        });
-
-        // Faz o upload para o Firebase Storage
-        const fileName = imageUrl.split('/').pop().split('?')[0] || `image_${Date.now()}`;
-        const storageRef = ref(storage, `images/${Date.now()}_${fileName.replace(/[^a-zA-Z0-9._-]/g, '')}`);
-        await uploadBytes(storageRef, blob);
-        const downloadURL = await getDownloadURL(storageRef);
-
-        return { url: downloadURL, storagePath: storageRef.fullPath, ...dimensions };
+        // Renderizar header atualizado com o Firebase Config carregado
+        if (typeof import('./modules/components/header.js').then === 'function') {
+            import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
+        }
     } catch (error) {
-        console.error(`Não foi possível processar a imagem da URL ${imageUrl}:`, error);
-        return null;
+        console.error('Falha ao carregar configurações do site:', error);
     }
-}
 
-document.addEventListener('DOMContentLoaded', () => {
+    // 4. Elementos específicos do Upload
     const jsonInput = document.getElementById('json-input');
     const importBtn = document.getElementById('import-btn');
     const notificationArea = document.getElementById('notification-area');
 
-    /**
-     * Exibe uma notificação para o usuário.
-     * @param {string} message - A mensagem a ser exibida.
-     * @param {string} type - O tipo de notificação (ex: 'is-success', 'is-danger').
-     */
     function showNotification(message, type = 'is-success') {
+        if (!notificationArea) return;
         notificationArea.innerHTML = `
             <div class="notification ${type}">
                 <button class="delete"></button>
                 ${message}
             </div>
         `;
-        const deleteButton = notificationArea.querySelector('.delete');
-        deleteButton.addEventListener('click', () => {
+        notificationArea.querySelector('.delete').addEventListener('click', () => {
             notificationArea.innerHTML = '';
         });
     }
 
-    importBtn.addEventListener('click', async () => {
-        const jsonText = jsonInput.value.trim();
-        if (!jsonText) {
-            showNotification('O campo de JSON não pode estar vazio.', 'is-danger');
-            return;
-        }
-
-        let cards;
-        try {
-            cards = JSON.parse(jsonText);
-        } catch (error) {
-            showNotification(`Erro de sintaxe no JSON: ${error.message}`, 'is-danger');
-            return;
-        }
-
-        if (!Array.isArray(cards) || cards.length === 0) {
-            showNotification('O JSON deve ser um array de cards e não pode estar vazio.', 'is-danger');
-            return;
-        }
-
-        importBtn.classList.add('is-loading');
-        notificationArea.innerHTML = '';
-
-        try {
-            const batch = writeBatch(db);
-            const itemsCollectionRef = collection(db, 'rpg-items');
-
-            // Usamos um loop for...of para poder usar 'await' dentro dele
-            for (const card of cards) {
-                const newCardRef = doc(itemsCollectionRef); // Cria uma referência com ID automático
-                
-                // Define os dados do card, garantindo valores padrão para campos essenciais
-                const dataToWrite = {
-                    ...card,
-                    titulo: card.titulo || 'Card Sem Título',
-                    conteudo: card.conteudo || '',
-                    descricao: card.descricao || '',
-                    tags: card.tags || [],
-                    isVisibleToPlayers: card.isVisibleToPlayers ?? true, // Padrão é visível
-                    createdAt: serverTimestamp(),
-                    order: card.order ?? -Date.now() // Garante uma ordem padrão
-                };
-
-                // Se o card tiver uma URL de imagem, processa-a
-                if (card.imagem && typeof card.imagem === 'string') {
-                    showNotification(`Processando imagem para: ${card.titulo}...`, 'is-info');
-                    const imageData = await processImageFromUrl(card.imagem);
-                    if (imageData) {
-                        Object.assign(dataToWrite, imageData);
-                    }
-                }
-                // Remove a chave temporária 'imagem' para não salvá-la no Firestore
-                delete dataToWrite.imagem;
-
-                batch.set(newCardRef, dataToWrite);
+    if (importBtn) {
+        importBtn.addEventListener('click', async () => {
+            if (!jsonInput) return;
+            const jsonText = jsonInput.value.trim();
+            if (!jsonText) {
+                showNotification('O campo de JSON não pode estar vazio.', 'is-danger');
+                return;
             }
 
-            await batch.commit();
-            showNotification(`${cards.length} card(s) importado(s) com sucesso!`, 'is-success');
-            jsonInput.value = ''; // Limpa o campo após o sucesso
-        } catch (error) {
-            console.error("Erro ao importar cards:", error);
-            showNotification(`Ocorreu um erro durante a importação: ${error.message}`, 'is-danger');
-        } finally {
-            importBtn.classList.remove('is-loading');
-        }
-    });
-});
+            let cards;
+            try {
+                cards = JSON.parse(jsonText);
+            } catch (error) {
+                showNotification(`Erro de sintaxe no JSON: ${error.message}`, 'is-danger');
+                return;
+            }
+
+            if (!Array.isArray(cards) || cards.length === 0) {
+                showNotification('O JSON deve ser um array de cards e não pode estar vazio.', 'is-danger');
+                return;
+            }
+
+            importBtn.classList.add('is-loading');
+            if (notificationArea) notificationArea.innerHTML = '';
+
+            try {
+                const count = await importCards(cards, showNotification);
+                showNotification(`${count} card(s) importado(s) com sucesso!`, 'is-success');
+                jsonInput.value = '';
+            } catch (error) {
+                console.error("Erro ao importar cards:", error);
+                showNotification(`Ocorreu um erro durante a importação: ${error.message}`, 'is-danger');
+            } finally {
+                importBtn.classList.remove('is-loading');
+            }
+        });
+    }
+}
+
+// Quando carregado diretamente pelo upload.html
+document.addEventListener('DOMContentLoaded', initializeUpload);

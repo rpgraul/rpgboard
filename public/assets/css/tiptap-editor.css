@@ -39,6 +39,9 @@ color: white;
     outline: none;
     caret-color: #fff; /* Cursor branco para o tema Cyborg */
 }
+.ProseMirror:focus-visible{
+    outline: none !important;
+}
 
 .tiptap-editor:focus-within {
     border-color: #3273dc !important;

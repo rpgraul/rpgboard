@@ -1,11 +1,10 @@
+import { isNarrator, getCurrentUserName, validateNarratorPassword, loginAsNarrator, loginAsPlayer, logout } from '../auth.js';
 
-// Utilitário para obter o título do site
 function getSiteTitle() {
   const settings = window.appSettings || {};
   return settings.siteTitle || 'GameBoard';
 }
 
-// Utilitário para saber a página atual
 function getCurrentPage() {
   const path = window.location.pathname.toLowerCase();
   if (path.includes('sheet-mode')) return 'sheet';
@@ -15,25 +14,22 @@ function getCurrentPage() {
   return '';
 }
 
-// Renderiza o header unificado
 export function renderHeader() {
   const container = document.getElementById('app-header');
   if (!container) return null;
 
-  const isNarrator = localStorage.getItem('isNarrator') === 'true';
-  const storedName = localStorage.getItem('rpgboard_user_name') || '';
+  const narrator = isNarrator();
+  const storedName = getCurrentUserName();
   const siteTitle = getSiteTitle();
   const currentPage = getCurrentPage();
 
-  // Menu principal
   const menu = [
-    { id: 'nav-login', label: isNarrator ? 'Mestre' : (storedName || 'Entrar'), icon: isNarrator ? 'fas fa-user-shield' : (storedName ? 'fas fa-user-edit' : 'fas fa-sign-in-alt'), action: 'login' },
+    { id: 'nav-login', label: narrator ? 'Mestre' : (storedName !== 'Visitante' ? storedName : 'Entrar'), icon: narrator ? 'fas fa-user-shield' : (storedName !== 'Visitante' ? 'fas fa-user-edit' : 'fas fa-sign-in-alt'), action: 'login' },
     { id: 'nav-sheet', label: 'Ficha', icon: 'fas fa-file-invoice', href: 'sheet-mode.html', page: 'sheet' },
     { id: 'nav-grid', label: 'Grid', icon: 'fas fa-th', href: 'index.html', page: 'grid' },
     { id: 'nav-notas', label: 'Notas', icon: 'fas fa-edit', href: 'text-mode.html', page: 'notas' },
     { id: 'nav-whiteboard', label: 'Whiteboard', icon: 'fas fa-pencil-ruler', href: 'drawing-mode.html', page: 'whiteboard' }
   ];
-
 
   container.innerHTML = `
     <header class="top-bar">
@@ -68,13 +64,13 @@ export function renderHeader() {
             <div class="field">
               <label class="label">Seu nome</label>
               <div class="control has-icons-left">
-                <input id="login-name" class="input" type="text" placeholder="Digite seu nome" maxlength="32" autocomplete="off" ${isNarrator ? 'disabled' : ''} value="${isNarrator ? 'Mestre' : (storedName || '')}">
+                <input id="login-name" class="input" type="text" placeholder="Digite seu nome" maxlength="32" autocomplete="off" ${narrator ? 'disabled' : ''} value="${narrator ? 'Mestre' : (storedName !== 'Visitante' ? storedName : '')}">
                 <span class="icon is-small is-left"><i class="fas fa-user"></i></span>
               </div>
             </div>
             <div class="field">
               <label class="checkbox">
-                <input type="checkbox" id="narrator-checkbox" ${isNarrator ? 'checked' : ''}> Entrar como Narrador
+                <input type="checkbox" id="narrator-checkbox" ${narrator ? 'checked' : ''}> Entrar como Narrador
               </label>
             </div>
             <div class="field narrator-password-field" style="display:none;">
@@ -94,7 +90,6 @@ export function renderHeader() {
     </div>
   `;
 
-  // Lógica de eventos do header
   setTimeout(() => setupHeaderEvents(), 0);
   return container;
 }
@@ -113,21 +108,20 @@ function setupHeaderEvents() {
   const bg = loginModal.querySelector('.modal-background');
   const editUserIcon = document.getElementById('edit-user-icon');
 
-  function openModal() {
+  function openLoginModal() {
     loginModal.classList.add('is-active');
     if (!narratorCheckbox.checked) loginNameInput.focus();
   }
-  function closeModal() {
+  function closeLoginModal() {
     loginModal.classList.remove('is-active');
     narratorPasswordInput.value = '';
   }
 
-  if (loginBtn) loginBtn.onclick = openModal;
-  if (editUserIcon) editUserIcon.onclick = openModal;
-  if (closeBtn) closeBtn.onclick = closeModal;
-  if (bg) bg.onclick = closeModal;
+  if (loginBtn) loginBtn.onclick = openLoginModal;
+  if (editUserIcon) editUserIcon.onclick = openLoginModal;
+  if (closeBtn) closeBtn.onclick = closeLoginModal;
+  if (bg) bg.onclick = closeLoginModal;
 
-  // Alternar campo de senha do narrador
   narratorCheckbox.onchange = () => {
     if (narratorCheckbox.checked) {
       narratorPasswordField.style.display = '';
@@ -137,26 +131,30 @@ function setupHeaderEvents() {
     } else {
       narratorPasswordField.style.display = 'none';
       loginNameInput.disabled = false;
-      if (localStorage.getItem('isNarrator') === 'true') loginNameInput.value = '';
-      else loginNameInput.value = localStorage.getItem('rpgboard_user_name') || '';
+      loginNameInput.value = isNarrator() ? '' : (getCurrentUserName() !== 'Visitante' ? getCurrentUserName() : '');
     }
   };
 
-  // Salvar login
+  const handleEnterKey = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveBtn.click();
+    }
+  };
+
+  loginNameInput.addEventListener('keydown', handleEnterKey);
+  narratorPasswordInput.addEventListener('keydown', handleEnterKey);
+
   saveBtn.onclick = (e) => {
     e.preventDefault();
     if (narratorCheckbox.checked) {
-      // Narrador: validar senha
       const senha = narratorPasswordInput.value.trim();
-      // Senhas válidas (de auth.js)
-      const validPasswords = ["dimitrinho", "tomatinho"];
-      if (!validPasswords.includes(senha)) {
+      if (!validateNarratorPassword(senha)) {
         narratorPasswordInput.classList.add('is-danger');
         narratorPasswordInput.focus();
         return;
       }
-      localStorage.setItem('isNarrator', 'true');
-      localStorage.setItem('rpgboard_user_name', 'Mestre');
+      loginAsNarrator();
     } else {
       const nome = loginNameInput.value.trim();
       if (!nome) {
@@ -164,19 +162,16 @@ function setupHeaderEvents() {
         loginNameInput.focus();
         return;
       }
-      localStorage.setItem('isNarrator', 'false');
-      localStorage.setItem('rpgboard_user_name', nome);
+      loginAsPlayer(nome);
     }
-    closeModal();
+    closeLoginModal();
     renderHeader();
   };
 
-  // Sair
   logoutBtn.onclick = (e) => {
     e.preventDefault();
-    localStorage.removeItem('isNarrator');
-    localStorage.removeItem('rpgboard_user_name');
-    closeModal();
+    logout();
+    closeLoginModal();
     renderHeader();
   };
 }

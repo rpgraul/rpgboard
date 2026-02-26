@@ -10,17 +10,19 @@ import StatNode from "./tiptap-extensions/StatNode.js";
 import HpNode from "./tiptap-extensions/HpNode.js";
 import MoneyNode from "./tiptap-extensions/MoneyNode.js";
 import CountNode from "./tiptap-extensions/CountNode.js";
-// REMOVIDO: import NotaShortcode from "./tiptap-extensions/notaShortcode.js";
-import ContainerShortcode from "./tiptap-extensions/containerShortcode.js"; // NOVO
-import FichaShortcode from "./tiptap-extensions/fichaShortcode.js"; // NOVO
+import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
+import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
-import { listenToItems, updateItem, addItem, removeImageFromItem, deleteItem, deleteItems, updateItemsVisibility, addTagsToItems, getSettings, } from "./modules/firebaseService.js";
+import * as firebaseService from "./modules/firebaseService.js";
+import * as shortcodeParser from "./modules/shortcodeParser.js";
 import { isNarrator, initializeAuth } from "./modules/auth.js";
 import { showConfirmationPopover, showToast } from "./modules/ui.js";
 import { initializeLayout } from "./modules/layout.js";
 import * as chat from "./modules/chat.js";
+import { initializeDice } from "./modules/diceLogic.js";
 import { openModal, closeModal, initializeModals } from "./modules/modal.js";
+
 
 let allCards = [];
 let selectedIds = [];
@@ -32,18 +34,17 @@ let mainEditorSaveTimeout = null;
 let sideViewSaveTimeout = null;
 let isProcessingUpdate = false;
 
-
 document.addEventListener("DOMContentLoaded", async () => {
   const layout = await initializeLayout({ fabActions: ['help', 'chat'] });
   initializeAuth();
   initializeModals();
   chat.initializeChat();
+  initializeDice(layout);
 
   try {
-    const firebaseService = await import('./modules/firebaseService.js');
     const appSettings = await firebaseService.getSettings();
     window.appSettings = appSettings;
-    window.IMGBB_API_KEY = appSettings.imgbbApiKey;
+    firebaseService.initFirebaseService({ imgbbApiKey: appSettings.imgbbApiKey });
     if (appSettings.siteTitle) {
       document.title = `${appSettings.siteTitle} - GameBoard`;
     }
@@ -74,15 +75,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       CardLink.configure({
         suggestion: {
-          items: ({ query }) => allCards.filter(c => c.titulo.toLowerCase().includes(query.toLowerCase())).map(c => ({ id: c.titulo, title: c.titulo })).slice(0, 5),
+          items: ({ query }) => {
+            const cleanQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return allCards
+              .filter(c => {
+                const cleanTitle = (c.titulo || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                return cleanTitle.includes(cleanQuery);
+              })
+              .map(c => ({ id: c.titulo, title: c.titulo }))
+              .slice(0, 10);
+          },
         },
       }),
       StatNode,
       HpNode,
       MoneyNode,
       CountNode,
-      ContainerShortcode, // ADICIONADO AQUI
-      FichaShortcode, // NOVO
+      ContainerShortcode,
+      FichaShortcode,
     ],
     editorProps: {
       attributes: { class: "ProseMirror" },
@@ -108,7 +118,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // ... (O restante do arquivo permanece igual ao original: saveCurrentCard, forceEditorReparse, listeners, etc)
   function saveCurrentCard() {
     if (!currentEditorCardId) return;
     const cardData = allCards.find(c => c.id === currentEditorCardId);
@@ -119,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       conteudo: convertEditorHtmlToShortcodes(mainEditor.getHTML()),
     };
     if (isNarrator()) updated.isVisibleToPlayers = cardVisibility.checked;
-    updateItem({ id: currentEditorCardId }, updated).catch(err => console.error("Erro ao salvar:", err));
+    firebaseService.updateItem({ id: currentEditorCardId }, updated).catch(err => console.error("Erro ao salvar:", err));
   }
 
   function forceEditorReparse(editor, html) {
@@ -187,7 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     history.pushState({ cardId: id }, "", `#${id}`);
   }
 
-  listenToItems((snapshot) => {
+  firebaseService.listenToItems((snapshot) => {
     allCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || ""));
     renderCardList();
     const hashId = window.location.hash.substring(1);
@@ -203,7 +212,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   document.getElementById("add-card-btn").onclick = async () => {
-    const id = await addItem({ titulo: "Novo Card", conteudo: "", tags: [], isVisibleToPlayers: true });
+    const id = await firebaseService.addItem({ titulo: "Novo Card", conteudo: "", tags: [], isVisibleToPlayers: true });
     loadCardIntoEditor(id);
   };
 
@@ -214,7 +223,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         targetElement: deleteBtn,
         message: `Deletar "${card.titulo}"?`,
         onConfirm: () => {
-          deleteItem(card).then(() => {
+          firebaseService.deleteItem(card).then(() => {
             currentEditorCardId = null;
             editorContainer.style.display = "none";
             emptyState.style.display = "block";
@@ -238,7 +247,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (action === "setTextAlign") chain.setTextAlign(val).run();
   };
 
-  // Configura o menu de shortcodes extraído
   const scContainer = document.getElementById('text-mode-shortcode-container');
   if (scContainer) {
     setupShortcodeMenu(scContainer, mainEditor);
@@ -247,8 +255,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("edit-shortcode", (e) => {
     const { type, attrs, pos, editor } = e.detail;
     const targetEditor = editor || mainEditor;
-
-    // Mapeamento de tipos internos para valores do select
     const typeMap = {
       'containerShortcode': 'container',
       'statNode': 'stat',
@@ -256,21 +262,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       'moneyNode': 'money',
       'countNode': 'count'
     };
-
     const mappedType = typeMap[type] || type;
     openConfigModal(mappedType, targetEditor, { pos, attrs, nodeType: type });
   });
 
-  // Listener global para CardLinks (@mentions)
   document.addEventListener('click', (e) => {
     const target = e.target.closest('.card-link');
-    if (target) {
-      e.preventDefault();
-      const cardName = target.dataset.cardName;
-      const found = allCards.find(it => normalizeString(it.titulo) === normalizeString(cardName));
-      if (found) showDetailModal(found);
-    }
-  });
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const cardName = target.getAttribute('data-card-name');
+    if (!cardName) return;
+    const found = allCards.find(it => normalizeString(it.titulo) === normalizeString(cardName));
+    if (found) showDetailModal(found);
+  }, true);
 });
 
 function normalizeString(str) {
@@ -281,16 +286,13 @@ function normalizeString(str) {
 function showDetailModal(item) {
   const modal = document.getElementById('detail-modal');
   if (!modal) return;
-
   document.getElementById('detail-title').textContent = item.titulo;
   const body = document.getElementById('detail-body');
-
   let html = "";
   if (item.url) {
     html += `<figure class="image mb-4"><img src="${item.url}" alt="${item.titulo}" style="max-height: 400px; object-fit: contain;"></figure>`;
   }
   html += `<div class="content">${shortcodeParser.parseMainContent(item.conteudo)}</div>`;
-
   const sc = shortcodeParser.parseAllShortcodes(item);
   if (sc.all.length > 0) {
     html += `<div class="box mt-4 has-background-dark">
@@ -301,7 +303,6 @@ function showDetailModal(item) {
             </div>
         </div>`;
   }
-
   body.innerHTML = html;
   openModal(modal);
 }

@@ -1,5 +1,38 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Obter referências aos elementos da página
+import { initializeLayout } from './modules/layout.js';
+import { getSettings, initFirebaseService } from './modules/firebaseService.js';
+import { initializeAuth } from './modules/auth.js';
+import * as chat from './modules/chat.js';
+import { initializeModals } from './modules/modal.js';
+
+export async function initializeConverter() {
+    // 1. Inicializar Interface Global (Header, FAB, Modais)
+    await initializeLayout({
+        fabActions: ['settings', 'chat', 'help']
+    });
+
+    // 2. Inicializar Módulos Globais (Autenticação, Modais, Chat)
+    initializeAuth();
+    initializeModals();
+    chat.initializeChat();
+
+    // 3. Carregar Configurações e Título Original via Firebase
+    try {
+        const appSettings = await getSettings();
+        window.appSettings = appSettings;
+        initFirebaseService();
+        if (appSettings.siteTitle) {
+            document.title = `${appSettings.siteTitle} - Conversor | GameBoard`;
+        }
+
+        // Renderizar header atualizado com o Firebase Config carregado
+        if (typeof import('./modules/components/header.js').then === 'function') {
+            import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
+        }
+    } catch (error) {
+        console.error('Falha ao carregar configurações do site:', error);
+    }
+
+    // 4. Elementos específicos do Conversor
     const textInput = document.getElementById('text-input');
     const jsonOutput = document.getElementById('json-output');
     const convertBtn = document.getElementById('convert-btn');
@@ -15,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} type - O tipo de notificação (ex: 'is-success', 'is-danger').
      */
     function showNotification(message, type = 'is-success') {
+        if (!notificationArea) return;
         notificationArea.innerHTML = `
             <div class="notification ${type}">
                 <button class="delete"></button>
@@ -30,6 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * Processa o texto de entrada e o converte para um array de objetos.
      */
     function handleConversion() {
+        if (!textInput || !jsonOutput || !copyBtn || !gotoUploadBtn) return;
+
         const rawText = textInput.value.trim();
         if (!rawText) {
             showNotification('O campo de texto não pode estar vazio.', 'is-warning');
@@ -37,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Limpa notificações e resultados antigos
-        notificationArea.innerHTML = '';
+        if (notificationArea) notificationArea.innerHTML = '';
         jsonOutput.value = '';
         copyBtn.classList.add('is-hidden');
         gotoUploadBtn.classList.add('is-hidden');
@@ -57,9 +93,26 @@ document.addEventListener('DOMContentLoaded', () => {
             lines.forEach(line => {
                 const match = line.match(/^([^:]+):\s*(.*)$/);
                 if (match) {
-                    const key = match[1].trim();
+                    const key = match[1].trim().toLowerCase();
                     const value = match[2].trim();
-                    cardObject[key] = value;
+
+                    if (key === 'descricao') {
+                        // Consolidação SSoT: Anexa descrição ao conteúdo
+                        if (cardObject.conteudo) {
+                            cardObject.conteudo += `\n\n${value}`;
+                        } else {
+                            cardObject.conteudo = value;
+                        }
+                    } else if (key === 'conteudo') {
+                        // Se já houver acumulado descrição antes (improvável pela ordem das linhas, mas seguro)
+                        if (cardObject.conteudo) {
+                            cardObject.conteudo = value + `\n\n${cardObject.conteudo}`;
+                        } else {
+                            cardObject.conteudo = value;
+                        }
+                    } else {
+                        cardObject[key] = value;
+                    }
                 }
             });
 
@@ -101,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Copia o conteúdo do campo de saída para a área de transferência.
      */
     async function handleCopy() {
-        if (!jsonOutput.value) return;
+        if (!jsonOutput || !jsonOutput.value) return;
 
         try {
             await navigator.clipboard.writeText(jsonOutput.value);
@@ -140,40 +193,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Creates a temporary visual feedback element near the cursor.
-     * @param {MouseEvent} event - The click event.
+     * Creates a temporary visual feedback notification (toast) 
+     * using the Bulma standard structure.
      * @param {string} text - The text to display.
      */
-    function createClickFeedback(event, text = 'Copiado!') {
-        const feedbackEl = document.createElement('div');
-        feedbackEl.textContent = text;
-        feedbackEl.className = 'click-feedback';
-        document.body.appendChild(feedbackEl);
-
-        // Position near the cursor
-        feedbackEl.style.left = `${event.pageX + 15}px`;
-        feedbackEl.style.top = `${event.pageY}px`;
-
-        // Animate out and remove
+    function createClickFeedback(text = 'Copiado!') {
+        showNotification(text, 'is-info');
         setTimeout(() => {
-            feedbackEl.style.opacity = '0';
-            setTimeout(() => {
-                feedbackEl.remove();
-            }, 500);
-        }, 700);
+            if (notificationArea && notificationArea.innerHTML.includes(text)) {
+                notificationArea.innerHTML = '';
+            }
+        }, 2000);
     }
 
-    // 2. Adicionar os listeners de eventos aos botões
-    convertBtn.addEventListener('click', handleConversion);
-    copyBtn.addEventListener('click', handleCopy);
+    // 5. Adicionar os listeners de eventos aos botões
+    if (convertBtn) convertBtn.addEventListener('click', handleConversion);
+    if (copyBtn) copyBtn.addEventListener('click', handleCopy);
     initializePromptModal();
 
-    // 3. Listener global para copiar conteúdo de tags <code>
+    // 6. Listener global para copiar conteúdo de tags <code>
     document.body.addEventListener('click', async (event) => {
         const codeBlock = event.target.closest('pre > code');
         if (codeBlock) {
             await navigator.clipboard.writeText(codeBlock.textContent);
-            createClickFeedback(event);
+            createClickFeedback();
         }
     });
-});
+}
+
+// Quando carregado diretamente pelo converter.html
+document.addEventListener('DOMContentLoaded', initializeConverter);

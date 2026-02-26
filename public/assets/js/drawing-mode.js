@@ -2,6 +2,7 @@ import { initializeLayout } from './modules/layout.js';
 import { initializeAuth } from './modules/auth.js';
 import { initWhiteboard } from './whiteboard/index.js';
 import * as chat from './modules/chat.js';
+import { initializeDice } from './modules/diceLogic.js';
 import { initializeModals } from './modules/modal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -16,13 +17,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Chat (Opcional, mas útil)
     chat.initializeChat();
+    initializeDice(layout);
 
     // 4. Carregar settings e garantir título no header
     try {
         const firebaseService = await import('./modules/firebaseService.js');
         const appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
-        window.IMGBB_API_KEY = appSettings.imgbbApiKey;
+        firebaseService.initFirebaseService();
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }

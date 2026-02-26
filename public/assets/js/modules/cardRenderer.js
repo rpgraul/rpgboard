@@ -18,17 +18,23 @@ export function renderCardViewMode(s, t) {
   s.classList.remove("is-hidden-from-players");
   if (isNarrator() && t && t.isVisibleToPlayers === false) s.classList.add("is-hidden-from-players");
 
+  // O parse deve acontecer independentemente de ter imagem, para processar overlays de stats/hp nas tags HTML
+  const parsedShortcodes = t.conteudo ? shortcodeParser.parseAllShortcodes(t, appSettings) : {};
+  const hasShortcodes = Object.values(parsedShortcodes).some((v) => v);
+  let o = "";
+
+  if (hasShortcodes) {
+    s.classList.add("has-overlay-content");
+    o = `\n                <div class="card-info-layer" style="pointer-events: auto;">\n                    <div class="info-content">\n                        <div class="info-group-left">${parsedShortcodes.left || ""}</div>\n                        <div class="info-group-right">${parsedShortcodes.right || ""}</div>\n                        <div class="info-group-bottom">${parsedShortcodes.bottom || ""}</div>\n                        <div class="info-group-details">${parsedShortcodes.details || ""}</div>\n                    </div>\n                    <div class="info-toggles">\n                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>\n                    </div>\n                </div>`;
+  }
+
   let e = "";
   if (t && t.url) {
     const i = `padding-bottom: ${t.width && t.height ? (t.height / t.width) * 100 : 75}%`;
-    const a = t.conteudo ? shortcodeParser.parseAllShortcodes(t, appSettings) : {};
-    let o = "";
-    const hasShortcodes = Object.values(a).some((v) => v);
-    if (hasShortcodes) {
-      s.classList.add("has-overlay-content");
-      o = `\n                <div class="card-info-layer" style="pointer-events: auto;">\n                    <div class="info-content">\n                        <div class="info-group-left">${a.left || ""}</div>\n                        <div class="info-group-right">${a.right || ""}</div>\n                        <div class="info-group-bottom">${a.bottom || ""}</div>\n                        <div class="info-group-details">${a.details || ""}</div>\n                    </div>\n                    <div class="info-toggles">\n                        <button class="tooltip-close-btn" aria-label="Fechar"><i class="fas fa-times"></i></button>\n                    </div>\n                </div>`;
-    }
     e += `\n            <div class="card-image">\n                <figure class="image" style="${i}">\n                    <img src="${t.url}" alt="${t.titulo}">\n                    ${o}\n                </figure>\n            </div>\n        `;
+  } else if (hasShortcodes) {
+    // Caso não tenha imagem, mas tenha shortcodes, injetamos no topo do card content.
+    e += `\n            <div class="card-image is-placeholder layout-only">\n                <figure class="image">\n                    ${o}\n                </figure>\n            </div>\n        `;
   }
 
   e += `<div class="card-content">\n        <p class="title is-4">${t.titulo}</p>`;

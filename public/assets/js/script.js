@@ -11,6 +11,7 @@ import * as chat from './modules/chat.js';
 import * as cardManager from './modules/cardManager.js';
 import { initializeLayout } from './modules/layout.js';
 import { initializeCardModal, openCardModal } from './modules/cardModal.js';
+import { initializeDice } from './modules/diceLogic.js';
 
 let allItems = [];
 let isInitialGridLoaded = false;
@@ -116,12 +117,13 @@ async function handleReorder(orderedIds) {
 document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Layout
-    await initializeLayout({
+    const layout = await initializeLayout({
         fabActions: ['settings', 'bulk-edit', 'converter', 'help', 'chat', 'dice', 'add-card']
     });
 
-    // 2. Chat
+    // 2. Chat & Dice
     chat.initializeChat();
+    initializeDice(layout);
 
     // 3. Referências
     const addCardButton = document.getElementById('fab-add-card');
@@ -167,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         appSettings = await firebaseService.getSettings();
         window.appSettings = appSettings;
-        window.IMGBB_API_KEY = appSettings.imgbbApiKey;
+        firebaseService.initFirebaseService();
         if (appSettings.siteTitle) document.title = `${appSettings.siteTitle} - GameBoard`;
         cardRenderer.initializeCardRenderer(appSettings);
         generateTagFilters(appSettings.filters, tagFiltersContainer);

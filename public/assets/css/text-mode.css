@@ -533,3 +533,21 @@ html {
     padding: 1em;
     min-height: 3em;
 }
+
+
+.card-link {
+    color: var(--link-color) !important;
+    text-decoration: underline !important;
+    cursor: pointer !important;
+    font-weight: 500;
+}
+
+.tippy-box[data-theme~='translucent'] {
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    border: 1px solid #444;
+}
+
+.tippy-content {
+    padding: 5px;
+}

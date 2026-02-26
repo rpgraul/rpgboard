@@ -8,29 +8,23 @@
  *   openCardModal(item?)          – abre para criar (sem item) ou editar (com item)
  *   getCardModalData()            – retorna { titulo, conteudo, tags, isVisibleToPlayers, newImageFile }
  */
-
 import { openModal, closeModal } from './modal.js';
 import { isNarrator } from './auth.js';
 import { getImageDimensions } from './cardRenderer.js';
 import { setupShortcodeMenu } from './shortcodeInserter.js';
 
-// ── Estado interno ────────────────────────────────────────────────────────────
-let _editor = null;           // instância Tiptap
-let _editingItem = null;      // item sendo editado (null = modo criação)
-let _newImageFile = null;     // arquivo de imagem novo (se trocado)
-let _removeImage = false;     // usuário pediu para remover a imagem
-let _onSave = null;           // callback: async (data, newImageFile, editingItem) => void
-let _onTagInputInit = null;   // callback para inicializar sugestões de tags
+let _editor = null;
+let _editingItem = null;
+let _newImageFile = null;
+let _removeImage = false;
+let _onSave = null;
+let _onTagInputInit = null;
 let _saveTimeout = null;
 
-// ── Elementos do DOM (preenchidos em init) ────────────────────────────────────
 let _modal, _form, _titleInput, _tagsInput, _visibilityField,
     _visibilityWrap, _imagePreview, _imageEl, _imagePlaceholder,
     _fileInput, _removeBtn, _editorArea, _submitBtn;
 
-// (Shortcodes migrados para shortcodeInserter.js)
-
-// ── Carrega Tiptap via CDN (ESM) ──────────────────────────────────────────────
 async function loadTiptap() {
     if (window.__tiptapLoaded) return window.__tiptapLoaded;
 
@@ -47,7 +41,6 @@ async function loadTiptap() {
         import('https://esm.sh/@tiptap/extension-code-block-lowlight@2.4.0'),
         import('https://esm.sh/lowlight@3.1.0'),
     ]).catch(() => {
-        // Fallback sem syntax highlighting se lowlight falhar
         return Promise.all([
             import('https://esm.sh/@tiptap/core@2.4.0'),
             import('https://esm.sh/@tiptap/starter-kit@2.4.0'),
@@ -60,7 +53,6 @@ async function loadTiptap() {
     return window.__tiptapLoaded;
 }
 
-// ── Cria o editor Tiptap ──────────────────────────────────────────────────────
 async function createEditor(content = '') {
     if (_editor) {
         _editor.destroy();
@@ -89,12 +81,10 @@ async function createEditor(content = '') {
         triggerAutoSave();
     });
 
-    // Ao mudar o conteúdo, atualiza estado dos botões do toolbar
     _editor.on('selectionUpdate', updateToolbarState);
     _editor.on('update', updateToolbarState);
 }
 
-// ── Atualiza estado visual do toolbar ────────────────────────────────────────
 function updateToolbarState() {
     if (!_editor) return;
     document.querySelectorAll('[data-tiptap-action]').forEach(btn => {
@@ -116,7 +106,6 @@ function updateToolbarState() {
     });
 }
 
-// ── Handlers do toolbar ───────────────────────────────────────────────────────
 function handleToolbarClick(e) {
     const btn = e.target.closest('[data-tiptap-action]');
     if (!btn || !_editor) return;
@@ -142,7 +131,6 @@ function handleToolbarClick(e) {
     updateToolbarState();
 }
 
-// ── Preview de imagem ─────────────────────────────────────────────────────────
 function setImagePreview(src) {
     if (src) {
         _imageEl.src = src;
@@ -165,7 +153,6 @@ function handleFileChange() {
     reader.readAsDataURL(file);
 }
 
-// ── Reset completo do modal ───────────────────────────────────────────────────
 async function resetModal() {
     _editingItem = null;
     _newImageFile = null;
@@ -186,13 +173,11 @@ async function resetModal() {
         _editor.commands.clearContent();
     }
 
-    // Mostra/oculta campo de visibilidade
     if (_visibilityWrap) {
         _visibilityWrap.classList.toggle('is-hidden', !isNarrator());
     }
 }
 
-// ── Popula o modal com dados de um item existente ─────────────────────────────
 async function populateModal(item) {
     _editingItem = item;
 
@@ -216,7 +201,6 @@ async function populateModal(item) {
     }
 }
 
-// ── API pública: abre o modal ─────────────────────────────────────────────────
 export async function openCardModal(item = null) {
     await resetModal();
     if (item) await populateModal(item);
@@ -224,7 +208,6 @@ export async function openCardModal(item = null) {
     setTimeout(() => _editor && _editor.commands.focus('end'), 100);
 }
 
-// ── Retorna os dados do formulário ────────────────────────────────────────────
 export function getCardModalData() {
     return {
         titulo: _titleInput.value.trim(),
@@ -241,16 +224,13 @@ export function getCardModalData() {
 async function triggerAutoSave() {
     if (!_editingItem || !_onSave) return;
     const data = getCardModalData();
-    // Auto-save não envia nova imagem para evitar overhead
     await _onSave(data, null, _editingItem);
 }
 
-// ── Inicialização principal ───────────────────────────────────────────────────
 export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
     _onSave = onSave;
     _onTagInputInit = onTagInputInit;
 
-    // Referências
     _modal = document.getElementById('add-card-modal');
     _form = document.getElementById('form-add-card');
     _titleInput = document.getElementById('card-titulo');
@@ -262,27 +242,23 @@ export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
     _fileInput = document.getElementById('card-modal-file-input');
     _removeBtn = document.getElementById('card-modal-image-remove');
     _editorArea = document.getElementById('card-modal-editor');
-    _submitBtn = _form ? _form.querySelector('button[type="submit"]') : null;
+    _submitBtn = _modal ? _modal.querySelector('button[type="submit"][form="form-add-card"]') : null;
 
     if (!_modal || !_editorArea) {
         console.warn('cardModal: elementos do DOM não encontrados.');
         return;
     }
 
-    // Cria o editor Tiptap
     await createEditor('');
 
-    // Toolbar clicks
     const toolbar = document.getElementById('card-modal-toolbar');
     if (toolbar) toolbar.addEventListener('mousedown', handleToolbarClick);
 
-    // Configura o menu de shortcodes extraído
     const scContainer = document.getElementById('card-modal-shortcode-container');
     if (scContainer) {
         setupShortcodeMenu(scContainer, _editor);
     }
 
-    // Imagem: clique no preview abre file input
     if (_imagePreview) {
         _imagePreview.addEventListener('click', () => _fileInput && _fileInput.click());
     }
@@ -298,22 +274,17 @@ export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
         });
     }
 
-    // Tag suggestions
     if (_tagsInput && _onTagInputInit) {
         _onTagInputInit(_tagsInput);
     }
 
-    // Submit
     if (_form) {
         _form.addEventListener('submit', async e => {
             e.preventDefault();
-            if (!_submitBtn) return;
-            _submitBtn.classList.add('is-loading');
+            if (_submitBtn) _submitBtn.classList.add('is-loading');
             try {
                 const data = getCardModalData();
-                // Extrai texto puro + HTML separados
                 data.conteudo = _editor ? _editor.getHTML() : '';
-                // Dimensões da imagem nova
                 if (data.newImageFile) {
                     const dims = await getImageDimensions(data.newImageFile);
                     data.width = dims.width;
@@ -327,12 +298,11 @@ export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
                 console.error('Erro ao salvar card:', err);
                 alert('Falha ao salvar o card.');
             } finally {
-                _submitBtn.classList.remove('is-loading');
+                if (_submitBtn) _submitBtn.classList.remove('is-loading');
             }
         });
     }
 
-    // Fecha e reseta ao fechar o modal
     _modal.addEventListener('click', e => {
         if (e.target.classList.contains('modal-background') ||
             e.target.classList.contains('delete') ||
@@ -341,7 +311,6 @@ export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
         }
     });
 
-    // MutationObserver para reset ao fechar
     new MutationObserver(() => {
         if (!_modal.classList.contains('is-active')) {
             resetModal();
