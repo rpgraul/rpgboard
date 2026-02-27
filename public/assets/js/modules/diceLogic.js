@@ -105,18 +105,19 @@ export function initializeDice(layoutRefs) {
         diceFabWrapper?.classList.toggle('is-active');
     });
 
-    // Botões rápidos (d4, d6, etc)
-    document.querySelectorAll('.dice-quick-btn').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            const dType = e.currentTarget.dataset.dice;
-            const userName = getCurrentUserName();
-            const command = `/r 1${dType}`;
+    // Botões rápidos (d4, d6, etc) - Delegação global para suportar botões injetados dinamicamente (ex: Ficha)
+    document.addEventListener('click', async (e) => {
+        const button = e.target.closest('.dice-quick-btn');
+        if (!button) return;
 
-            await addChatMessage(command, 'user', userName);
-            processRoll(command, null, userName);
+        const dType = button.dataset.dice;
+        const userName = getCurrentUserName() || 'Anônimo';
+        const command = `/r 1${dType}`;
 
-            // Fecha o wrapper após rolar
-            diceFabWrapper?.classList.remove('is-active');
-        });
+        await addChatMessage(command, 'user', userName);
+        processRoll(command, null, userName);
+
+        // Fecha o wrapper do FAB se existir
+        diceFabWrapper?.classList.remove('is-active');
     });
 }

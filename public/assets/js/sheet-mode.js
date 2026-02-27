@@ -199,13 +199,13 @@ function injectSheetLayoutHTML() {
                     <!-- Botões de Macro serão injetados aqui -->
                 </div>
                 <div class="dice-bar">
-                    <button class="button is-small is-rounded dice-btn" data-dice="d4">d4</button>
-                    <button class="button is-small is-rounded dice-btn" data-dice="d6">d6</button>
-                    <button class="button is-small is-rounded dice-btn" data-dice="d8">d8</button>
-                    <button class="button is-small is-rounded dice-btn" data-dice="d10">d10</button>
-                    <button class="button is-small is-rounded dice-btn" data-dice="d12">d12</button>
-                    <button class="button is-small is-rounded dice-btn" data-dice="d20">d20</button>
-                    <button class="button is-small is-rounded dice-btn" data-dice="d100">d100</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d4">D4</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d6">D6</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d8">D8</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d10">D10</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d12">D12</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d20">D20</button>
+                    <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d100">D100</button>
                 </div>
                 <div class="chat-input-wrapper">
                     <input id="sheet-chat-input" class="input is-small" type="text" placeholder="Mensagem ou comando (/r 1d20+5)...">
@@ -368,14 +368,11 @@ function setupSheetSpecificListeners() {
         const typeSelect = document.getElementById('shortcode-type');
         const insertBtn = document.getElementById('shortcode-insert-btn');
         const closeBtn = shortcodeModal.querySelector('.delete');
+        if (closeBtn) closeBtn.addEventListener('click', () => closeModal(shortcodeModal));
         const cancelBtn = shortcodeModal.querySelector('.modal-cancel');
+        if (cancelBtn) cancelBtn.addEventListener('click', () => closeModal(shortcodeModal));
         const bgBtn = shortcodeModal.querySelector('.modal-background');
-
-        typeSelect.addEventListener('change', updateShortcodeOptions);
-        insertBtn.addEventListener('click', insertShortcodeFromModal);
-        closeBtn.addEventListener('click', () => closeModal(shortcodeModal));
-        cancelBtn.addEventListener('click', () => closeModal(shortcodeModal));
-        bgBtn.addEventListener('click', () => closeModal(shortcodeModal));
+        if (bgBtn) bgBtn.addEventListener('click', () => closeModal(shortcodeModal));
     }
 }
 
