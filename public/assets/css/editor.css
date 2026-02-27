@@ -276,7 +276,6 @@
 .is-hidden-preview::after, .is-hidden-from-players::after {
     content: "Oculto";
     position: absolute; 
-    display: none;
     top: -10px; 
     right: -10px;
     font-size: 0.7rem; 

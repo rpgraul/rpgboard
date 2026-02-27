@@ -495,6 +495,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        const statComponent = target.closest('.shortcode-stat');
+        if (statComponent) {
+            const display = statComponent.querySelector('.stat-value-display');
+            const input = statComponent.querySelector('.stat-value-input');
+            if (display && input) {
+                display.classList.add('is-hidden');
+                input.classList.remove('is-hidden');
+                input.focus(); input.select();
+            }
+        }
+
         const hpComponent = target.closest('.shortcode-hp');
         if (hpComponent && !target.closest('.hp-current-input')) {
             const displayMode = hpComponent.querySelector('.hp-display-mode');
@@ -541,6 +552,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             handleMoneyChange(event.target);
             event.target.closest('.shortcode-money').querySelector('.money-value-display').classList.remove('is-hidden');
             event.target.classList.add('is-hidden');
+        }
+
+        if (event.target.classList.contains('stat-value-input')) {
+            const statComp = event.target.closest('.shortcode-stat');
+            if (statComp) {
+                const { itemId, shortcode } = statComp.dataset;
+                handleShortcodeValueChange(itemId, shortcode, event.target.value.trim(), event.target);
+                statComp.querySelector('.stat-value-display').classList.remove('is-hidden');
+                event.target.classList.add('is-hidden');
+            }
         }
 
         if (event.target.classList.contains('hp-current-input')) {

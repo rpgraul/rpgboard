@@ -95,18 +95,6 @@ export async function initializeLayout(config = {}) {
   return layoutReferences;
 }
 
-// Global CSS Injections
-const injectCSS = (id, href) => {
-  if (!document.getElementById(id)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    link.id = id;
-    document.head.appendChild(link);
-  }
-};
 
-injectCSS('header-menu-css', 'assets/css/header-menu.css');
-injectCSS('rpg-dice-css', 'assets/css/rpg-dice.css');
 
 export default { initializeLayout };

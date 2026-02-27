@@ -33,7 +33,11 @@ export function setupShortcodeMenu(toolbarContainer, editorInstance) {
     btn.className = 'tiptap-btn tiptap-btn-text tiptap-shortcode-btn';
     btn.title = 'Inserir shortcode RPG';
     btn.style.cssText = 'width:auto; gap:5px; padding:0 8px;';
-    btn.innerHTML = '<i class="fas fa-magic"></i><span>Shortcode</span><i class="fas fa-chevron-down" style="font-size:0.6rem"></i>';
+    btn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5 5-5 5-5-5 5-5z"/><path d="m7 2 5 5-5 5-5-5 5-5z"/><path d="m22 2-5 5-5-5 5-5z"/><path d="m8 11 5 5-5 5-5-5 5-5z"/></svg>
+        <span>Shortcode</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    `;
     wrap.appendChild(btn);
 
     // --- MENU ---
