@@ -24,16 +24,25 @@ export async function processRoll(command, character, userName, macroName = null
         chatLines.push(`<div class="macro-header"><strong>${userName}</strong> rolou:</div>`);
     }
 
-    // 1. Extração de Stats (Cache)
+    // 1. Extração de Stats (Robustecida para Raw e HTML)
     const stats = {};
     if (character && character.conteudo) {
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = character.conteudo.replace(/<[^>]+>/g, ' ');
-        const statRegex = /\[stat\s+["']([^"']+)["']\s+["']([^"']+)["']/gi;
-        let sMatch;
-        const textToSearch = tempDiv.textContent;
-        while ((sMatch = statRegex.exec(textToSearch)) !== null) {
-            stats[sMatch[1].toLowerCase()] = parseInt(sMatch[2], 10);
+        const content = character.conteudo;
+
+        // A. Tenta extrair de raw: [stat "Nome" "Valor"]
+        const rawStatRegex = /\[stat\s+["']?([^"']+)["']?\s+["']?([^"']+)["']?\]/gi;
+        let rMatch;
+        while ((rMatch = rawStatRegex.exec(content)) !== null) {
+            const val = parseInt(rMatch[2], 10);
+            if (!isNaN(val)) stats[rMatch[1].toLowerCase()] = val;
+        }
+
+        // B. Tenta extrair de HTML (data-attributes do StatNode): data-label="..." data-value="..."
+        const htmlStatRegex = /data-label="([^"]+)"\s+data-value="([^"]+)"/gi;
+        let hMatch;
+        while ((hMatch = htmlStatRegex.exec(content)) !== null) {
+            const val = parseInt(hMatch[2], 10);
+            if (!isNaN(val)) stats[hMatch[1].toLowerCase()] = val;
         }
     }
 
@@ -41,9 +50,9 @@ export async function processRoll(command, character, userName, macroName = null
         let currentLine = line.trim();
         if (!currentLine) continue;
 
-        // Título da linha (se houver o formato Nome: Rolagem)
+        // Título da linha
         let lineLabel = "";
-        let cleanLabel = ""; // Sem HTML para a etiqueta flutuante
+        let cleanLabel = "";
         if (currentLine.includes(':')) {
             const parts = currentLine.split(':');
             cleanLabel = parts[0].trim();
@@ -52,7 +61,9 @@ export async function processRoll(command, character, userName, macroName = null
         }
 
         // --- SUBSTITUIÇÃO DE ATRIBUTOS ---
-        Object.keys(stats).forEach(s => {
+        const sortedStatKeys = Object.keys(stats).sort((a, b) => b.length - a.length);
+        sortedStatKeys.forEach(s => {
+            // Substitui apenas se for uma palavra isolada (Case-Insensitive)
             const r = new RegExp(`\\b${s}\\b`, 'gi');
             currentLine = currentLine.replace(r, stats[s]);
         });
@@ -62,11 +73,22 @@ export async function processRoll(command, character, userName, macroName = null
 
         // Se a linha tem dados, processamos
         if (diceRegex.test(currentLine)) {
-            const isPool = /([<>]=?|=)/.test(currentLine);
+            // DETERMINAÇÃO: POOL vs COMPARAÇÃO
+            // É um POOL se: qtd > 1 E tem operador colado E NÃO é d100
+            // Motivo: 1d20 >= 10 ou 1d100 <= 50 são comparações de teste, não pools de sucessos.
+            const diceMatches = [...currentLine.matchAll(diceRegex)];
+            const activePool = diceMatches.some(m => {
+                const qtd = parseInt(m[1]);
+                const sides = parseInt(m[2]);
+                const op = m[4];
+                return op && (qtd > 1 || (sides !== 100 && sides !== 20));
+            });
 
-            if (isPool) {
+            if (activePool) {
                 // CENÁRIO: Pool de Dados (Sucessos)
                 currentLine.replace(diceRegex, (match, qtd, sides, explode, op, target, fail) => {
+                    if (!op) return match; // Não deveria acontecer se activePool deu true, mas por segurança
+
                     const q = parseInt(qtd);
                     const s = parseInt(sides);
                     const targetVal = parseInt(target);
@@ -100,14 +122,15 @@ export async function processRoll(command, character, userName, macroName = null
                     });
 
                     lineResultHtml = `${lineLabel}${successes} Sucessos [ ${results.join(', ')} ]`;
-                    notificationSummary.push(`${cleanLabel ? cleanLabel + ': ' : ''}${successes} Sucessos`);
+                    notificationSummary.push(`${cleanLabel ? cleanLabel + ': ' : ''}${successes} Suc`);
                 });
             } else {
-                // CENÁRIO: Soma Matemática ou Comparação
-                let mathExpression = currentLine;
+                // CENÁRIO: Soma ou Comparação de Resultado Único
                 let details = currentLine;
+                const diceResults = [];
 
-                const processedMath = currentLine.replace(diceRegex, (match, qtd, sides) => {
+                // 1. Resolve os dados primeiro, guardando os totais para cada match
+                const processedForMath = currentLine.replace(diceRegex, (match, qtd, sides) => {
                     const q = parseInt(qtd);
                     const s = parseInt(sides);
                     let sum = 0;
@@ -121,38 +144,45 @@ export async function processRoll(command, character, userName, macroName = null
                     return sum;
                 });
 
-                // Tenta resolver a matemática (eval seguro básico)
+                // 2. Tenta resolver a expressão (Soma ou Comparação)
                 try {
-                    // Sanitiza para permitir apenas números e operadores básicos
-                    const sanitized = processedMath.replace(/[^-+*/().0-9\s]/g, '');
-                    const total = new Function(`return ${sanitized}`)();
+                    const compRegex = /([\d.+\-*/() ]+)\s*([<>]=?|=)\s*([\d.+\-*/() ]+)/;
+                    const compMatch = processedForMath.match(compRegex);
 
-                    // Verifica se há uma comparação no final
-                    const compRegex = /([\d.]+)\s*([<>]=?|=)\s*([\d.]+)/;
-                    const compMatch = currentLine.replace(diceRegex, '0').match(compRegex); // Usa 0 como placeholder pra achar o op
+                    // Função auxiliar para eval seguro
+                    const safeEval = (expr) => {
+                        const sanitized = expr.replace(/[^-+*/().0-9\s]/g, '');
+                        return new Function(`return ${sanitized || '0'}`)();
+                    };
 
                     if (compMatch) {
+                        // COMPARAÇÃO (ex: 45 <= 80)
+                        const leftVal = safeEval(compMatch[1]);
                         const op = compMatch[2];
-                        const target = parseFloat(compMatch[3]);
+                        const rightVal = safeEval(compMatch[3]);
+
                         let success = false;
-                        if (op === '>') success = total > target;
-                        else if (op === '>=') success = total >= target;
-                        else if (op === '<') success = total < target;
-                        else if (op === '<=') success = total <= target;
-                        else if (op === '=') success = total === target;
+                        if (op === '>') success = leftVal > rightVal;
+                        else if (op === '>=') success = leftVal >= rightVal;
+                        else if (op === '<') success = leftVal < rightVal;
+                        else if (op === '<=') success = leftVal <= rightVal;
+                        else if (op === '=') success = leftVal === rightVal;
 
                         const tag = success
                             ? '<span class="tag is-success is-light ml-1">SUCESSO</span>'
                             : '<span class="tag is-danger is-light ml-1">FALHA</span>';
 
-                        lineResultHtml = `${lineLabel}${total} ${op} ${target} ➔${tag}`;
-                        notificationSummary.push(`${cleanLabel ? cleanLabel + ': ' : ''}${total} ${success ? 'PASSO' : 'FALHOU'}`);
+                        lineResultHtml = `${lineLabel}${leftVal} ${op} ${rightVal} ➔${tag}`;
+                        notificationSummary.push(`${cleanLabel ? cleanLabel + ': ' : ''}${leftVal} ${success ? 'Sucesso' : 'Falha'}`);
                     } else {
+                        // SOMA SIMPLES (ex: 10 + 5)
+                        const total = safeEval(processedForMath);
                         lineResultHtml = `${lineLabel}${total} [${details}]`;
                         notificationSummary.push(`${cleanLabel ? cleanLabel + ': ' : ''}${total}`);
                     }
                 } catch (e) {
-                    lineResultHtml = `${lineLabel}${currentLine} (Erro de cálculo)`;
+                    console.error("Erro na rolagem:", e);
+                    lineResultHtml = `${lineLabel}${currentLine} (Erro)`;
                 }
             }
         } else {
