@@ -82,8 +82,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('ficha-save-btn').addEventListener('click', saveFichaEditorContent);
 
-    if (layout.fabMacros) {
-        layout.fabMacros.addEventListener('click', () => openModal(document.getElementById('macro-modal')));
+    const fabMacros = document.getElementById('fab-macros');
+    if (fabMacros) {
+        fabMacros.addEventListener('click', () => openModal(document.getElementById('macro-modal')));
     }
 
     // 4. INJETAR HTML DA FICHA NA .sheet-layout
@@ -271,6 +272,9 @@ function loadCharacter(id) {
 
         // Renderizar Containers Dinâmicos (Sempre lendo do conteúdo global)
         renderContainers(char);
+
+        // Renderizar Macros (Firebase)
+        renderMacroButtons();
 
         setupInteractiveSheetListeners();
     }
@@ -513,43 +517,55 @@ function getMacros() {
     return JSON.parse(localStorage.getItem(`macros_${getCurrentUserName()}`) || '[]');
 }
 
-function saveMacro() {
+async function saveMacro() {
     const n = document.getElementById('macro-name').value.trim();
-    const c = document.getElementById('macro-command').value.trim();
-    if (!n || !c) return;
-    const m = getMacros();
-    m.push({ name: n, command: c });
-    localStorage.setItem(`macros_${getCurrentUserName()}`, JSON.stringify(m));
-    loadMacros();
+    const f = document.getElementById('macro-formula').value.trim();
+    if (!n || !f || !currentCharacterId) return;
+
+    if (!currentCharacter.macros) currentCharacter.macros = [];
+    currentCharacter.macros.push({ nome: n, formula: f });
+
+    await updateItem({ id: currentCharacterId }, { macros: currentCharacter.macros });
+    renderMacroButtons();
     closeModal(document.getElementById('macro-modal'));
     document.getElementById('macro-name').value = '';
-    document.getElementById('macro-command').value = '';
+    document.getElementById('macro-formula').value = '';
 }
 
-function loadMacros() {
+function renderMacroButtons() {
     const container = document.getElementById('macro-bar');
     if (!container) return;
     container.innerHTML = '';
-    const m = getMacros();
-    m.forEach((mac, i) => {
+
+    const macros = currentCharacter?.macros || [];
+    macros.forEach((mac, i) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'macro-btn-wrap';
+        wrap.style.cssText = 'display:inline-flex; align-items:center; margin-right:8px; background:rgba(255,255,255,0.05); border-radius:4px; padding:2px 4px;';
+
         const b = document.createElement('button');
         b.className = 'button is-small is-rounded is-primary is-light';
-        b.textContent = mac.name;
-        b.style.marginRight = '5px';
+        b.textContent = mac.nome;
+        b.style.border = 'none';
         b.onclick = () => {
-            const user = getCurrentUserName();
-            addChatMessage(mac.command, 'user', user);
-            processRoll(mac.command, currentCharacter, user, mac.name);
+            const user = getCurrentUserName() || 'Anônimo';
+            processRoll(mac.formula, currentCharacter, user, mac.nome);
         };
-        b.oncontextmenu = (e) => {
-            e.preventDefault();
-            if (confirm('Deletar macro?')) {
-                m.splice(i, 1);
-                localStorage.setItem(`macros_${getCurrentUserName()}`, JSON.stringify(m));
-                loadMacros();
+
+        const del = document.createElement('button');
+        del.className = 'delete is-small';
+        del.style.marginLeft = '4px';
+        del.onclick = async (e) => {
+            e.stopPropagation();
+            if (confirm(`Deletar macro "${mac.nome}"?`)) {
+                currentCharacter.macros.splice(i, 1);
+                await updateItem({ id: currentCharacterId }, { macros: currentCharacter.macros });
+                renderMacroButtons();
             }
         };
-        container.appendChild(b);
+
+        wrap.append(b, del);
+        container.appendChild(wrap);
     });
 }
 

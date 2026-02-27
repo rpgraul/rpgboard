@@ -8,79 +8,122 @@ import { openModal } from './modal.js';
  * NÃO gera a mensagem do usuário (isso é responsabilidade do chat.js).
  */
 export function processRoll(command, character, userName, macroName = null) {
-    let formula = command.replace(/^\/(r|roll)\s+/, '').toLowerCase();
+    const rawFormula = command.replace(/^\/(r|roll)\s+/, '');
+    const lines = rawFormula.split('\n');
+    let outputHtml = `<div class="dice-roll-result">`;
+    if (macroName) outputHtml += `<div class="macro-header"><strong>${userName}</strong> usou <strong>${macroName}</strong></div>`;
+    else outputHtml += `<div class="macro-header"><strong>${userName}</strong> rolou:</div>`;
 
-    // 1. Substituição de Stats (Lógica de Ficha)
+    // 1. Extração de Stats (Cache para evitar re-parse em cada linha)
+    const stats = {};
     if (character && character.conteudo) {
-        // Limpa HTML para pegar texto puro
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = character.conteudo.replace(/<[^>]+>/g, ' ');
         const rawText = tempDiv.textContent;
-
         const statRegex = /\[stat\s+["']([^"']+)["']\s+["']([^"']+)["']/gi;
-        let match;
-        const stats = {};
-
-        // Extrai todos os stats
-        while ((match = statRegex.exec(rawText)) !== null) {
-            const key = match[1].toLowerCase();
-            const val = parseInt(match[2], 10);
-            if (!isNaN(val)) stats[key] = val;
+        let sMatch;
+        while ((sMatch = statRegex.exec(rawText)) !== null) {
+            stats[sMatch[1].toLowerCase()] = parseInt(sMatch[2], 10);
         }
-
-        // Substitui na fórmula
-        Object.keys(stats).forEach(statName => {
-            const regex = new RegExp(`\\b${statName}\\b`, 'g');
-            formula = formula.replace(regex, stats[statName]);
-        });
     }
 
-    try {
-        const diceRegex = /(\d+)d(\d+)/g;
-        let evaluatedFormula = formula;
-        const rollsToSend = [];
+    lines.forEach(line => {
+        let currentLine = line.trim();
+        if (!currentLine) return;
 
-        // 2. Executa as rolagens matemáticas
-        evaluatedFormula = evaluatedFormula.replace(diceRegex, (match, qtd, sides) => {
-            let subTotal = 0;
+        // Se a linha não tem comando de dado nem comparação, apenas exibe como texto
+        if (!currentLine.includes('d') && !/[<>=]/.test(currentLine)) {
+            outputHtml += `<p class="dice-line text-only">${currentLine}</p>`;
+            return;
+        }
+
+        // --- SUBSTITUIÇÃO DE ATRIBUTOS ---
+        Object.keys(stats).forEach(s => {
+            const r = new RegExp(`\\b${s}\\b`, 'gi');
+            currentLine = currentLine.replace(r, stats[s]);
+        });
+
+        const rollsTo3D = [];
+        const diceRegex = /(\d+)d(\d+)(!)?(?:([<>]=?|=)(\d+))?(?:f(\d+))?/gi;
+
+        let hasDice = false;
+        let lineDetails = currentLine;
+
+        // --- PROCESSAMENTO DE DADOS ---
+        const processedLine = currentLine.replace(diceRegex, (match, qtd, sides, explode, op, target, fail) => {
+            hasDice = true;
             const q = parseInt(qtd);
             const s = parseInt(sides);
+            const isPool = !!op;
+            const targetVal = isPool ? parseInt(target) : 0;
+            const failVal = fail ? parseInt(fail) : 0;
 
+            let results = [];
             for (let i = 0; i < q; i++) {
-                const r = Math.floor(Math.random() * s) + 1;
-                subTotal += r;
-                // Guarda cada dado para o 3D
-                rollsToSend.push({ sides: s, result: r });
+                let r = Math.floor(Math.random() * s) + 1;
+                results.push(r);
+                rollsTo3D.push({ sides: s, result: r });
+
+                if (explode) {
+                    let lastRoll = r;
+                    while (lastRoll === s) {
+                        lastRoll = Math.floor(Math.random() * s) + 1;
+                        results.push(lastRoll);
+                        rollsTo3D.push({ sides: s, result: lastRoll });
+                    }
+                }
             }
-            return subTotal;
+
+            if (isPool) {
+                let successes = 0;
+                results.forEach(val => {
+                    let isSuccess = false;
+                    if (op === '>') isSuccess = val > targetVal;
+                    else if (op === '>=') isSuccess = val >= targetVal;
+                    else if (op === '<') isSuccess = val < targetVal;
+                    else if (op === '<=') isSuccess = val <= targetVal;
+                    else if (op === '=') isSuccess = val === targetVal;
+
+                    if (isSuccess) successes++;
+                    else if (fail && val <= failVal) successes--;
+                });
+                return `${successes} [${results.join(',')}]`;
+            } else {
+                const sum = results.reduce((a, b) => a + b, 0);
+                return `${sum} [${results.join(',')}]`;
+            }
         });
 
-        // 3. Calcula o total final
-        if (!/^[\d\s+\-*/().]+$/.test(evaluatedFormula)) {
-            throw new Error("Fórmula inválida ou insegura");
+        // --- COMPARAÇÃO FINAL ---
+        let finalLabel = "";
+        const comparisonRegex = /(-?\d+)\s*([<>]=?|=)\s*(-?\d+)/;
+        const compMatch = processedLine.match(comparisonRegex);
+        if (compMatch) {
+            const v1 = parseInt(compMatch[1]);
+            const op = compMatch[2];
+            const v2 = parseInt(compMatch[3]);
+            let success = false;
+            if (op === '>') success = v1 > v2;
+            else if (op === '>=') success = v1 >= v2;
+            else if (op === '<') success = v1 < v2;
+            else if (op === '<=') success = v1 <= v2;
+            else if (op === '=') success = v1 === v2;
+
+            finalLabel = success
+                ? ' <span class="tag is-success is-light ml-1">SUCESSO</span>'
+                : ' <span class="tag is-danger is-light ml-1">FALHA</span>';
         }
-        const totalResult = new Function('return ' + evaluatedFormula)();
 
-        // 4. Define o Rótulo Visual (Para o dado 3D)
-        const infoLabel = macroName ? `${macroName}: ${totalResult}` : `Total: ${totalResult}`;
+        outputHtml += `<p class="dice-line">${processedLine}${finalLabel}</p>`;
 
-        // 5. Gera a mensagem do SISTEMA
-        // Nota: O remetente aqui é 'Sistema', pois é a resposta do comando.
-        const logMsg = macroName
-            ? `<strong>${userName}</strong> usou <strong>${macroName}</strong>: ${totalResult} <span style="color:#ccc; font-size:0.8em">(${formula})</span>`
-            : `<strong>${userName}</strong> rolou: ${totalResult} <span style="color:#ccc; font-size:0.8em">(${formula})</span>`;
-
-        addChatMessage(logMsg, 'system', 'Sistema');
-
-        // 6. Envia para o Visualizador 3D
-        rollsToSend.forEach(roll => {
-            sendDiceRoll(userName, `d${roll.sides}`, roll.result, infoLabel);
+        // Envia para o 3D
+        rollsTo3D.forEach(r => {
+            sendDiceRoll(userName, `d${r.sides}`, r.result, macroName || 'Roll');
         });
+    });
 
-    } catch (e) {
-        console.error("Erro na rolagem:", e);
-        addChatMessage(`Erro ao processar: ${formula}`, 'system', 'Sistema');
-    }
+    outputHtml += `</div>`;
+    addChatMessage(outputHtml, 'system', 'Sistema');
 }
 
 /**

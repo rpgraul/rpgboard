@@ -66,11 +66,20 @@
           </div>
         </div>
         <div class="field">
-          <label class="label">Comando</label>
+          <label class="label">Fórmula do Macro</label>
           <div class="control">
-            <input id="macro-command" class="input" type="text" placeholder="Ex: /r 1d20+forca">
+            <textarea id="macro-formula" class="textarea is-small" rows="4" placeholder="Ex:&#10;Ataque: 1d20+for&#10;Dano: 1d10+5"></textarea>
           </div>
-          <p class="help">Use nomes de atributos definidos em [stat "forca" "3"] para somar automaticamente.</p>
+          <div class="content is-small mt-2" style="color: #ccc;">
+            <p><strong>Dicas de Uso:</strong></p>
+            <ul>
+              <li><strong>Pool de Dados:</strong> <code>5d10>7</code> (conta sucessos se ≥ 7)</li>
+              <li><strong>Falhas:</strong> <code>5d10>7f1</code> (subtrai sucessos se rolar 1)</li>
+              <li><strong>Explosão:</strong> <code>5d10!</code> (rola extra se tirar valor máximo)</li>
+              <li><strong>Comparação:</strong> <code>1d100 <= Int</code> (mostra SUCESSO/FALHA)</li>
+              <li><strong>Atributos:</strong> Use nomes como <code>For</code>, <code>Int</code>, etc.</li>
+            </ul>
+          </div>
         </div>
       </section>
       <footer class="modal-card-foot">
