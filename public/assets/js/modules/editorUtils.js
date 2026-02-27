@@ -79,8 +79,8 @@ export function convertEditorHtmlToShortcodes(html) {
         const isHidden = e.getAttribute("data-is-hidden") === "true";
         const isClosed = e.getAttribute("data-is-closed") === "true";
 
-        const openTag = `[container label="${label}" type="${type}"${isClosed ? ' close' : ''}${isHidden ? ' #' : ''}]`;
-        const closeTag = `[/container]`;
+        const openTag = `[container label="${label}" type="${type}"${isClosed ? ' close' : ''}${isHidden ? ' #' : ''}]\n`;
+        const closeTag = `\n[/container]`;
 
         const contentArea = e.querySelector('.container-content-area') || e;
         const innerHTML = contentArea.innerHTML;
@@ -92,7 +92,7 @@ export function convertEditorHtmlToShortcodes(html) {
     body.querySelectorAll('[data-node-type="fichaShortcode"]').forEach((e) => {
         const contentArea = e.querySelector('.ficha-content-area') || e;
         const innerHTML = contentArea.innerHTML;
-        e.replaceWith(document.createTextNode("[ficha]"), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode("[/ficha]"));
+        e.replaceWith(document.createTextNode("[ficha]\n"), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode("\n[/ficha]"));
     });
 
     body.querySelectorAll('[data-node-type="moneyNode"]').forEach((e) => {

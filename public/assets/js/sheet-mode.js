@@ -269,8 +269,8 @@ function loadCharacter(id) {
         visualStatsContainer.innerHTML = parsed.all.filter(s => s.type === 'stat' || s.type === 'money').map(s => s.html).join('');
         if (visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
 
-        // Renderizar Containers Dinâmicos (passando o conteúdo técnico)
-        renderContainers({ conteudo: finalTechContent });
+        // Renderizar Containers Dinâmicos (Sempre lendo do conteúdo global)
+        renderContainers(char);
 
         setupInteractiveSheetListeners();
     }
@@ -850,7 +850,7 @@ async function saveContainerContent() {
 
         const newConteudo = currentCharacter.conteudo.replace(oldFullMatch, newFullShortcode);
 
-        // Atualiza a ficha isolada se o container veio dela
+        // Se o container está dentro da ficha técnica, atualizamos também o bloco isolado
         if (currentFichaBlock && currentFichaBlock.includes(oldFullMatch)) {
             currentFichaBlock = currentFichaBlock.replace(oldFullMatch, newFullShortcode);
         }

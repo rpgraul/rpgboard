@@ -7,8 +7,9 @@ const MENU_ITEMS = [
     { configType: 'count', icon: 'fa-list-ol', label: 'Contador', preview: '[count]' },
     { configType: 'money', icon: 'fa-coins', label: 'Dinheiro', preview: '[money]' },
     { configType: 'nota', icon: 'fa-sticky-note', label: 'Nota Recolhível', preview: '[nota]' },
+    { configType: 'container', icon: 'fa-box', label: 'Container de Itens', preview: '[container]' },
     { configType: 'link', icon: 'fa-link', label: 'Link de Card', preview: '[link]' },
-    { shortcode: '[ficha]', icon: 'fa-id-card', label: 'Ficha (Sheet)', preview: '[ficha]' },
+    { shortcode: '[ficha]\n\n[/ficha]', icon: 'fa-id-card', label: 'Ficha (Sheet)', preview: '[ficha]' },
 ];
 
 export function setupShortcodeMenu(toolbarContainer, editorInstance) {
@@ -126,7 +127,8 @@ export function openConfigModal(type, editor, existingNodeInfo = null) {
                 'sc_hidden': 'isHidden', 'sc_nome': 'label', 'sc_valor': 'value',
                 'sc_moeda': 'currency', 'sc_icon': 'icon', 'sc_theme': 'theme',
                 'sc_overlay': 'isOverlay', 'sc_card': 'card', 'sc_titulo': 'titulo',
-                'sc_conteudo': 'conteudo', 'container_type': 'type', 'container_label': 'label'
+                'sc_conteudo': 'conteudo', 'container_type': 'type', 'container_label': 'label',
+                'container_closed': 'isClosed'
             };
             const attrName = map[id];
             if (attrName && existingNodeInfo.attrs[attrName] !== undefined) {
@@ -224,9 +226,19 @@ export function openConfigModal(type, editor, existingNodeInfo = null) {
             fields: [
                 { id: 'container_label', label: 'Rótulo / Título', type: 'text', default: getDef('container_label', 'Mochila'), req: true },
                 { id: 'container_type', label: 'Tipo (Ícone/Cor)', type: 'select', options: ['default', 'inventory', 'spells', 'skills'], default: getDef('container_type', 'default') },
+                { id: 'container_closed', label: 'Iniciar Fechado', type: 'checkbox', default: getDef('container_closed', false) },
                 ...naratorOnlyField('sc_hidden', 'Oculto para Jogadores', false)
             ],
-            build: (data) => ({ text: '', attrs: { label: data.container_label, type: data.container_type, isHidden: data.sc_hidden } })
+            build: (data) => {
+                let tag = `[container label="${data.container_label}" type="${data.container_type}"`;
+                if (data.container_closed) tag += ' close';
+                if (data.sc_hidden) tag += ' #';
+                tag += ']';
+                return {
+                    text: `${tag}\n\n[/container]`,
+                    attrs: { label: data.container_label, type: data.container_type, isClosed: data.container_closed, isHidden: data.sc_hidden }
+                };
+            }
         }
     };
 

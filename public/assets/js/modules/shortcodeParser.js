@@ -251,12 +251,26 @@ export function parseAllShortcodes(item, options = {}) {
         }
     }
 
+    // Isolar shortcodes dentro de containers
+    const containerRanges = [];
+    const containerFullRegex = /\[container(?:\s+[^\]]*)?\]([\s\S]*?)\[\/container\]/gi;
+    let containerMatch;
+    while ((containerMatch = containerFullRegex.exec(content)) !== null) {
+        const innerContent = containerMatch[1];
+        const startIndex = containerMatch.index + containerMatch[0].indexOf(innerContent);
+        containerRanges.push({ start: startIndex, end: startIndex + innerContent.length });
+    }
+
     const parsedShortcodes = foundShortcodes.map(sc => {
         const args = parseArguments(sc.inner);
         const commandRaw = args[0] || '';
         const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
 
         if (!['stat', 'hp', 'count', 'money'].includes(command)) return null;
+
+        // Regra 1: Ignorar se estiver dentro de um container
+        const isInsideContainer = containerRanges.some(range => sc.index >= range.start && sc.index < range.end);
+        if (isInsideContainer) return null;
 
         const isHashHidden = commandRaw.startsWith('#');
         const isArgHidden = args.includes('#');
