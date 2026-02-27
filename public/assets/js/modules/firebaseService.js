@@ -123,12 +123,14 @@ export const addChatMessage = (text, type = 'user', sender = 'Anônimo') =>
 
 export const listenToChat = (cb) => onSnapshot(query(chatCollectionRef, orderBy('createdAt', 'asc')), cb);
 
-export async function sendDiceRoll(userName, diceType, result, customLabel = null) {
+export async function sendDiceRoll(userName, diceType, result, customLabel = null, hideLabel = false, hideDie = false) {
   await addDoc(rollsCollectionRef, {
     userName,
     diceType,
     result,
     label: customLabel || userName,
+    hideLabel,
+    hideDie,
     createdAt: serverTimestamp(),
   });
 }
