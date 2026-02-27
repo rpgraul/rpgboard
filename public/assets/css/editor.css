@@ -1,0 +1,316 @@
+/* ========================================
+   EDITOR.CSS - TIPTAP, SHORTCODES, SIMPLE
+   ======================================== */
+
+/* ── TIPTAP GLOBAL ───────────────────────────────────────────────────────── */
+/* The global tiptap toolbar is defined in components.css since it's shared 
+   between modals and editors. Tiptap editor structural CSS follows. */
+
+.tiptap-editor-wrapper, .card-modal-editor-wrap {
+    height: 100%;
+    min-height: 200px;
+}
+
+/* Ensure full height clickable area */
+.ProseMirror {
+    min-height: 100%;
+    padding: 1rem;
+    outline: none;
+    background-color: #1e1e1e;
+    color: var(--text-color);
+    font-size: 1rem;
+    line-height: 1.7;
+    border-radius: 0 0 6px 6px; /* In case it's in a wrapper */
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+    color: var(--input-border-color);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+}
+
+.ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+    color: #f2f2f2;
+    line-height: 1.2;
+    font-weight: 600;
+    margin: 2em 0 1em;
+    border-bottom: 1px solid #444;
+    padding-bottom: 0.3em;
+}
+
+.ProseMirror h1 { font-size: 1.8em; }
+.ProseMirror h2 { font-size: 1.5em; }
+.ProseMirror h3 { font-size: 1.25em; }
+
+.ProseMirror ol, .ProseMirror ul { padding-left: 1.5rem; }
+.ProseMirror a { color: var(--link-color); }
+
+.ProseMirror mark {
+    background-color: rgba(255, 221, 87, 0.4);
+    border-radius: 3px;
+}
+
+.ProseMirror hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1em 0;
+}
+
+.ProseMirror blockquote {
+    border-left: 3px solid var(--link-color);
+    padding-left: 1em;
+    color: var(--input-border-color);
+    margin: 0.5em 0;
+}
+
+.ProseMirror code {
+    background-color: rgba(0,0,0,0.2);
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.88em;
+    font-family: monospace;
+}
+
+/* ── SHORTCODES VISUAL LOGIC ─────────────────────────────────────────────── */
+
+/* Universal Contrast and Inline Edit Styling */
+.shortcode-stat strong,
+.shortcode-money strong,
+.hp-label,
+.count-name {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.stat-value-display,
+.money-value-display,
+.hp-text,
+.count-current-value {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Global Reset for Inline Edit Inputs */
+.stat-value-input,
+.money-value-input,
+.hp-current-input,
+.count-value-input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-family: inherit;
+    font-weight: 600;
+    width: auto;
+    outline: none !important;
+    text-align: inherit;
+}
+
+.stat-value-input:focus,
+.money-value-input:focus,
+.hp-current-input:focus,
+.count-value-input:focus {
+    border-bottom: 2px dashed var(--link-color) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    outline: none !important;
+}
+
+/* [stat] */
+.shortcode-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0.2rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto;
+    user-select: text;
+    border: 1px solid transparent;
+    word-break: break-word;
+}
+.shortcode-stat strong {
+    flex-shrink: 0;
+}
+
+/* [money] */
+.shortcode-money {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.95) !important;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto !important;
+    z-index: 20 !important;
+    user-select: text;
+}
+.shortcode-money .fa-coins { color: #ffdd57; }
+
+.shortcode-money.is-interactive .money-value-display {
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+    transition: border-bottom-color 0.2s ease;
+}
+.shortcode-money.is-interactive:hover .money-value-display { border-bottom-color: var(--light-text); }
+
+/* [count] */
+.shortcode-count.is-interactive {
+    display: flex;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.85);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto;
+    user-select: text;
+}
+.shortcode-count .count-name { display: block; margin-bottom: 0.25rem; }
+.info-group-right .shortcode-count { text-align: center; }
+.count-checkboxes-interactive { display: flex; gap: 5px; align-items: center; }
+.count-checkbox { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
+
+.theme-default .count-checkbox { width: 16px; height: 16px; border: 1px solid var(--light-text); border-radius: 3px; }
+.theme-default .count-checkbox.is-checked { background-color: var(--light-text); box-shadow: inset 0 0 0 2px #2c2c2c; }
+
+.theme-arrow .count-checkbox, .theme-potion .count-checkbox, .theme-custom-icon .count-checkbox { font-size: 1.2rem; color: var(--light-text); opacity: 0.3; }
+.theme-arrow .count-checkbox.is-checked, .theme-potion .count-checkbox.is-checked, .theme-custom-icon .count-checkbox.is-checked { opacity: 1; transform: scale(1.1); }
+.theme-arrow .count-checkbox i { transform: rotate(30deg); }
+
+/* [hp] */
+.shortcode-hp {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    pointer-events: auto;
+    user-select: none;
+    min-width: 120px;
+    background-color: rgba(20, 24, 33, 0.9);
+    border: 1px solid #4a4a4a;
+    padding: 0.4rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.1s ease, border-color 0.2s ease;
+}
+.shortcode-hp:hover { border-color: #666; transform: translateY(-1px); }
+
+.hp-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.hp-label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; }
+.hp-text { font-size: 0.85rem; font-weight: bold; color: #fff; }
+
+.hp-bar-container { width: 100%; height: 6px; background-color: #222; border-radius: 3px; overflow: hidden; }
+.hp-bar-fill { height: 100%; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease; }
+
+.hp-bar-fill.is-high { background-color: var(--color-success); }
+.hp-bar-fill.is-medium { background-color: var(--color-warning); }
+.hp-bar-fill.is-low { background-color: var(--color-danger); }
+.hp-bar-fill.is-critical { background-color: #d32f2f; animation: hp-pulse 1.5s infinite; }
+.hp-bar-fill.is-dead { background-color: #7a5c91; }
+@keyframes hp-pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+.shortcode-hp.is-unconscious { background-color: rgba(60, 20, 80, 0.4); box-shadow: 0 0 10px rgba(255, 0, 0, 0.3); }
+
+.hp-input-wrapper { display: flex; align-items: baseline; }
+.hp-current-input::-webkit-inner-spin-button, .hp-current-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.hp-max-value { font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); margin-left: 2px; }
+
+/* In Sheet Edit Mode - ensure the input grows visually to show user they are editing but keeping inline aesthetics */
+.hp-edit-mode .hp-current-input { 
+    text-align: center; 
+}
+
+/* [container] Tiptap view vs Grid view */
+.shortcode-container-editor {
+    border: 1px solid #444; border-radius: 6px; background: #1a1a1a; margin: 1.5rem 0;
+    display: block; clear: both; overflow: hidden;
+}
+
+.shortcode-container-editor .container-header {
+    background: #2a2a2a; padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid #444; cursor: default;
+}
+
+.shortcode-container-editor .container-label { flex-grow: 1; color: #fff; font-weight: 500; }
+.shortcode-container-editor .container-actions { display: flex; gap: 5px; }
+.shortcode-container-editor .container-content-area { padding: 0.8em; min-height: 50px; background: #121212; }
+.shortcode-container-editor.is-collapsed .container-content-area { display: none; }
+.shortcode-container-editor svg { width: 1em; height: 1em; pointer-events: none; }
+
+.shortcode-container-view { border: 1px solid #333; border-radius: 4px; margin-bottom: 0.5em; background: #111; overflow: hidden; }
+.shortcode-container-view .container-header {
+    padding: 0.8em; background: #222; cursor: pointer; display: flex; align-items: center;
+    gap: 0.5rem; color: #fff; transition: background 0.2s;
+}
+.shortcode-container-view .container-header:hover { background: #2a2a2a; }
+.shortcode-container-view .container-label { flex-grow: 1; font-weight: bold; }
+.shortcode-container-view .toggle-icon { transition: transform 0.3s; }
+.shortcode-container-view.is-open .toggle-icon { transform: rotate(180deg); }
+.shortcode-container-view .container-body { display: none; padding: 1rem; border-top: 1px solid #333; background: #1a1a1a; }
+.shortcode-container-view.is-open .container-body { display: block; animation: fadeIn 0.3s ease; }
+
+.type-inventory .container-header { border-left: 4px solid #3e8ed0; }
+.type-spells .container-header { border-left: 4px solid #9b59b6; }
+.type-skills .container-header { border-left: 4px solid #e67e22; }
+.type-default .container-header { border-left: 4px solid #7f8c8d; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Visibility States */
+.is-hidden-preview, .is-hidden-from-players {
+    border: 2px dashed var(--color-danger) !important;
+    background-color: rgba(241, 70, 104, 0.1) !important;
+    position: relative;
+    border-radius: 4px;
+}
+.is-hidden-preview::after, .is-hidden-from-players::after {
+    content: "Oculto";
+    position: absolute; 
+    display: none;
+    top: -10px; 
+    right: -10px;
+    font-size: 0.7rem; 
+    font-weight: bold;
+    background: var(--color-danger); 
+    color: #fff; 
+    padding: 2px 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    z-index: 10;
+    pointer-events: none;
+}
+
+
+/* ── Inline Tiptap Rendered Highlights ───────────────────────────────────── */
+.ProseMirror .is-rendered-in-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #363636;
+    border: 1px solid #4a4a4a;
+    padding: 0.25rem 0.6rem;
+    border-radius: 5px;
+    white-space: nowrap;
+    user-select: none;
+    margin: 0 2px;
+}
+
+.ProseMirror .shortcode-inline {
+    background-color: rgba(72, 153, 241, 0.15);
+    border: 1px solid rgba(72, 153, 241, 0.35);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: monospace;
+    font-size: 0.85em;
+    color: var(--link-color);
+}

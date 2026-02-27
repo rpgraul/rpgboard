@@ -1,0 +1,312 @@
+/* ========================================
+   CARDS.CSS - GRID ITEMS & CARD LOGIC
+   ======================================== */
+
+#grid-view-container {
+    position: relative;
+}
+
+/* Base Card Shell */
+.card {
+    position: absolute;
+    margin: 12px;
+    width: calc(33.3333% - 24px);
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    transition: opacity 0.4s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+@media (max-width: 940px) { .card { width: calc(50% - 24px); } }
+@media (max-width: 520px) { .card { width: calc(100% - 24px); } }
+
+/* Muuri Grid Interactions */
+.card.muuri-item-dragging { z-index: 3; }
+.card.muuri-item-releasing { z-index: 2; }
+
+/* Selection States */
+.card.is-bulk-selected {
+    box-shadow: 0 0 0 3px var(--link-color), 0 8px 24px rgba(0, 0, 0, 0.5);
+    border-color: var(--link-color);
+}
+
+/* Card Content & Images */
+.card .card-content {
+    flex-grow: 1;
+    background-color: var(--card-background-color);
+    color: var(--text-color);
+    border-radius: 0 0 4px 4px;
+}
+
+.card .card-content .content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.card .card-image .image {
+    position: relative;
+    display: block;
+    height: 0;
+    background-color: var(--border-color);
+}
+
+.card .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Image Change Overlay */
+.card-image .change-image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.card.editing .card-image:hover .change-image-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Card Actions (Top Right) */
+.card-actions-top {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    display: flex;
+    gap: 0.75rem;
+    opacity: 0 !important;
+    pointer-events: none;
+    transform: translateY(5px) !important;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.card:hover .card-actions-top, .card.editing .card-actions-top {
+    opacity: 1 !important;
+    pointer-events: auto;
+    transform: translateY(0) !important;
+}
+
+.action-icon {
+    background-color: rgba(240, 240, 240, 0.85);
+    color: var(--background-color);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.action-icon:hover {
+    transform: scale(1.1);
+    background-color: var(--background-color);
+}
+.action-icon.delete-btn:hover { color: #e53e3e; }
+.action-icon.edit-btn:hover, .action-icon.save-btn:hover { color: #38a169; }
+.action-icon.view-btn:hover { color: #3273dc; }
+
+/* ── CARDS INFO LAYER (Overlay Content) ────────────────── */
+.card-info-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Overlay Base Classes */
+.overlay-item { position: absolute; pointer-events: auto; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); }
+.overlay-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.overlay-left { top: 0.75rem; left: 0.75rem; }
+.overlay-right { top: 50%; right: 0.75rem; transform: translateY(-50%); }
+.overlay-bottom { bottom: 0.75rem; left: 50%; transform: translateX(-50%); }
+
+/* Info layout groups */
+.info-content { width: 100%; height: 100%; transition: opacity 0.2s ease-in-out; }
+.info-toggles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.info-group-left, .info-group-right, .info-group-bottom {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.info-group-left { top: 0.75rem; left: 0.75rem; align-items: flex-start; }
+.info-group-right { top: 50%; right: 0.75rem; transform: translateY(-50%); align-items: center; }
+.info-group-bottom { bottom: 0.75rem; left: 50%; transform: translateX(-50%); align-items: center; }
+
+/* Hide detailed items originally */
+.card-info-layer .info-group-details,
+.card-info-layer .tooltip-description,
+.card-info-layer .tooltip-divider {
+    display: none;
+}
+
+/* Full Details Visibility (.is-details-visible) */
+.card.is-details-visible .card-info-layer {
+    pointer-events: auto;
+    user-select: text;
+    background-color: var(--card-background-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    overflow-y: auto;
+    box-sizing: border-box;
+    width: 97%;
+    max-height: 97%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.card.is-details-visible .info-content { display: flex; flex-direction: column; height: auto; }
+
+.card.is-details-visible .info-group-left,
+.card.is-details-visible .info-group-right,
+.card.is-details-visible .info-group-bottom,
+.card.is-details-visible .info-group-details {
+    position: static;
+    transform: none;
+    gap: 0;
+    display: contents;
+}
+
+.card.is-details-visible .card-info-layer .shortcode-stat,
+.card.is-details-visible .card-info-layer .shortcode-hp,
+.card.is-details-visible .card-info-layer .shortcode-count,
+.card.is-details-visible .card-info-layer .shortcode-money {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    background-color: transparent;
+    padding: 0.25rem 0;
+    border-bottom: none;
+    gap: 4px;
+}
+
+.card.is-details-visible .shortcode-count .count-name { display: inline; margin-bottom: 0; }
+
+.card.is-details-visible .card-info-layer .info-group-details,
+.card.is-details-visible .card-info-layer .tooltip-description,
+.card.is-details-visible .card-info-layer .tooltip-divider {
+    display: block;
+}
+
+/* Description Only Version (.is-description-only) */
+.is-description-only .info-toggles { display: none !important; }
+.is-description-only .card-info-layer {
+    width: auto;
+    height: auto;
+}
+
+.card.is-description-only:hover .card-info-layer {
+    pointer-events: auto;
+    user-select: text;
+    background-color: rgba(20, 24, 33, 0.95);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    width: 90%;
+    height: auto;
+    max-height: 82%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.card.is-description-only:hover .info-content { display: flex; flex-direction: column; height: auto; }
+
+.card.is-description-only:hover .card-info-layer .tooltip-description,
+.card.is-description-only:hover .card-info-layer .tooltip-divider { display: block; }
+
+/* Tooltip Buttons & Features */
+.tooltip-close-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    padding: 0;
+    line-height: 1;
+    z-index: 21;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tooltip-close-btn:hover { opacity: 1; transform: scale(1.1); }
+.card.is-details-visible .tooltip-close-btn { opacity: 0.6; pointer-events: auto; }
+
+.tooltip-divider {
+    background-color: var(--border-color);
+    height: 1px;
+    border: none;
+    margin: 0.75rem 0;
+}
+
+.toggle-view-icon {
+    font-size: 2rem;
+    color: var(--text-color);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.card.has-overlay-content:hover .toggle-view-icon { opacity: 0.25; }
+.toggle-view-icon:hover { opacity: 0.75 !important; }
+.card.is-details-visible .toggle-view-icon { display: none; }
+
+/* Filter Tags (Grid) */
+#tag-filters .checkbox {
+    display: inline-block;
+    padding: 0.5em 1em;
+    border: 1px solid var(--border-color);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    user-select: none;
+}
+
+#tag-filters .checkbox:hover { background-color: var(--border-color); }
+#tag-filters .checkbox input[type="checkbox"] { display: none; }
+#tag-filters .checkbox.is-active {
+    background-color: var(--link-color);
+    border-color: var(--link-color);
+    color: #fff;
+}
+
+#active-filters-container { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* Generic Card Link styling */
+.card-link {
+    color: var(--link-color) !important;
+    text-decoration: underline !important;
+    cursor: pointer !important;
+    font-weight: 500;
+}

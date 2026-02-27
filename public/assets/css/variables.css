@@ -1,0 +1,32 @@
+/* ========================================
+   VARIABLES.CSS - SINGLE SOURCE OF TRUTH
+   ======================================== */
+
+:root {
+    /* Colors (Cyborg Base) */
+    --background-color: #2c2c2c;
+    --text-color: #f5f5f5;
+    --card-background-color: #363636;
+    --border-color: #4a4a4a;
+    --link-color: #4899f1;
+    --primary-color: #00d1b2;
+    --top-bar-bg: #363636;
+    --input-bg-color: #4a4a4a;
+    --input-border-color: #6b6b6b;
+    --modal-card-head-bg: #4a4a4a;
+    
+    /* Bulma Semantics */
+    --color-success: #48c774;
+    --color-danger: #f14668;
+    --color-warning: #ffdd57;
+    --color-info: #3298dc;
+    --light-text: #e0e0e0;
+
+    /* Z-Index Stack */
+    --z-back: -1;
+    --z-normal: 1;
+    --z-dropdown: 50;
+    --z-sticky: 100;
+    --z-modal: 1000;
+    --z-toast: 9999;
+}
