@@ -4,6 +4,7 @@ import { initWhiteboard } from './whiteboard/index.js';
 import * as chat from './modules/chat.js';
 import { initializeDice } from './modules/diceLogic.js';
 import { initializeModals } from './modules/modal.js';
+import { initializeCardModal } from './modules/cardModal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Layout Base
@@ -28,14 +29,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (appSettings.siteTitle) {
             document.title = `${appSettings.siteTitle} - GameBoard`;
         }
-        // Re-renderizar header para garantir título correto
         if (typeof import('./modules/components/header.js').then === 'function') {
             import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
         }
+
+        // 5. Inicializar modal de card com onSave -> updateItem
+        await initializeCardModal({
+            onSave: async (data, file, editingItem) => {
+                if (!editingItem) return;
+                await firebaseService.updateItem(editingItem, data, file || null);
+            }
+        });
     } catch (error) {
         console.error('Falha ao carregar configurações do site:', error);
     }
 
-    // 5. Inicializar Whiteboard
+    // 6. Inicializar Whiteboard
     initWhiteboard();
 });

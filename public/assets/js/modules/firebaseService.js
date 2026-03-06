@@ -46,6 +46,7 @@ const itemsCollectionRef = collection(db, "rpg-items");
 const usersCollectionRef = collection(db, "rpg-users");
 const chatCollectionRef = collection(db, "rpg-chat");
 const rollsCollectionRef = collection(db, "rpg-rolls");
+const whiteboardAssetsCollectionRef = collection(db, "rpg-whiteboard-assets");
 
 export const listenToItems = (cb) => onSnapshot(query(itemsCollectionRef, orderBy("order", "asc")), cb);
 export const saveUser = (name) => setDoc(doc(usersCollectionRef, name.toLowerCase()), { name, lastSeen: serverTimestamp() }, { merge: true });
@@ -159,6 +160,18 @@ export const updateItemsOrder = async (ids) => {
 };
 export const getSettings = async () => (await getDoc(doc(db, "config", "mainSettings"))).data() || {};
 export const saveSettings = (data) => wrapSync(setDoc(doc(db, "config", "mainSettings"), data, { merge: true }));
+
+export const listenToWhiteboardAssets = (cb) => onSnapshot(query(whiteboardAssetsCollectionRef, orderBy("createdAt", "desc")), cb);
+
+export async function addWhiteboardAsset(url, name) {
+  return wrapSync(addDoc(whiteboardAssetsCollectionRef, {
+    url,
+    name,
+    createdAt: serverTimestamp()
+  }));
+}
+
+export const deleteWhiteboardAsset = (id) => wrapSync(deleteDoc(doc(db, "rpg-whiteboard-assets", id)));
 
 const boardsCollectionRef = collection(db, "rpg-boards");
 

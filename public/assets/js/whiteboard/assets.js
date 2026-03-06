@@ -1,6 +1,6 @@
 import { canvas } from './canvas.js';
 import { setMode } from './tools.js';
-import { uploadImageToImgBB } from '../modules/firebaseService.js';
+import { uploadImageToImgBB, listenToItems, listenToWhiteboardAssets, addWhiteboardAsset, deleteWhiteboardAsset } from '../modules/firebaseService.js';
 import { showToast } from '../modules/ui.js';
 
 export function initializeAssets() {
@@ -9,35 +9,169 @@ export function initializeAssets() {
     const btnUpload = document.getElementById('btn-image-upload');
     const btnAssets = document.getElementById('btn-assets-toggle');
     const assetsDrawer = document.getElementById('assets-drawer');
-    const assetsList = document.getElementById('assets-list');
 
-    // Populate gallery from /assets/asset/
-    const defaultAssets = ['asset1.jpg', 'asset2.jpg'];
-    if (assetsList) {
-        assetsList.innerHTML = '';
-        defaultAssets.forEach(name => {
-            const img = document.createElement('img');
-            img.src = `assets/asset/${name}`;
-            img.className = 'asset-item';
-            img.draggable = true;
-            img.title = name;
-            img.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('imgUrl', img.src);
+    // Tab Elements
+    const tabs = assetsDrawer ? assetsDrawer.querySelectorAll('.tabs li') : [];
+    const tabContents = assetsDrawer ? assetsDrawer.querySelectorAll('.content-tab') : [];
+    const cardsList = document.getElementById('assets-cards-list');
+    const searchInput = document.getElementById('assets-card-search');
+    const resourcesList = document.getElementById('assets-resources-list');
+    const btnResourceUpload = document.getElementById('btn-assets-resource-upload');
+
+    // Tab Switching Logic
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
+            const target = tab.dataset.tab;
+            tabContents.forEach(content => {
+                if (content.id === `tab-${target}`) {
+                    content.style.display = 'block';
+                } else {
+                    content.style.display = 'none';
+                }
             });
-            assetsList.appendChild(img);
+        });
+    });
+
+    // Handle Cards Tab
+    let allCards = [];
+    listenToItems((snapshot) => {
+        allCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderCards(allCards);
+    });
+
+    const renderCards = (cards) => {
+        if (!cardsList) return;
+        cardsList.innerHTML = '';
+        if (cards.length === 0) {
+            cardsList.innerHTML = '<div class="has-text-centered p-2 has-text-grey"><small>Nenhum card encontrado.</small></div>';
+            return;
+        }
+        cards.forEach(card => {
+            if (!card.url) return; // Only show cards with images
+            const container = document.createElement('div');
+            container.className = 'assets-item-container';
+            container.style.cssText = 'width: 80px; text-align: center; cursor: grab;';
+            container.draggable = true;
+
+            const img = document.createElement('img');
+            img.src = card.url;
+            img.title = card.titulo || 'Card';
+            img.style.cssText = 'width: 100%; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #333; pointer-events: none;';
+
+            const title = document.createElement('div');
+            title.textContent = card.titulo || 'Card';
+            title.style.cssText = 'font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; opacity: 0.8;';
+
+            container.appendChild(img);
+            container.appendChild(title);
+
+            container.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('imgUrl', card.url);
+                e.dataTransfer.setData('cardTitle', card.titulo || 'Card');
+                e.dataTransfer.setData('cardId', card.id);
+            });
+
+            cardsList.appendChild(container);
+        });
+    };
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allCards.filter(c => (c.titulo || '').toLowerCase().includes(term));
+            renderCards(filtered);
         });
     }
 
-    // Button trigger
+    // Handle Resources Tab
+    listenToWhiteboardAssets((snapshot) => {
+        if (!resourcesList) return;
+        resourcesList.innerHTML = '';
+        if (snapshot.docs.length === 0) {
+            resourcesList.innerHTML = '<div class="has-text-centered p-2 has-text-grey"><small>Nenhum recurso.</small></div>';
+            return;
+        }
+
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const resContainer = document.createElement('div');
+            resContainer.style.cssText = 'position: relative; width: 60px; height: 60px; margin: 2px;';
+
+            const img = document.createElement('img');
+            img.src = data.url;
+            img.className = 'asset-item';
+            img.style.cssText = 'width: 100%; height: 100%; object-fit: contain; cursor: grab; padding: 2px;';
+            img.draggable = true;
+            img.title = data.name || 'Recurso';
+
+            img.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('imgUrl', data.url);
+                // No cardTitle means it drops as isolated image resource
+            });
+
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '<i class="fas fa-times"></i>';
+            delBtn.style.cssText = 'position: absolute; top: 0; right: 0; background: rgba(255,50,50,0.8); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: none; padding: 0; display: flex; align-items: center; justify-content: center;';
+
+            resContainer.addEventListener('mouseenter', () => delBtn.style.display = 'flex');
+            resContainer.addEventListener('mouseleave', () => delBtn.style.display = 'none');
+
+            delBtn.addEventListener('click', () => {
+                if (confirm('Excluir este recurso permanentemente?')) {
+                    deleteWhiteboardAsset(doc.id);
+                }
+            });
+
+            resContainer.appendChild(img);
+            resContainer.appendChild(delBtn);
+            resourcesList.appendChild(resContainer);
+        });
+    });
+
+    // Upload resource button
+    if (btnResourceUpload && fileInput) {
+        btnResourceUpload.addEventListener('click', () => {
+            const oldHandler = fileInput.onchange;
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    try {
+                        showToast("Subindo recurso...", "is-info");
+                        const { url } = await uploadImageToImgBB(file);
+                        await addWhiteboardAsset(url, file.name || 'recurso');
+                        showToast("Recurso salvo!", "is-success");
+                    } catch (err) {
+                        console.error(err);
+                        showToast("Erro ao subir recurso.", "is-danger");
+                    }
+                }
+                fileInput.value = '';
+                // Restore original handler for main toolbar image upload
+                fileInput.onchange = oldHandler ? oldHandler : (evt) => {
+                    const f = evt.target.files[0];
+                    if (f) handleImageFile(f);
+                    fileInput.value = '';
+                };
+            };
+            fileInput.click();
+        });
+    }
+
+    // Main toolbar Image Add button
     if (btnUpload && fileInput) {
-        btnUpload.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) handleImageFile(file);
-            fileInput.value = ''; // Reset
+        btnUpload.addEventListener('click', () => {
+            fileInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) handleImageFile(file);
+                fileInput.value = '';
+            };
+            fileInput.click();
         });
     }
 
+    // Drawer Toggle
     if (btnAssets && assetsDrawer) {
         btnAssets.addEventListener('click', () => {
             const isOpen = assetsDrawer.classList.toggle('is-open');
@@ -45,41 +179,86 @@ export function initializeAssets() {
 
             if (isOpen) {
                 setMode('select');
-                // Close other panels (Visual only, tools.js handles selection logic)
                 document.querySelectorAll('.wb-options-panel').forEach(p => p.style.display = 'none');
             }
         });
     }
 
     // Drag Over (Canvas)
-    scrollArea.addEventListener('dragover', (e) => e.preventDefault());
+    if (scrollArea) {
+        scrollArea.addEventListener('dragover', (e) => e.preventDefault());
 
-    // Drop (Canvas)
-    scrollArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const imgUrl = e.dataTransfer.getData('imgUrl');
+        // Drop (Canvas)
+        scrollArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const imgUrl = e.dataTransfer.getData('imgUrl');
+            const cardTitle = e.dataTransfer.getData('cardTitle');
+            const cardId = e.dataTransfer.getData('cardId');
 
-        const rect = canvas.upperCanvasEl.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+            const rect = canvas.upperCanvasEl.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
 
-        if (imgUrl) {
-            fabric.Image.fromURL(imgUrl, (img) => {
-                img.set({
-                    left: x, top: y, originX: 'center', originY: 'center',
-                    uid: window.generateUid()
-                });
-                if (img.width > 300) img.scaleToWidth(300);
-                canvas.add(img);
-                canvas.setActiveObject(img);
-                setMode('select');
-            });
-        } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
-                handleImageFile(file, x, y);
+            if (imgUrl) {
+                fabric.Image.fromURL(imgUrl, (img) => {
+                    // Set origin directly when dropping so x,y are accurate
+                    img.set({
+                        left: x, top: y, originX: 'center', originY: 'center',
+                        uid: window.generateUid()
+                    });
+                    if (img.width > 300) img.scaleToWidth(300);
+
+                    if (cardTitle) {
+                        // Create text underneath
+                        const text = new fabric.IText(cardTitle, {
+                            left: x,
+                            top: y + (img.getScaledHeight() / 2) + 5,
+                            originX: 'center',
+                            originY: 'top',
+                            fontSize: 18,
+                            fontFamily: 'Roboto',
+                            fill: '#000000',
+                            fontWeight: 'normal',
+                            uid: window.generateUid(),
+                            editable: true
+                        });
+
+                        const group = new fabric.Group([img, text], {
+                            uid: window.generateUid(),
+                            cardId: cardId // custom property to link with Firebase card
+                        });
+
+                        canvas.add(group);
+                        canvas.setActiveObject(group);
+                    } else {
+                        canvas.add(img);
+                        canvas.setActiveObject(img);
+                    }
+
+                    setMode('select');
+                }, { crossOrigin: 'anonymous' });
+            } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('image/')) {
+                    handleImageFile(file, x, y);
+                }
             }
+        });
+    }
+
+    // Double-click to open card edit modal
+    canvas.on('mouse:dblclick', async (e) => {
+        const target = e.target;
+        if (!target || target.type !== 'group' || !target.cardId) return;
+
+        const card = allCards.find(c => c.id === target.cardId);
+        if (!card) {
+            console.warn('[Whiteboard] cardId não encontrado em allCards:', target.cardId);
+            return;
         }
+
+        const { openCardModal } = await import('../modules/cardModal.js');
+        openCardModal(card);
     });
 
     // Paste (Ctrl+V) handler for external images

@@ -156,11 +156,60 @@
         <div class="wb-container">
             <!-- Assets Drawer (Oculto por padrão) -->
             <div class="wb-assets-drawer" id="assets-drawer">
-                <h6 class="title is-7 has-text-centered has-text-grey-light mt-2">Galeria</h6>
-                <div id="assets-list" class="assets-list">
-                    <div class="has-text-centered p-2 has-text-grey">
-                        <small>Arraste imagens aqui ou use o botão de upload.</small>
+                <div class="tabs is-small is-centered is-fullwidth mt-2 mb-2">
+                    <ul>
+                        <li class="is-active" data-tab="cards"><a>Cards</a></li>
+                        <li data-tab="resources"><a>Recursos</a></li>
+                        <li data-tab="integrations"><a>Integrações</a></li>
+                    </ul>
+                </div>
+                
+                <div class="tab-content">
+                    <!-- Cards Tab -->
+                    <div id="tab-cards" class="content-tab is-active">
+                        <div class="field px-2">
+                            <div class="control has-icons-left">
+                                <input class="input is-small" type="text" id="assets-card-search" placeholder="Buscar card...">
+                                <span class="icon is-small is-left">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div id="assets-cards-list" class="assets-list px-2" style="display: flex; flex-wrap: wrap; gap: 5px; overflow-y: auto; max-height: 400px; justify-content: center;">
+                            <div class="has-text-centered p-2 has-text-grey">
+                                <small>Carregando cards...</small>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <!-- Resources Tab -->
+                    <div id="tab-resources" class="content-tab" style="display: none;">
+                        <div class="has-text-centered px-2 mb-2">
+                             <button class="button is-small is-info is-fullwidth" id="btn-assets-resource-upload">
+                                 <i class="fas fa-upload mr-1"></i> Subir Recurso
+                             </button>
+                             <small class="has-text-grey is-size-7">PNG, SVG</small>
+                        </div>
+                        <div id="assets-resources-list" class="assets-list px-2" style="display: flex; flex-wrap: wrap; gap: 5px; overflow-y: auto; max-height: 400px; justify-content: center;">
+                            <div class="has-text-centered p-2 has-text-grey">
+                                <small>Nenhum recurso.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Integrations Tab -->
+                    <div id="tab-integrations" class="content-tab" style="display: none;">
+                        <div class="px-2">
+                            <p class="is-size-7 mb-2">Geradores úteis:</p>
+                            <a href="https://azgaar.github.io/Fantasy-Map-Generator/" target="_blank" class="button is-small is-fullwidth is-dark mb-2">Fantasy Map <i class="fas fa-external-link-alt ml-1"></i></a>
+                            <a href="https://watabou.itch.io/medieval-fantasy-city-generator" target="_blank" class="button is-small is-fullwidth is-dark mb-2">Medieval City <i class="fas fa-external-link-alt ml-1"></i></a>
+                            <a href="https://donjon.bin.sh/" target="_blank" class="button is-small is-fullwidth is-dark mb-2">Donjon Tools <i class="fas fa-external-link-alt ml-1"></i></a>
+                            <p class="is-size-7 has-text-grey mt-4">Integrações diretas em breve.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Default fallback for compatibility -->
+                    <div id="assets-list" style="display:none;"></div>
                 </div>
             </div>
 
@@ -215,6 +264,102 @@
         <div class="wb-action-group">
             <button class="wb-action-btn" id="btn-undo" disabled><i class="fas fa-undo"></i></button>
             <button class="wb-action-btn" id="btn-redo" disabled><i class="fas fa-redo"></i></button>
+        </div>
+    </div>
+
+    <!-- Modal de Criação/Edição de Card (reutilizado do grid) -->
+    <div id="add-card-modal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title">Editar Card</p>
+                <button class="delete" aria-label="close"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="form-add-card" autocomplete="off">
+                    <div class="card-modal-layout">
+                        <aside class="card-modal-sidebar">
+                            <div id="card-modal-image-preview" class="card-modal-image-preview">
+                                <img id="card-modal-image-el" src="" alt="Preview" class="is-empty">
+                                <div class="card-modal-image-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <span>Clique para adicionar imagem</span>
+                                </div>
+                                <div class="card-modal-image-overlay">
+                                    <i class="fas fa-camera" style="font-size:1.5rem"></i>
+                                    <span>Trocar imagem</span>
+                                </div>
+                                <button type="button" id="card-modal-image-remove" class="card-modal-image-remove" title="Remover imagem">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <input type="file" id="card-modal-file-input" accept="image/*">
+                            </div>
+                            <div class="card-modal-meta">
+                                <div class="field">
+                                    <label class="label" for="card-tags">Tags</label>
+                                    <div class="control">
+                                        <input class="input is-small" id="card-tags" placeholder="rpg, personagem, item…" autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="card-modal-visibility narrator-only is-hidden">
+                                    <label class="checkbox narrator-control">
+                                        <input type="checkbox" id="card-visibility" checked>
+                                        <span class="switch-track"></span>
+                                        <span class="switch-label-text">Visível para jogadores</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </aside>
+                        <div class="card-modal-main">
+                            <div class="field card-modal-title-field">
+                                <label class="label" for="card-titulo">Título</label>
+                                <div class="control">
+                                    <input class="input" id="card-titulo" placeholder="Nome do card" required autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="field" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                                <label class="label">Conteúdo</label>
+                                <div class="card-modal-editor-wrap">
+                                    <div id="card-modal-toolbar" class="tiptap-toolbar">
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="undo" title="Desfazer"><i class="fas fa-undo"></i></button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="redo" title="Refazer"><i class="fas fa-redo"></i></button>
+                                        </div>
+                                        <div class="tiptap-toolbar-divider"></div>
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="1">H1</button>
+                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="2">H2</button>
+                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="3">H3</button>
+                                        </div>
+                                        <div class="tiptap-toolbar-divider"></div>
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="bold"><i class="fas fa-bold"></i></button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="italic"><i class="fas fa-italic"></i></button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="strike"><i class="fas fa-strikethrough"></i></button>
+                                        </div>
+                                        <div class="tiptap-toolbar-divider"></div>
+                                        <div class="tiptap-toolbar-group">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="bulletList"><i class="fas fa-list-ul"></i></button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="orderedList"><i class="fas fa-list-ol"></i></button>
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="blockquote"><i class="fas fa-quote-right"></i></button>
+                                        </div>
+                                        <div class="tiptap-toolbar-divider"></div>
+                                        <div id="card-modal-shortcode-container"></div>
+                                        <div class="tiptap-toolbar-group" style="margin-left:auto">
+                                            <button type="button" class="tiptap-btn" data-tiptap-action="clearFormat" title="Limpar formatação"><i class="fas fa-remove-format"></i></button>
+                                        </div>
+                                    </div>
+                                    <div id="card-modal-editor" class="tiptap-editor-area"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button modal-cancel">Cancelar</button>
+                <button class="button is-link" form="form-add-card" type="submit">Salvar Alterações</button>
+            </footer>
         </div>
     </div>
 

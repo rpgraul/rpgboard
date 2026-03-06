@@ -23,10 +23,10 @@ export function initializeCanvas(canvasId, scrollContainerId) {
         stopContextMenu: true
     });
 
-    // Ensure UID is saved in JSON for all objects
+    // Ensure UID and cardId are saved in JSON for all objects
     fabric.Object.prototype.toObject = (function (toObject) {
         return function (propertiesToInclude) {
-            return toObject.call(this, ['uid'].concat(propertiesToInclude));
+            return toObject.call(this, ['uid', 'cardId'].concat(propertiesToInclude || []));
         };
     })(fabric.Object.prototype.toObject);
 
