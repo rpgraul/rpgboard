@@ -36,8 +36,62 @@ export function initializeAssets() {
 
     // Handle Cards Tab
     let allCards = [];
+    let prevCardUrls = {}; // cardId -> url cache for diff
+
     listenToItems((snapshot) => {
-        allCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const updated = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Sync canvas images if any card URL changed
+        updated.forEach(card => {
+            if (card.url && prevCardUrls[card.id] && prevCardUrls[card.id] !== card.url) {
+                canvas.getObjects().filter(o => o.type === 'group' && o.cardId === card.id).forEach(group => {
+                    const textObj = (group._objects || []).find(o => o.type === 'i-text');
+                    const titleText = textObj ? textObj.text : '';
+
+                    // Save current transform
+                    const left = group.left;
+                    const top = group.top;
+                    const angle = group.angle;
+                    const scaleX = group.scaleX;
+                    const scaleY = group.scaleY;
+                    const cardId = group.cardId;
+                    const uid = group.uid;
+
+                    canvas.remove(group);
+
+                    fabric.Image.fromURL(card.url, (img) => {
+                        if (img.width > 300) img.scaleToWidth(300);
+
+                        // Center image at origin so Fabric group math works
+                        img.set({ left: 0, top: 0, originX: 'center', originY: 'center' });
+
+                        const text = new fabric.IText(titleText, {
+                            left: 0,
+                            top: (img.getScaledHeight() / 2) + 5,
+                            originX: 'center',
+                            originY: 'top',
+                            fontSize: 18,
+                            fontFamily: 'Roboto',
+                            fill: '#000000',
+                            fontWeight: 'normal',
+                            editable: true
+                        });
+
+                        const newGroup = new fabric.Group([img, text], {
+                            left, top, angle, scaleX, scaleY,
+                            originX: 'center', originY: 'center',
+                            cardId, uid: uid || window.generateUid()
+                        });
+
+                        canvas.add(newGroup);
+                        canvas.requestRenderAll();
+                    }, { crossOrigin: 'anonymous' });
+                });
+            }
+            prevCardUrls[card.id] = card.url || null;
+        });
+
+        allCards = updated;
         renderCards(allCards);
     });
 
