@@ -220,9 +220,13 @@ body, html {
 .macro-bar {
     display: flex;
     gap: 5px;
+    align-items: center;
     overflow-x: auto;
-    max-width: 40%;
-    margin-right: 10px;
+    flex: 1; /* Ocupa o máximo de espaço possível na largura */
+    margin: 0 15px;
+    padding: 0 10px;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
 }
 
 .macro-bar::-webkit-scrollbar {
@@ -238,6 +242,14 @@ body, html {
     background-color: #3e8ed0;
     border: none;
     color: white;
+}
+
+.macro-btn-wrap .macro-delete-btn {
+    display: none;
+}
+
+.macro-btn-wrap:hover .macro-delete-btn {
+    display: block;
 }
 
 .chat-input-wrapper {
@@ -270,17 +282,6 @@ h3.title.is-6 {
 }
 
 /* Notificação Flutuante de Chat */
-
-/* Macro Bar no Footer */
-.macro-bar {
-    display: flex;
-    align-items: center;
-    overflow-x: auto;
-    max-width: 400px;
-    padding-right: 10px;
-    border-right: 1px solid #333;
-    margin-right: 10px;
-}
 
 /* Modal de Edição de Conteúdo */
 #content-editor-modal .modal-card {

@@ -196,9 +196,6 @@ function injectSheetLayoutHTML() {
                 </div>
             </div>
             <footer class="sheet-footer">
-                <div id="macro-bar" class="macro-bar">
-                    <!-- Botões de Macro serão injetados aqui -->
-                </div>
                 <div class="dice-bar">
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d4">D4</button>
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d6">D6</button>
@@ -207,6 +204,9 @@ function injectSheetLayoutHTML() {
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d12">D12</button>
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d20">D20</button>
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d100">D100</button>
+                </div>
+                <div id="macro-bar" class="macro-bar">
+                    <!-- Botões de Macro serão injetados aqui -->
                 </div>
                 <div class="chat-input-wrapper">
                     <input id="sheet-chat-input" class="input is-small" type="text" placeholder="Mensagem ou comando (/r 1d20+5)...">
@@ -552,7 +552,7 @@ function renderMacroButtons() {
         wrap.style.cssText = 'display:inline-flex; align-items:center; margin-right:8px; background:rgba(255,255,255,0.05); border-radius:4px; padding:2px 4px;';
 
         const b = document.createElement('button');
-        b.className = 'button is-small is-rounded is-primary is-light';
+        b.className = 'button is-small is-rounded is-info has-text-weight-bold';
         b.textContent = mac.nome;
         b.style.border = 'none';
         b.onclick = () => {
@@ -561,7 +561,7 @@ function renderMacroButtons() {
         };
 
         const del = document.createElement('button');
-        del.className = 'delete is-small';
+        del.className = 'delete is-small macro-delete-btn';
         del.style.marginLeft = '4px';
         del.onclick = async (e) => {
             e.stopPropagation();
