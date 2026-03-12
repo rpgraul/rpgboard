@@ -189,14 +189,16 @@ export function openConfigModal(type, editor, existingNodeInfo = null) {
         xp: {
             title: existingNodeInfo ? 'Editar: XP / Experiência' : 'Configurar: XP / Experiência',
             fields: [
+                { id: 'sc_nome', label: 'Identificador (ex: Nível, Gasto)', type: 'text', default: getDef('sc_nome', ''), placeholder: 'ex: XP Nível, XP Gasto...' },
                 { id: 'sc_current', label: 'XP Atual', type: 'number', default: getDef('sc_current', '0'), req: true },
                 ...naratorOnlyField('sc_hidden', 'Oculto para Jogadores', false)
             ],
             build: (data) => {
                 let s = `[xp current="${data.sc_current}"`;
+                if (data.sc_nome) s = `[xp "${data.sc_nome}" current="${data.sc_current}"`;
                 if (data.sc_hidden) s += ' #';
                 s += ']';
-                return { text: s, attrs: { current: data.sc_current, isHidden: data.sc_hidden } };
+                return { text: s, attrs: { label: data.sc_nome, current: data.sc_current, isHidden: data.sc_hidden } };
             }
         },
         count: {

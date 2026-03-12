@@ -401,7 +401,10 @@ export function parseAllShortcodes(item, options = {}) {
             case "xp":
                 const xpParams = parseKeyValueArgs(finalArgs);
                 const xpValue = parseInt((xpParams.current || "0").replace(/[^\d.\-]/g, ''), 10) || 0;
+                const xpLabel = xpParams.label || finalArgs.find(arg => !arg.includes('=') && arg !== 'left' && arg !== 'right' && arg !== 'bottom' && arg !== '#') || '';
+                
                 html = `<div class="shortcode-xp is-interactive" data-item-id="${item.id}" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
+                          ${xpLabel ? `<strong>${xpLabel}:</strong> ` : ''}
                           <i class="fas fa-star"></i>
                           <span class="xp-value-display">${xpValue} XP</span>
                           <input type="text" class="xp-value-input is-hidden" data-field="stats.xp" value="${xpValue}">

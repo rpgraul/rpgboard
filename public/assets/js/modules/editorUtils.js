@@ -66,8 +66,10 @@ export function preParseShortcodesForEditor(t) {
     // XP: [xp current="100" #]
     t = t.replace(shortcodeRegexes.xp, (match, args) => {
         const params = parseKeyValueArgs(args);
+        const splitted = parseArguments(args);
+        const label = params.label || (splitted[0] && !splitted[0].includes('=') ? splitted[0] : "");
         const hidden = args.includes("#");
-        return `<span data-node-type="xpNode" data-current="${params.current || "0"}" data-is-hidden="${hidden}"></span>`;
+        return `<span data-node-type="xpNode" data-current="${params.current || "0"}" data-label="${label.replace(/^["']|["']$/g, "")}" data-is-hidden="${hidden}"></span>`;
     });
 
     return t;
@@ -136,6 +138,8 @@ export function convertEditorHtmlToShortcodes(html) {
     
     body.querySelectorAll('[data-node-type="xpNode"]').forEach((e) => {
         const args = [];
+        const label = e.getAttribute("data-label");
+        if (label) args.push(`"${label.replace(/"/g, "'")}"`);
         if (e.getAttribute("data-is-hidden") === "true") args.push("#");
         e.replaceWith(document.createTextNode(`[xp current="${e.getAttribute("data-current") || "0"}"${args.length ? " " + args.join(" ") : ""}]`));
     });

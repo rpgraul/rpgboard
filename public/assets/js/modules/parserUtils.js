@@ -74,4 +74,7 @@ export const shortcodeRegexes = {
 
     // Matches [*count ...] or [count ...]
     count: /\[(\*|count)\s+([^\]]+)\]/gi,
+
+    // Matches [xp ...]
+    xp: /\[xp\s+([^\]]+)\]/gi,
 };
