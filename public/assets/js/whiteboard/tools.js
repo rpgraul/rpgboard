@@ -11,6 +11,9 @@ let brushOpacity = 1;
 let brushStyle = 'solid'; // 'solid', 'dashed'
 let shapeFillType = 'border'; // 'border', 'solid'
 
+const DEFAULT_PRESETS = ['#000000', '#ffffff', '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+let colorPresets = [];
+
 export function initializeTools() {
     const colorPickers = document.querySelectorAll('.color-picker');
     const widthSliders = document.querySelectorAll('.slider');
@@ -27,12 +30,11 @@ export function initializeTools() {
     colorPickers.forEach(picker => {
         picker.addEventListener('input', (e) => {
             currentColor = e.target.value;
-            // Sincronizar todos os seletores de cor
-            colorPickers.forEach(p => p.value = currentColor);
-            updateActiveObjectStyle();
-            updateBrush();
+            syncColors();
         });
     });
+
+    loadColorPresets();
 
     widthSliders.forEach(slider => {
         slider.addEventListener('input', (e) => {
@@ -266,4 +268,69 @@ export function getCurrentState() {
         style: brushStyle,
         shapeFill: shapeFillType
     };
+}
+
+function syncColors() {
+    document.querySelectorAll('.color-picker').forEach(p => p.value = currentColor);
+    updateActiveObjectStyle();
+    updateBrush();
+}
+
+function loadColorPresets() {
+    try {
+        const saved = localStorage.getItem('wb_color_presets');
+        if (saved) colorPresets = JSON.parse(saved);
+        else colorPresets = [...DEFAULT_PRESETS];
+    } catch {
+        colorPresets = [...DEFAULT_PRESETS];
+    }
+    renderAllColorPresets();
+}
+
+function saveColorPresets() {
+    localStorage.setItem('wb_color_presets', JSON.stringify(colorPresets));
+}
+
+function renderAllColorPresets() {
+    ['draw', 'text', 'shape'].forEach(type => {
+        const container = document.getElementById(`presets-${type}`);
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        colorPresets.forEach((color, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'color-preset-btn';
+            btn.style.backgroundColor = color;
+            btn.title = 'Clique para usar. Botão direito para remover.';
+            
+            btn.onclick = () => {
+                currentColor = color;
+                syncColors();
+            };
+            
+            btn.oncontextmenu = (e) => {
+                e.preventDefault();
+                colorPresets.splice(index, 1);
+                saveColorPresets();
+                renderAllColorPresets();
+            };
+            
+            container.appendChild(btn);
+        });
+        
+        const addBtn = document.createElement('button');
+        addBtn.className = 'color-preset-add';
+        addBtn.innerHTML = '<i class="fas fa-plus"></i>';
+        addBtn.title = 'Adicionar cor atual aos presets';
+        addBtn.onclick = () => {
+            if (!colorPresets.includes(currentColor)) {
+                colorPresets.push(currentColor);
+                saveColorPresets();
+                renderAllColorPresets();
+            }
+        };
+        
+        container.appendChild(addBtn);
+    });
 }
