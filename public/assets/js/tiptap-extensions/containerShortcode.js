@@ -69,7 +69,7 @@ export default Node.create({
 
       // Botão de Visibilidade
       const visibilityBtn = document.createElement("button");
-      visibilityBtn.className = `button is-small is-ghost ${node.attrs.isHidden ? 'has-text-danger' : 'has-text-success'}`;
+      visibilityBtn.className = `button is-small is-ghost container-visibility-btn ${node.attrs.isHidden ? 'has-text-danger' : 'has-text-success'}`;
       visibilityBtn.innerText = node.attrs.isHidden ? '🙈' : '👁️';
 
       const handleVisibility = (e) => {
@@ -140,7 +140,7 @@ export default Node.create({
           iconSpan.innerText = getIcon(updatedNode.attrs.type);
 
           visibilityBtn.innerText = updatedNode.attrs.isHidden ? '🙈' : '👁️';
-          visibilityBtn.className = `button is-small is-ghost ${updatedNode.attrs.isHidden ? 'has-text-danger' : 'has-text-success'}`;
+          visibilityBtn.className = `button is-small is-ghost container-visibility-btn ${updatedNode.attrs.isHidden ? 'has-text-danger' : 'has-text-success'}`;
           dom.classList.toggle("is-hidden-preview", !!updatedNode.attrs.isHidden);
 
           toggleBtn.innerText = updatedNode.attrs.isClosed ? '▶' : '▼';

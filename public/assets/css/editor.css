@@ -305,6 +305,13 @@
     pointer-events: none;
 }
 
+/* Ocultar visualização de jogadores */
+body:not(.master-view) .is-hidden-preview,
+body:not(.master-view) .is-hidden-from-players,
+body:not(.master-view) .container-visibility-btn {
+    display: none !important;
+}
+
 
 /* ── Inline Tiptap Rendered Highlights ───────────────────────────────────── */
 .ProseMirror .is-rendered-in-editor {
