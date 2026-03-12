@@ -103,6 +103,14 @@ export async function updateItem(item, data, file = null) {
   })());
 }
 
+export async function updateCharacterStat(characterId, fieldPath, value) {
+  return wrapSync((async () => {
+    const data = {};
+    data[fieldPath] = value;
+    return updateDoc(doc(db, "rpg-items", characterId), data);
+  })());
+}
+
 export const updateItemsVisibility = async (ids, val) => {
   return wrapSync((async () => {
     const batch = writeBatch(db);

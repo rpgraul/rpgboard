@@ -13,7 +13,7 @@ import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
-import { listenToItems, updateItem, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
+import { listenToItems, updateItem, updateCharacterStat, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
 import { initializeLayout } from './modules/layout.js';
 import { openModal, closeModal, initializeModals } from './modules/modal.js';
@@ -492,9 +492,17 @@ function saveMainEditorContent() {
     const html = mainEditor.getHTML();
     const narrativeShortcodes = convertEditorHtmlToShortcodes(html);
 
-    // Recombina com a ficha que está isolada
-    const fullContent = currentFichaBlock
-        ? `${currentFichaBlock}\n\n${narrativeShortcodes}`
+    // Usa a versão mais recente registrada em currentCharacter (que a sheet-ui pode ter atualizado via autosave do firebaseService)
+    // ao invés de depender apenas de currentFichaBlock se ele for nulo. Isso previne o editor de pisar por cima
+    let latestFichaBlock = currentFichaBlock;
+    if (!latestFichaBlock && currentCharacter?.conteudo) {
+        const fichaMatch = currentCharacter.conteudo.match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i);
+        if (fichaMatch) latestFichaBlock = fichaMatch[0];
+    }
+
+    // Recombina com a ficha
+    const fullContent = latestFichaBlock
+        ? `${latestFichaBlock}\n\n${narrativeShortcodes}`
         : narrativeShortcodes;
 
     // Atualiza localmente
@@ -770,8 +778,8 @@ function setupInteractiveSheetListeners() {
             if (!interactive || !interactive.dataset.shortcode) return;
 
             const oldShortcode = decodeURIComponent(interactive.dataset.shortcode);
-            const args = shortcodeParser._parseArguments(oldShortcode.slice(1, -1));
-            const params = shortcodeParser._parseKeyValueArgs(args);
+            const args = shortcodeParser.parseArguments(oldShortcode.slice(1, -1));
+            const params = shortcodeParser.parseKeyValueArgs(args);
             const newValue = input.value.trim();
 
             let newShortcode = "";
@@ -807,7 +815,25 @@ function setupInteractiveSheetListeners() {
             }
 
             if (newShortcode && newShortcode !== oldShortcode) {
+                const dataField = input.dataset.field;
+                if (dataField) {
+                    await updateCharacterStat(currentCharacterId, dataField, newValue);
+                }
                 await updateFichaShortcode(oldShortcode, newShortcode);
+
+                // IMPORTANTE: Atualizar o data-shortcode visual localmente para não causar conflitos na próxima edição 
+                // caso o Tiptap ou renderContainers não seja disparado imediatamente
+                interactive.dataset.shortcode = encodeURIComponent(newShortcode);
+
+                // e Atualiza a label
+                if (interactive.classList.contains('shortcode-hp')) {
+                    const txt = interactive.querySelector('.hp-text');
+                    if (txt) txt.textContent = `${newValue} / ${params.max || 10}`;
+                } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money')) {
+                    const display = interactive.querySelector('.stat-value-display, .money-value-display');
+                    if (display) display.textContent = newValue;
+                }
+
             } else {
                 // Se não mudou mas o input sumiu (por algum motivo manual), garantimos o reset visual
                 const display = interactive.querySelector('.hp-display-mode, .stat-value-display, .money-value-display');
@@ -820,11 +846,12 @@ function setupInteractiveSheetListeners() {
         });
 
         // Atalhos de teclado para inputs
-        container.onkeydown = (e) => {
+        container.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
                 e.target.blur();
             }
-        };
+        });
     });
 }
 
@@ -832,20 +859,31 @@ function setupInteractiveSheetListeners() {
  * Atualiza um shortcode específico dentro do bloco [ficha] e sincroniza tudo.
  */
 async function updateFichaShortcode(oldSc, newSc) {
-    if (!currentFichaBlock || !currentCharacterId) return;
+    if (!currentCharacter || !currentCharacterId) return;
 
-    // Atualiza o bloco isolado
-    currentFichaBlock = currentFichaBlock.replace(oldSc, newSc);
+    // Como o conteúdo pode ter mudado externamente, nós buscamos a versão local da memória antes
+    let currentHtml = currentCharacter.conteudo || "";
 
-    // Recombina com a narrativa do mainEditor
-    const narrativeShortcodes = convertEditorHtmlToShortcodes(mainEditor.getHTML());
-    const fullContent = `${currentFichaBlock}\n\n${narrativeShortcodes}`;
+    // Se o oldSc está presente e temos um bloco de ficha, nós atualizamos
+    if (currentFichaBlock && currentFichaBlock.includes(oldSc)) {
+        currentFichaBlock = currentFichaBlock.replace(oldSc, newSc);
+        currentHtml = currentHtml.replace(oldSc, newSc);
+    }
+    // Fallback: se estiver na root, troca do global
+    else if (currentHtml.includes(oldSc)) {
+        currentHtml = currentHtml.replace(oldSc, newSc);
+    }
 
-    currentCharacter.conteudo = fullContent;
-    await updateItem({ id: currentCharacterId }, { conteudo: fullContent });
+    currentCharacter.conteudo = currentHtml;
 
-    // Recarrega a visualização (sem re-parsear o editor principal se possível)
+    // Salvamos localmente o conteudo completo pois ele tem todos os shortcodes de ficha/stats juntos
+    await updateItem({ id: currentCharacterId }, { conteudo: currentHtml });
+
+    // isProcessingUpdate desabilita eventos onUpdate do Tiptap temporariamente 
+    // para evitar trigger circular de salvageamento
+    isProcessingUpdate = true;
     loadCharacter(currentCharacterId);
+    setTimeout(() => { isProcessingUpdate = false; }, 100);
 }
 async function saveContainerContent() {
     if (!currentCharacterId || !sideViewEditor) return;
