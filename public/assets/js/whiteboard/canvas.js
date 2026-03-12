@@ -35,6 +35,28 @@ export function initializeCanvas(canvasId, scrollContainerId) {
         return Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
     };
 
+    // --- Custom Text Background with padding and radius ---
+    fabric.Text.prototype._renderBackground = function (ctx) {
+        if (!this.backgroundColor) return;
+        const paddingH = 8; // Padding horizontal
+        const paddingV = 2; // Padding vertical
+        const radius = 6;   // Arredondamento
+        
+        ctx.fillStyle = this.backgroundColor;
+        const width = this.width;
+        const height = this.height;
+        const x = -width / 2 - paddingH;
+        const y = -height / 2 - paddingV;
+        
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(x, y, width + (paddingH * 2), height + (paddingV * 2), radius);
+        } else {
+            ctx.rect(x, y, width + (paddingH * 2), height + (paddingV * 2));
+        }
+        ctx.fill();
+    };
+
     const scrollArea = document.getElementById(scrollContainerId);
 
     // --- ESPAÇO (PAN TEMPORÁRIO) ---

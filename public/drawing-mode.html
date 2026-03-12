@@ -74,7 +74,10 @@
 
         <!-- Painéis de Opções (Flutuantes/Contextuais) -->
         <div class="wb-options-panel" id="options-panel-draw" style="display: none;">
-            <h6 class="panel-title">Pincel</h6>
+            <div class="is-flex is-justify-content-space-between is-align-items-center mb-2" style="border-bottom: 1px solid #444; padding-bottom: 5px;">
+                <h6 class="panel-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Pincel</h6>
+                <i class="fas fa-info-circle wb-tooltip-icon" title="Atalhos:\n[ + ] Aumentar Tamanho\n[ - ] Diminuir Tamanho\n[Shift+S] Sólido\n[Shift+T] Tracejado"></i>
+            </div>
             
             <div class="panel-row">
                 <label>Cor</label>
@@ -104,7 +107,10 @@
         </div>
 
         <div class="wb-options-panel" id="options-panel-text" style="display: none;">
-            <h6 class="panel-title">Texto</h6>
+            <div class="is-flex is-justify-content-space-between is-align-items-center mb-2" style="border-bottom: 1px solid #444; padding-bottom: 5px;">
+                <h6 class="panel-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Texto</h6>
+                <i class="fas fa-info-circle wb-tooltip-icon" title="Atalhos:\n[ + ] Aumentar Tamanho\n[ - ] Diminuir Tamanho"></i>
+            </div>
             <div class="panel-row">
                 <label>Cor</label>
                 <div class="color-picker-container">
@@ -128,15 +134,22 @@
                 </div>
             </div>
             <div class="panel-row">
-                <button class="button is-small is-fullwidth" id="btn-text-bg" data-active="false">
-                    <span class="icon"><i class="fas fa-highlighter"></i></span>
-                    <span>Fundo</span>
-                </button>
+                <label>Fundo do Texto</label>
+                <div class="color-picker-container mt-1">
+                    <button class="button is-small" id="wb-text-bg-toggle" title="Ativar/Desativar Fundo" style="width: 30px; height: 30px; padding: 0;">
+                        <i class="fas fa-highlighter"></i>
+                    </button>
+                    <input type="color" class="color-picker" id="wb-color-text-bg" value="#f1c40f">
+                </div>
+                <div class="color-presets" id="presets-text-bg"></div>
             </div>
         </div>
 
         <div class="wb-options-panel" id="options-panel-shape" style="display: none;">
-            <h6 class="panel-title">Formas</h6>
+            <div class="is-flex is-justify-content-space-between is-align-items-center mb-2" style="border-bottom: 1px solid #444; padding-bottom: 5px;">
+                <h6 class="panel-title" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">Formas</h6>
+                <i class="fas fa-info-circle wb-tooltip-icon" title="Atalhos:\n[ + ] Aumentar Espessura\n[ - ] Diminuir Espessura\n[Shift+S] Sólido\n[Shift+T] Apenas Borda"></i>
+            </div>
             <div class="panel-row">
                 <label>Cor da Borda</label>
                 <div class="color-picker-container">

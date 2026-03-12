@@ -218,6 +218,8 @@ html, body {
 /* Utils */
 .color-picker-container { display: flex; align-items: center; gap: 8px; }
 .color-picker { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 4px; overflow: hidden; }
+.wb-tooltip-icon { color: #b9bbbe; cursor: help; font-size: 0.85rem; margin-left: auto; transition: color 0.2s; }
+.wb-tooltip-icon:hover { color: #fff; }
 
 .color-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .color-preset-btn { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #444; cursor: pointer; transition: transform 0.1s; padding: 0; }

@@ -7,6 +7,7 @@ let currentColor = '#000000';
 let currentWidth = 3;
 let currentFont = 'Arial';
 let textBgActive = false;
+let textBgColor = '#f1c40f';
 let brushOpacity = 1;
 let brushStyle = 'solid'; // 'solid', 'dashed'
 let shapeFillType = 'border'; // 'border', 'solid'
@@ -48,7 +49,8 @@ export function initializeTools() {
 
     // New Text Tools
     const fontSelect = document.getElementById('wb-font-family');
-    const bgBtn = document.getElementById('btn-text-bg');
+    const bgToggle = document.getElementById('wb-text-bg-toggle');
+    const bgColorInput = document.getElementById('wb-color-text-bg');
 
     if (fontSelect) {
         fontSelect.addEventListener('change', (e) => {
@@ -57,18 +59,18 @@ export function initializeTools() {
         });
     }
 
-    if (bgBtn) {
-        bgBtn.addEventListener('click', () => {
+    if (bgToggle) {
+        bgToggle.addEventListener('click', (e) => {
             textBgActive = !textBgActive;
-            bgBtn.dataset.active = textBgActive;
-            if (textBgActive) {
-                bgBtn.classList.remove('is-light');
-                bgBtn.classList.add('is-info');
-            } else {
-                bgBtn.classList.add('is-light');
-                bgBtn.classList.remove('is-info');
-            }
+            bgToggle.classList.toggle('is-info', textBgActive);
             updateActiveObjectStyle();
+        });
+    }
+
+    if (bgColorInput) {
+        bgColorInput.addEventListener('input', (e) => {
+            textBgColor = e.target.value;
+            if (textBgActive) updateActiveObjectStyle();
         });
     }
 
@@ -97,8 +99,64 @@ export function initializeTools() {
         switch (e.key.toLowerCase()) {
             case 'v': setMode('select'); break;
             case 'p': setMode('draw'); break;
-            case 't': setMode('text'); break;
-            case 's': setMode('shape'); break;
+            case 't': if (!e.shiftKey) setMode('text'); break;
+            case 's': if (!e.shiftKey) setMode('shape'); break;
+        }
+
+        // Shortcuts for size and style (only if specific tools are active or something is selected)
+        if (['draw', 'shape', 'text'].includes(currentMode) || canvas.getActiveObject()) {
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                currentWidth = Math.min(50, currentWidth + 1);
+                document.querySelectorAll('.slider').forEach(s => s.value = currentWidth);
+                updateActiveObjectStyle();
+                updateBrush();
+            } else if (e.key === '-') {
+                e.preventDefault();
+                currentWidth = Math.max(1, currentWidth - 1);
+                document.querySelectorAll('.slider').forEach(s => s.value = currentWidth);
+                updateActiveObjectStyle();
+                updateBrush();
+            }
+        }
+
+        // Toggles for Solid / Dashed / Fill (Shift+S, Shift+T)
+        if (e.key === 'S' || (e.shiftKey && e.key.toLowerCase() === 's')) {
+            e.preventDefault();
+            if (currentMode === 'draw' || (canvas.getActiveObject() && canvas.getActiveObject().type === 'path')) {
+                brushStyle = 'solid';
+                document.querySelectorAll('.style-btn').forEach(b => {
+                    if (b.dataset.style === 'solid') b.classList.add('is-info', 'is-selected'), b.classList.remove('is-light');
+                    else b.classList.remove('is-info', 'is-selected'), b.classList.add('is-light');
+                });
+                updateBrush();
+            } else if (currentMode === 'shape' || (canvas.getActiveObject() && ['rect', 'circle', 'triangle'].includes(canvas.getActiveObject().type))) {
+                shapeFillType = 'solid';
+                document.querySelectorAll('.shape-fill-btn').forEach(b => {
+                    if (b.dataset.fill === 'solid') b.classList.add('is-info', 'is-selected'), b.classList.remove('is-light');
+                    else b.classList.remove('is-info', 'is-selected'), b.classList.add('is-light');
+                });
+                updateActiveObjectStyle();
+            }
+        }
+
+        if (e.key === 'T' || (e.shiftKey && e.key.toLowerCase() === 't')) {
+            e.preventDefault();
+            if (currentMode === 'draw' || (canvas.getActiveObject() && canvas.getActiveObject().type === 'path')) {
+                brushStyle = 'dashed';
+                document.querySelectorAll('.style-btn').forEach(b => {
+                    if (b.dataset.style === 'dashed') b.classList.add('is-info', 'is-selected'), b.classList.remove('is-light');
+                    else b.classList.remove('is-info', 'is-selected'), b.classList.add('is-light');
+                });
+                updateBrush();
+            } else if (currentMode === 'shape' || (canvas.getActiveObject() && ['rect', 'circle', 'triangle'].includes(canvas.getActiveObject().type))) {
+                shapeFillType = 'border';
+                document.querySelectorAll('.shape-fill-btn').forEach(b => {
+                    if (b.dataset.fill === 'border') b.classList.add('is-info', 'is-selected'), b.classList.remove('is-light');
+                    else b.classList.remove('is-info', 'is-selected'), b.classList.add('is-light');
+                });
+                updateActiveObjectStyle();
+            }
         }
 
         // Clipboard
@@ -248,7 +306,7 @@ function updateActiveObjectStyle() {
         if (active.type === 'i-text') {
             active.set('fill', currentColor);
             active.set('fontFamily', currentFont);
-            active.set('backgroundColor', textBgActive ? '#f1c40f' : '');
+            active.set('backgroundColor', textBgActive ? textBgColor : '');
         } else if (active.set) {
             if (active.stroke) active.set('stroke', currentColor);
             if (active.fill && active.fill !== 'transparent' && active.type !== 'image') active.set('fill', currentColor);
@@ -264,6 +322,7 @@ export function getCurrentState() {
         width: currentWidth,
         font: currentFont,
         textBg: textBgActive,
+        textBgColor: textBgColor,
         opacity: brushOpacity,
         style: brushStyle,
         shapeFill: shapeFillType
@@ -292,7 +351,7 @@ function saveColorPresets() {
 }
 
 function renderAllColorPresets() {
-    ['draw', 'text', 'shape'].forEach(type => {
+    ['draw', 'text', 'shape', 'text-bg'].forEach(type => {
         const container = document.getElementById(`presets-${type}`);
         if (!container) return;
         
@@ -305,8 +364,14 @@ function renderAllColorPresets() {
             btn.title = 'Clique para usar. Botão direito para remover.';
             
             btn.onclick = () => {
-                currentColor = color;
-                syncColors();
+                if (type === 'text-bg') {
+                    textBgColor = color;
+                    document.getElementById('wb-color-text-bg').value = textBgColor;
+                    if (textBgActive) updateActiveObjectStyle();
+                } else {
+                    currentColor = color;
+                    syncColors();
+                }
             };
             
             btn.oncontextmenu = (e) => {
@@ -324,8 +389,9 @@ function renderAllColorPresets() {
         addBtn.innerHTML = '<i class="fas fa-plus"></i>';
         addBtn.title = 'Adicionar cor atual aos presets';
         addBtn.onclick = () => {
-            if (!colorPresets.includes(currentColor)) {
-                colorPresets.push(currentColor);
+            const colorToAdd = (type === 'text-bg') ? textBgColor : currentColor;
+            if (!colorPresets.includes(colorToAdd)) {
+                colorPresets.push(colorToAdd);
                 saveColorPresets();
                 renderAllColorPresets();
             }

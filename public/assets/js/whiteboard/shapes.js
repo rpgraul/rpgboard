@@ -46,7 +46,7 @@ function onMouseDown(o) {
             fill: state.color,
             fontSize: 24,
             fontFamily: state.font || 'Arial',
-            backgroundColor: state.textBg ? '#f1c40f' : '',
+            backgroundColor: state.textBg ? state.textBgColor : '',
             uid: window.generateUid()
         });
         canvas.add(text);
