@@ -18,6 +18,18 @@ let isInitialGridLoaded = false;
 let appSettings = {};
 let tagSuggestionsContainer = null;
 
+// Expose card suggestion logic for Tiptap (cardModal)
+window.getSuggestionItems = (query) => {
+    const cleanQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return allItems
+        .filter(c => {
+            const cleanTitle = (c.titulo || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return cleanTitle.includes(cleanQuery);
+        })
+        .map(c => ({ id: c.titulo, title: c.titulo }))
+        .slice(0, 10);
+};
+
 const VISIBILITY_FILTERS = { VISIBLE: 'visible', HIDDEN: 'hidden' };
 
 // --- Funções Utilitárias ---
@@ -264,7 +276,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             newShortcode = decodedShortcode.replace(/]$/, ` current="${newCurrentValue}"]`);
         }
-        const newContent = item.conteudo.replace(decodedShortcode, newShortcode);
+        const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
+        
+        // Sincroniza cache local
+        item.conteudo = newContent;
+
         try { await firebaseService.updateItem(item, { conteudo: newContent }); } catch (error) { console.error(error); }
     }
 
@@ -275,40 +292,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         const item = allItems.find(i => i.id === itemId);
         if (!item) return;
         const decodedShortcode = decodeURIComponent(encodedShortcode);
-        const originalArgs = shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1);
-        const originalParams = shortcodeParser._parseKeyValueArgs(originalArgs);
+        const originalArgs = shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1);
+        const originalParams = shortcodeParser.parseKeyValueArgs(originalArgs);
         const originalValue = parseFloat(originalParams.current) || 0;
-        let cleanedInput = inputElement.value.trim().replace(/\u00A0/g, ' ').replace(/\s+/g, '');
-        if (cleanedInput === '') return;
-        if (cleanedInput.includes('.') && cleanedInput.includes(',')) {
-            cleanedInput = cleanedInput.indexOf('.') < cleanedInput.indexOf(',') ? cleanedInput.replace(/\./g, '').replace(/,/g, '.') : cleanedInput.replace(/,/g, '');
-        } else if (cleanedInput.includes(',')) { cleanedInput = cleanedInput.replace(/,/g, '.'); }
-        let newValue = originalValue;
-        const fullExpr = cleanedInput.match(/^(-?\d+(?:\.\d+)?)\s*([+\-*\/])\s*(-?\d+(?:\.\d+)?)$/);
-        if (fullExpr) {
-            const v1 = parseFloat(fullExpr[1]), op = fullExpr[2], v2 = parseFloat(fullExpr[3]);
-            if (!isNaN(v1) && !isNaN(v2)) {
-                if (op === '+') newValue = v1 + v2;
-                else if (op === '-') newValue = v1 - v2;
-                else if (op === '*') newValue = v1 * v2;
-                else if (op === '/' && v2 !== 0) newValue = v1 / v2;
-            }
-        } else {
-            const relExpr = cleanedInput.match(/^([+\-*\/])\s*(-?\d+(?:\.\d+)?)$/);
-            if (relExpr) {
-                const op = relExpr[1], v = parseFloat(relExpr[2]);
-                if (!isNaN(v)) {
-                    if (op === '+') newValue = originalValue + v;
-                    else if (op === '-') newValue = originalValue - v;
-                    else if (op === '*') newValue = originalValue * v;
-                    else if (op === '/' && v !== 0) newValue = originalValue / v;
-                }
-            } else if (!isNaN(parseFloat(cleanedInput))) { newValue = parseFloat(cleanedInput); }
-        }
-        newValue = Math.round(newValue * 100) / 100;
+        
+        const newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, inputElement.value) * 100) / 100;
+        
         if (isNaN(newValue)) return;
         const newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newValue}"`);
-        const newContent = item.conteudo.replace(decodedShortcode, newShortcode);
+        const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
+        if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
+    }
+
+    async function handleXpChange(inputElement) {
+        const xpComponent = inputElement.closest('.shortcode-xp');
+        if (!xpComponent || !xpComponent.dataset.itemId) return;
+        const { itemId, shortcode: encodedShortcode } = xpComponent.dataset;
+        const item = allItems.find(i => i.id === itemId);
+        if (!item) return;
+        const decodedShortcode = decodeURIComponent(encodedShortcode);
+        const originalArgs = shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1);
+        const originalParams = shortcodeParser.parseKeyValueArgs(originalArgs);
+        const originalValue = parseInt(originalParams.current, 10) || 0;
+        
+        const newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, inputElement.value));
+        
+        if (isNaN(newValue)) return;
+        const newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newValue}"`);
+        const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
         if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
     }
 
@@ -484,6 +497,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             activeMoneyInput.classList.add('is-hidden');
         }
 
+        const xpComponent = target.closest('.shortcode-xp');
+        if (xpComponent) {
+            const display = xpComponent.querySelector('.xp-value-display');
+            const input = xpComponent.querySelector('.xp-value-input');
+            if (display && input) {
+                display.classList.add('is-hidden');
+                input.classList.remove('is-hidden');
+                input.focus(); input.select();
+            }
+        }
+
         const moneyComponent = target.closest('.shortcode-money');
         if (moneyComponent) {
             const display = moneyComponent.querySelector('.money-value-display');
@@ -495,7 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        const statComponent = target.closest('.shortcode-stat');
+        const statComponent = target.closest('.shortcode-stat:not(.is-rendered-in-editor)');
         if (statComponent) {
             const display = statComponent.querySelector('.stat-value-display');
             const input = statComponent.querySelector('.stat-value-input');
@@ -554,6 +578,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             event.target.classList.add('is-hidden');
         }
 
+        if (event.target.classList.contains('xp-value-input')) {
+            handleXpChange(event.target);
+            event.target.closest('.shortcode-xp').querySelector('.xp-value-display').classList.remove('is-hidden');
+            event.target.classList.add('is-hidden');
+        }
+
         if (event.target.classList.contains('stat-value-input')) {
             const statComp = event.target.closest('.shortcode-stat');
             if (statComp) {
@@ -569,35 +599,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!hpComponent) return;
             const maxHp = parseInt(hpComponent.dataset.maxHp, 10) || 100;
             const decodedShortcode = decodeURIComponent(hpComponent.dataset.shortcode);
-            const originalParams = shortcodeParser._parseKeyValueArgs(shortcodeParser._parseArguments(decodedShortcode.slice(1, -1)).slice(1));
+            const originalParams = shortcodeParser.parseKeyValueArgs(shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1));
             const originalValue = parseInt(originalParams.current, 10) || 0;
-            let cleanedInput = event.target.value.trim().replace(/\s+/g, '');
-            if (cleanedInput === '') return;
-            let newValue = originalValue;
-            const fullExpr = cleanedInput.match(/^(-?\d+)\s*([+\-*\/])\s*(-?\d+)$/);
-            if (fullExpr) {
-                const v1 = parseInt(fullExpr[1], 10), op = fullExpr[2], v2 = parseInt(fullExpr[3], 10);
-                if (!isNaN(v1) && !isNaN(v2)) {
-                    if (op === '+') newValue = v1 + v2;
-                    else if (op === '-') newValue = v1 - v2;
-                    else if (op === '*') newValue = v1 * v2;
-                    else if (op === '/' && v2 !== 0) newValue = Math.floor(v1 / v2);
-                }
-            } else if (/^-?\d+$/.test(cleanedInput)) {
-                newValue = parseInt(cleanedInput, 10);
-            } else {
-                const relExpr = cleanedInput.match(/^([+\-*\/])\s*(-?\d+)$/);
-                if (relExpr) {
-                    const op = relExpr[1], v = parseInt(relExpr[2], 10);
-                    if (!isNaN(v)) {
-                        if (op === '+') newValue = originalValue + v;
-                        else if (op === '-') newValue = originalValue - v;
-                        else if (op === '*') newValue = originalValue * v;
-                        else if (op === '/' && v !== 0) newValue = Math.floor(originalValue / v);
-                    }
-                }
-            }
+            
+            let newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, event.target.value));
             newValue = Math.max(-10, Math.min(newValue, maxHp));
+            
             event.target.value = newValue;
             const hpText = hpComponent.querySelector('.hp-text');
             const hpBarFill = hpComponent.querySelector('.hp-bar-fill');
@@ -622,7 +629,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.addEventListener('keydown', (event) => {
         const isMoney = event.target.classList.contains('money-value-input');
         const isHp = event.target.classList.contains('hp-current-input');
-        if ((isMoney || isHp) && event.key === 'Enter') {
+        if ((isMoney || isHp || event.target.classList.contains('xp-value-input')) && event.key === 'Enter') {
             event.preventDefault();
             event.target.blur();
         }

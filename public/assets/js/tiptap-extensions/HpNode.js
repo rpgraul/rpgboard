@@ -1,4 +1,5 @@
 import { Node, mergeAttributes, textInputRule } from "@tiptap/core";
+import { calculateMathExpression } from "../modules/shortcodeParser.js";
 export default Node.create({
   name: "hpNode",
   group: "block",
@@ -95,9 +96,9 @@ export default Node.create({
 
       i.addEventListener("change", () => {
         if ("number" == typeof a()) {
-          let r = parseInt(i.value, 10) || 0;
-          r = Math.max(0, Math.min(r, t.attrs.max)),
-            (i.value = r);
+          const result = calculateMathExpression(t.attrs.current, i.value);
+          let r = Math.max(-10, Math.min(Math.round(result), t.attrs.max));
+          i.value = r;
           updateBar(r);
           e.view.dispatch(
             e.view.state.tr.setNodeMarkup(a(), void 0, {

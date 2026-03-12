@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     setupSheetSpecificListeners();
+    setupInteractiveSheetListeners();
     loadMacros();
 });
 
@@ -275,8 +276,6 @@ function loadCharacter(id) {
 
         // Renderizar Macros (Firebase)
         renderMacroButtons();
-
-        setupInteractiveSheetListeners();
     }
 
     if (mainEditor) {
@@ -733,9 +732,6 @@ function initializeSideViewEditor() {
     }
 }
 
-/**
- * Salva o conteúdo editado de um container de volta para o documento principal.
- */
 function setupInteractiveSheetListeners() {
     const containers = [visualStatsContainer, visualCountsContainer];
 
@@ -748,7 +744,6 @@ function setupInteractiveSheetListeners() {
 
             e.stopPropagation();
 
-            // Lógica específica por tipo
             if (interactive.classList.contains('shortcode-hp')) {
                 const display = interactive.querySelector('.hp-display-mode');
                 const edit = interactive.querySelector('.hp-edit-mode');
@@ -759,8 +754,8 @@ function setupInteractiveSheetListeners() {
                     input.focus();
                     input.select();
                 }
-            } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money')) {
-                const display = interactive.querySelector('.stat-value-display, .money-value-display');
+            } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money') || interactive.classList.contains('shortcode-xp')) {
+                const display = interactive.querySelector('.stat-value-display, .money-value-display, .xp-value-display');
                 const input = interactive.querySelector('input');
                 if (display && input) {
                     display.classList.add('is-hidden');
@@ -780,63 +775,89 @@ function setupInteractiveSheetListeners() {
             const oldShortcode = decodeURIComponent(interactive.dataset.shortcode);
             const args = shortcodeParser.parseArguments(oldShortcode.slice(1, -1));
             const params = shortcodeParser.parseKeyValueArgs(args);
-            const newValue = input.value.trim();
+            const inputVal = input.value.trim();
 
             let newShortcode = "";
 
             if (interactive.classList.contains('shortcode-hp')) {
-                if (params.current === newValue) {
+                const max = parseInt(params.max, 10) || 100;
+                const current = parseInt(params.current, 10) || 0;
+                let newValue = Math.round(shortcodeParser.calculateMathExpression(current, inputVal));
+                newValue = Math.max(-10, Math.min(newValue, max));
+                if (current === newValue) {
                     interactive.querySelector('.hp-display-mode').classList.remove('is-hidden');
                     interactive.querySelector('.hp-edit-mode').classList.add('is-hidden');
                     return;
                 }
-                newShortcode = `[hp max="${params.max || 10}" current="${newValue}"]`;
+                newShortcode = `[hp max="${max}" current="${newValue}"]`;
+                input.value = newValue;
             } else if (interactive.classList.contains('shortcode-stat')) {
                 const label = args[1] || "";
                 const oldValue = args[2] || "";
-                if (oldValue === newValue) {
+                if (oldValue === inputVal) {
                     interactive.querySelector('.stat-value-display').classList.remove('is-hidden');
                     input.classList.add('is-hidden');
                     return;
                 }
-                newShortcode = `[stat "${label}" "${newValue}"]`;
+                newShortcode = `[stat "${label}" "${inputVal}"]`;
             } else if (interactive.classList.contains('shortcode-money')) {
-                if (params.current === newValue) {
+                const current = parseFloat(params.current) || 0;
+                const newValue = Math.round(shortcodeParser.calculateMathExpression(current, inputVal) * 100) / 100;
+                if (current === newValue) {
                     interactive.querySelector('.money-value-display').classList.remove('is-hidden');
                     input.classList.add('is-hidden');
                     return;
                 }
-                // Tenta pegar a moeda do primeiro argumento ou do param
                 let currency = params.currency || "";
                 if (!currency) {
                     currency = args.find(a => !a.includes('=') && a.toLowerCase() !== 'money') || "";
                 }
                 newShortcode = `[money ${currency} current="${newValue}"]`.replace(/\s+\]/, ']');
+                input.value = newValue;
+            } else if (interactive.classList.contains('shortcode-xp')) {
+                const current = parseInt(params.current, 10) || 0;
+                const newValue = Math.round(shortcodeParser.calculateMathExpression(current, inputVal));
+                if (current === newValue) {
+                    interactive.querySelector('.xp-value-display').classList.remove('is-hidden');
+                    input.classList.add('is-hidden');
+                    return;
+                }
+                newShortcode = `[xp current="${newValue}"]`;
+                input.value = newValue;
             }
 
             if (newShortcode && newShortcode !== oldShortcode) {
                 const dataField = input.dataset.field;
                 if (dataField) {
                     await updateCharacterStat(currentCharacterId, dataField, newValue);
+                    // Sincroniza cache local para o stat
+                    const itemIdx = allItems.findIndex(i => i.id === currentCharacterId);
+                    if (itemIdx !== -1) {
+                        const keys = dataField.split('.');
+                        let obj = allItems[itemIdx];
+                        for (let i = 0; i < keys.length - 1; i++) {
+                            if (!obj[keys[i]]) obj[keys[i]] = {};
+                            obj = obj[keys[i]];
+                        }
+                        obj[keys[keys.length - 1]] = newValue;
+                    }
                 }
                 await updateFichaShortcode(oldShortcode, newShortcode);
 
-                // IMPORTANTE: Atualizar o data-shortcode visual localmente para não causar conflitos na próxima edição 
-                // caso o Tiptap ou renderContainers não seja disparado imediatamente
                 interactive.dataset.shortcode = encodeURIComponent(newShortcode);
 
-                // e Atualiza a label
                 if (interactive.classList.contains('shortcode-hp')) {
                     const txt = interactive.querySelector('.hp-text');
                     if (txt) txt.textContent = `${newValue} / ${params.max || 10}`;
-                } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money')) {
-                    const display = interactive.querySelector('.stat-value-display, .money-value-display');
-                    if (display) display.textContent = newValue;
+                } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money') || interactive.classList.contains('shortcode-xp')) {
+                    const display = interactive.querySelector('.stat-value-display, .money-value-display, .xp-value-display');
+                    if (display) {
+                        const val = interactive.classList.contains('shortcode-xp') ? `${input.value} XP` : input.value;
+                        display.textContent = val;
+                    }
                 }
-
             } else {
-                // Se não mudou mas o input sumiu (por algum motivo manual), garantimos o reset visual
-                const display = interactive.querySelector('.hp-display-mode, .stat-value-display, .money-value-display');
+                const display = interactive.querySelector('.hp-display-mode, .stat-value-display, .money-value-display, .xp-value-display');
                 const edit = interactive.querySelector('.hp-edit-mode, input');
                 if (display && edit) {
                     display.classList.remove('is-hidden');
@@ -845,7 +866,6 @@ function setupInteractiveSheetListeners() {
             }
         });
 
-        // Atalhos de teclado para inputs
         container.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
                 e.preventDefault();
@@ -864,17 +884,20 @@ async function updateFichaShortcode(oldSc, newSc) {
     // Como o conteúdo pode ter mudado externamente, nós buscamos a versão local da memória antes
     let currentHtml = currentCharacter.conteudo || "";
 
-    // Se o oldSc está presente e temos um bloco de ficha, nós atualizamos
+    const escapedSearch = oldSc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const globalRegex = new RegExp(escapedSearch, 'g');
+
     if (currentFichaBlock && currentFichaBlock.includes(oldSc)) {
-        currentFichaBlock = currentFichaBlock.replace(oldSc, newSc);
-        currentHtml = currentHtml.replace(oldSc, newSc);
+        currentFichaBlock = currentFichaBlock.replace(globalRegex, newSc);
     }
-    // Fallback: se estiver na root, troca do global
-    else if (currentHtml.includes(oldSc)) {
-        currentHtml = currentHtml.replace(oldSc, newSc);
-    }
+    
+    currentHtml = currentHtml.replace(globalRegex, newSc);
 
     currentCharacter.conteudo = currentHtml;
+
+    // Sincronização Local Imediata: Atualiza o cache para evitar race conditions no re-render
+    const itemIdx = allItems.findIndex(i => i.id === currentCharacterId);
+    if (itemIdx !== -1) allItems[itemIdx].conteudo = currentHtml;
 
     // Salvamos localmente o conteudo completo pois ele tem todos os shortcodes de ficha/stats juntos
     await updateItem({ id: currentCharacterId }, { conteudo: currentHtml });

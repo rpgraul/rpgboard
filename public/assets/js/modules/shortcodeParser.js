@@ -1,6 +1,49 @@
 import { parseArguments, parseKeyValueArgs, shortcodeRegexes } from './parserUtils.js';
 export { parseArguments, parseKeyValueArgs, shortcodeRegexes };
 
+/**
+ * Calculates a value based on a math expression string.
+ * Supports:
+ * - Direct value: "100"
+ * - Relative: "+10", "-5", "*2", "/2"
+ * - Expressions: "100+50"
+ */
+export function calculateMathExpression(current, input) {
+    if (typeof input !== 'string') return current;
+    const cleaned = input.trim().replace(/\s+/g, '').replace(/,/g, '.');
+    if (!cleaned) return current;
+
+    // Relative operations: +X, -X, *X, /X
+    const relativeMatch = cleaned.match(/^([+\-*/])(-?\d+(?:\.\d+)?)$/);
+    if (relativeMatch) {
+        const op = relativeMatch[1];
+        const val = parseFloat(relativeMatch[2]);
+        if (isNaN(val)) return current;
+        if (op === '+') return current + val;
+        if (op === '-') return current - val;
+        if (op === '*') return current * val;
+        if (op === '/' && val !== 0) return current / val;
+        return current;
+    }
+
+    // Full expressions: X+Y, X-Y, etc.
+    const expressionMatch = cleaned.match(/^(-?\d+(?:\.\d+)?)([+\-*/])(-?\d+(?:\.\d+)?)$/);
+    if (expressionMatch) {
+        const v1 = parseFloat(expressionMatch[1]);
+        const op = expressionMatch[2];
+        const v2 = parseFloat(expressionMatch[3]);
+        if (isNaN(v1) || isNaN(v2)) return current;
+        if (op === '+') return v1 + v2;
+        if (op === '-') return v1 - v2;
+        if (op === '*') return v1 * v2;
+        if (op === '/' && v2 !== 0) return v1 / v2;
+    }
+
+    // Pure number
+    const pureNum = parseFloat(cleaned);
+    return !isNaN(pureNum) ? pureNum : current;
+}
+
 function formatNumber(num) {
     if (typeof num !== 'number' && typeof num !== 'string') return num;
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -268,7 +311,7 @@ export function parseAllShortcodes(item, options = {}) {
         const commandRaw = args[0] || '';
         const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
 
-        if (!['stat', 'hp', 'count', 'money'].includes(command)) return null;
+        if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) return null;
 
         // Regra 1: Ignorar se estiver dentro de um container
         const isInsideContainer = containerRanges.some(range => sc.index >= range.start && sc.index < range.end);
@@ -354,6 +397,16 @@ export function parseAllShortcodes(item, options = {}) {
                 } else {
                     result.details.push(wrappedHtml);
                 }
+                break;
+            case "xp":
+                const xpParams = parseKeyValueArgs(finalArgs);
+                const xpValue = parseInt((xpParams.current || "0").replace(/[^\d.\-]/g, ''), 10) || 0;
+                html = `<div class="shortcode-xp is-interactive" data-item-id="${item.id}" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
+                          <i class="fas fa-star"></i>
+                          <span class="xp-value-display">${xpValue} XP</span>
+                          <input type="text" class="xp-value-input is-hidden" data-field="stats.xp" value="${xpValue}">
+                        </div>`.replace(/\s+/g, ' ');
+                result[position || 'left'].push(wrapIfHidden(html, sc.isHidden));
                 break;
         }
 

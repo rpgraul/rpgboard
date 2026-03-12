@@ -1,5 +1,6 @@
 import { Node, mergeAttributes, textInputRule } from "@tiptap/core";
 import { getSettings } from "../modules/firebaseService.js";
+import { calculateMathExpression } from "../modules/shortcodeParser.js";
 
 export default Node.create({
   name: "moneyNode",
@@ -95,13 +96,7 @@ export default Node.create({
 
       const save = (val) => {
         if (typeof e !== "function") return;
-        let cleaned = val.toString().trim().replace(/,/g, ".");
-        let result = parseFloat(cleaned) || 0;
-
-        // Simples suporte a +X / -X
-        if (val.startsWith("+") || val.startsWith("-")) {
-          result = (t.attrs.current || 0) + (parseFloat(val) || 0);
-        }
+        const result = calculateMathExpression(t.attrs.current || 0, val);
 
         r.view.dispatch(
           r.view.state.tr.setNodeMarkup(e(), undefined, {
