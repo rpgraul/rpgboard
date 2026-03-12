@@ -1,0 +1,53 @@
+/* ========================================
+   SHORTCODES.CSS - RPG SHORTCODE STYLES
+   ======================================== */
+
+.shortcode-xp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    background-color: rgba(20, 24, 33, 0.95) !important;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+    pointer-events: auto !important;
+    z-index: 20 !important;
+    user-select: text;
+}
+
+.shortcode-xp .fa-star {
+    color: #3273dc;
+}
+
+.shortcode-xp.is-interactive .xp-value-display {
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+    transition: border-bottom-color 0.2s ease;
+}
+
+.shortcode-xp.is-interactive:hover .xp-value-display {
+    border-bottom-color: var(--light-text);
+}
+
+.xp-value-input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-family: inherit;
+    font-weight: 600;
+    width: 60px;
+    outline: none !important;
+    text-align: inherit;
+    border-bottom: 1px solid #fff !important;
+}
+
+.xp-value-input:focus {
+    border-bottom: 2px dashed var(--link-color) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    outline: none !important;
+}

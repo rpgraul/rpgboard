@@ -271,7 +271,7 @@ export function parseAllShortcodes(item, options = {}) {
     if (!item || !item.conteudo) return { all: [], left: "", right: "", bottom: "", details: "" };
 
     const result = { all: [], left: [], right: [], bottom: [], details: [] };
-    const commandOrder = { stat: 1, money: 2, hp: 3, count: 4, default: 99 };
+    const commandOrder = { stat: 1, money: 2, hp: 3, count: 4, xp: 5, default: 99 };
     const content = item.conteudo;
     const shortcodeRegex = /\[(.*?)\]/g;
     let match;

@@ -14,7 +14,7 @@ import { getImageDimensions } from './cardRenderer.js';
 import { setupShortcodeMenu } from './shortcodeInserter.js';
 import MoneyNode from '../tiptap-extensions/MoneyNode.js';
 import HpNode from '../tiptap-extensions/HpNode.js';
-import XPNode from '../tiptap-extensions/XPNode.js';
+import XpNode from '../tiptap-extensions/XpNode.js';
 import StatNode from '../tiptap-extensions/StatNode.js';
 import CountNode from '../tiptap-extensions/CountNode.js';
 import ContainerShortcode from '../tiptap-extensions/containerShortcode.js';
@@ -76,7 +76,7 @@ async function createEditor(content = '') {
             Placeholder.configure({ placeholder: 'Conteúdo do card (suporta shortcodes, markdown, etc.)…' }),
             MoneyNode,
             HpNode,
-            XPNode,
+            XpNode,
             StatNode,
             CountNode,
             ContainerShortcode,

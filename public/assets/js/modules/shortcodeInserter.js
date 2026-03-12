@@ -6,6 +6,7 @@ const MENU_ITEMS = [
     { configType: 'stat', icon: 'fa-dice-d20', label: 'Atributo / Stat', preview: '[stat]' },
     { configType: 'count', icon: 'fa-list-ol', label: 'Contador', preview: '[count]' },
     { configType: 'money', icon: 'fa-coins', label: 'Dinheiro', preview: '[money]' },
+    { configType: 'xp', icon: 'fa-star', label: 'XP / Experiência', preview: '[xp]' },
     { configType: 'nota', icon: 'fa-sticky-note', label: 'Nota Recolhível', preview: '[nota]' },
     { configType: 'container', icon: 'fa-box', label: 'Container de Itens', preview: '[container]' },
     { configType: 'link', icon: 'fa-link', label: 'Link de Card', preview: '[link]' },
@@ -183,6 +184,19 @@ export function openConfigModal(type, editor, existingNodeInfo = null) {
                 if (data.sc_hidden) s += ' #';
                 s += ']';
                 return { text: s, attrs: { currency: currency, current: data.sc_current, isHidden: data.sc_hidden } };
+            }
+        },
+        xp: {
+            title: existingNodeInfo ? 'Editar: XP / Experiência' : 'Configurar: XP / Experiência',
+            fields: [
+                { id: 'sc_current', label: 'XP Atual', type: 'number', default: getDef('sc_current', '0'), req: true },
+                ...naratorOnlyField('sc_hidden', 'Oculto para Jogadores', false)
+            ],
+            build: (data) => {
+                let s = `[xp current="${data.sc_current}"`;
+                if (data.sc_hidden) s += ' #';
+                s += ']';
+                return { text: s, attrs: { current: data.sc_current, isHidden: data.sc_hidden } };
             }
         },
         count: {

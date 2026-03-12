@@ -62,6 +62,13 @@ export function preParseShortcodesForEditor(t) {
         const hidden = args.includes("#");
         return `<span data-node-type="countNode" data-label="${label.replace(/^["']|["']$/g, "")}" data-max="${max}" data-current="${current}" data-theme="${theme}" data-icon="${params.icon || ""}" data-is-overlay="${isOverlay}" data-position="${pos}" data-is-hidden="${hidden}"></span>`;
     });
+    
+    // XP: [xp current="100" #]
+    t = t.replace(shortcodeRegexes.xp, (match, args) => {
+        const params = parseKeyValueArgs(args);
+        const hidden = args.includes("#");
+        return `<span data-node-type="xpNode" data-current="${params.current || "0"}" data-is-hidden="${hidden}"></span>`;
+    });
 
     return t;
 }
@@ -125,6 +132,12 @@ export function convertEditorHtmlToShortcodes(html) {
         if (e.getAttribute("data-is-overlay") === "true") c.unshift("*");
         if (e.getAttribute("data-is-hidden") === "true") c.push("#");
         e.replaceWith(document.createTextNode(`[${c.join(" ")}]`));
+    });
+    
+    body.querySelectorAll('[data-node-type="xpNode"]').forEach((e) => {
+        const args = [];
+        if (e.getAttribute("data-is-hidden") === "true") args.push("#");
+        e.replaceWith(document.createTextNode(`[xp current="${e.getAttribute("data-current") || "0"}"${args.length ? " " + args.join(" ") : ""}]`));
     });
 
     return body.innerHTML;

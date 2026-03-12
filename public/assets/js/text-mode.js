@@ -9,6 +9,7 @@ import CardLink from "./tiptap-extensions/cardLink.js";
 import StatNode from "./tiptap-extensions/StatNode.js";
 import HpNode from "./tiptap-extensions/HpNode.js";
 import MoneyNode from "./tiptap-extensions/MoneyNode.js";
+import XpNode from "./tiptap-extensions/XpNode.js";
 import CountNode from "./tiptap-extensions/CountNode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
@@ -90,6 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       StatNode,
       HpNode,
       MoneyNode,
+      XpNode,
       CountNode,
       ContainerShortcode,
       FichaShortcode,
@@ -100,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (event.key === "]" || (event.key === "/" && event.shiftKey)) {
           setTimeout(() => {
             const html = mainEditor.getHTML();
-            if (html.includes("[stat") || html.includes("[hp") || html.includes("[money") || html.includes("[count") || html.includes("[container") || html.includes("[#") || html.includes("[ficha")) {
+            if (html.includes("[stat") || html.includes("[hp") || html.includes("[money") || html.includes("[xp") || html.includes("[count") || html.includes("[container") || html.includes("[#") || html.includes("[ficha")) {
               forceEditorReparse(mainEditor, html);
             }
           }, 10);
@@ -260,6 +262,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       'statNode': 'stat',
       'hpNode': 'hp',
       'moneyNode': 'money',
+      'xpNode': 'xp',
       'countNode': 'count'
     };
     const mappedType = typeMap[type] || type;
