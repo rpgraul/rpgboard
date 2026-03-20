@@ -86,46 +86,7 @@ MECANISMO DO BUG:
 AÇÃO: Em loadState(), setar isReceivingUpdate=true antes do fire,
       ou exportar flag compartilhada entre history.js e boardManager.js.
 
-------------------------------------------------------------------------------
-4. parseMainContent() NÃO EXISTE NO SOURCE
-------------------------------------------------------------------------------
 
-CHAMADA EM:
-  text-mode.js:298     → shortcodeParser.parseMainContent(item.conteudo)
-  sheet-mode.js:876    → shortcodeParser.parseMainContent(item.conteudo)
-  cardRenderer.min.js  → shortcodeParser.parseMainContent() (múltiplas)
-  playerMode.min.js    → shortcodeParser.parseMainContent() (múltiplas)
-
-MAS NÃO EXISTE EM:
-  shortcodeParser.js   → NENHUMA definição ou export de parseMainContent
-
-EXISTE APENAS EM:
-  shortcodeParser.min.js → Definição inline completa (versão alternativa)
-
-IMPACTO: Se o build usa os .js fontes, TypeError runtime em:
-         - text-mode detail modal
-         - sheet-mode detail modal
-         - Grid view card content rendering (via cardRenderer)
-
-AÇÃO: Portar parseMainContent() do .min.js para shortcodeParser.js,
-      ou remover chamadas e substituir pela lógica equivalente.
-
-------------------------------------------------------------------------------
-5. extractContainers() NÃO EXISTE EM NENHUM LUGAR
-------------------------------------------------------------------------------
-
-CHAMADA EM:
-  sheet-mode.js:600    → shortcodeParser.extractContainers(char.conteudo)
-
-NÃO EXISTE EM:
-  shortcodeParser.js      → Não definida
-  shortcodeParser.min.js  → Não definida
-
-IMPACTO: TypeError runtime garantido quando sheet-mode tenta renderizar
-         containers na ficha de personagem.
-
-AÇÃO: Implementar extractContainers() em shortcodeParser.js
-      ou remover a chamada e funcionalidade de containers.
 
 ------------------------------------------------------------------------------
 6. fab.js IGNORA PARÂMETRO activeButtons
@@ -448,27 +409,23 @@ Zoom não persiste em localStorage ou Firestore.
 
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
-| SSOT Violations        |    8  | 🔴 Crítico |
+| SSOT Violations        |    6  | 🔴 Crítico |
 | Duplicações            |    8  | 🟠 Alta    |
 | Obsoletos              |    6  | 🟡 Média   |
 | Cleanup                |    5  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   27  |            |
+| TOTAL                  |   25  |            |
 
 
 ================================================================================
                         🎯 AÇÕES PRIORITÁRIAS
 ================================================================================
 
-🔴 BLOQUANTE (Runtime errors):
-  1. [Item 4]  Portar parseMainContent() para shortcodeParser.js
-  2. [Item 5]  Implementar ou remover extractContainers()
-
 🔴 CRÍTICO (Fazer na próxima sprint):
-  3. [Item 2]  cardManager.loadItems() nas atualizações incrementais
-  4. [Item 3]  Coordenar flags isLocked/isReceivingUpdate
-  5. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
-  6. [Item 1]  Migrar auth para Firebase Auth
+  1. [Item 2]  cardManager.loadItems() nas atualizações incrementais
+  2. [Item 3]  Coordenar flags isLocked/isReceivingUpdate
+  3. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
+  4. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
   7. [Item 9]  Unificar normalizeString() → módulo utils

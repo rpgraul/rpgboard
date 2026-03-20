@@ -349,6 +349,51 @@ export function parseAllShortcodes(item, options = {}) {
     };
 }
 
+export function parseMainContent(content) {
+    if (!content) return "";
+    let t = content;
+    t = t.replace(/<p>\s*(\[nota\s+[^\]]+\])\s*<\/p>/gi, "$1");
+    t = t.replace(/<p>\s*(\[\/nota\])\s*<\/p>/gi, "$1");
+    t = t.replace(/\[nota\s+titulo="([^"]+)"\s*(#)?\]([\s\S]*?)\[\/nota\]/gi,
+        (_, title, hash, inner) =>
+            `<div class="shortcode-nota ${hash ? "is-hidden-from-players" : ""}">
+          <div class="nota-header" role="button" tabindex="0">
+              <span class="nota-title">${title}</span>
+              <span class="nota-icon"><i class="fas fa-plus"></i></span>
+          </div>
+          <div class="nota-content">${inner.trim()}</div>
+      </div>`);
+    t = t.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi,
+        (full, open, inner, close) =>
+            open.toLowerCase() !== close.toLowerCase() ? full : `<div class="is-hidden-from-players">${inner}</div>`);
+    t = t.replace(/\[(\*?)(stat|hp|count|money|xp)\s.*?\]/gi, "");
+    t = t.replace(/<p>\s*<\/p>/gi, "");
+    return t.trim();
+}
+
+export function extractContainers(content) {
+    if (!content) return [];
+    const regex = /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi;
+    const containers = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        const argsStr = match[1];
+        const inner = match[2];
+        const attrs = {};
+        const attrRegex = /(\w+)=["']?([^"'\]]*?)["']?(?=\s|\]|$)/g;
+        let attrMatch;
+        while ((attrMatch = attrRegex.exec(argsStr)) !== null) {
+            attrs[attrMatch[1].toLowerCase()] = attrMatch[2];
+        }
+        containers.push({
+            label: attrs.label || "Container",
+            type: attrs.type || "default",
+            content: inner.trim()
+        });
+    }
+    return containers;
+}
+
 export function extractRawShortcodes(content) {
     if (!content) return [];
     const regex = /\[(.*?)\]/g;
