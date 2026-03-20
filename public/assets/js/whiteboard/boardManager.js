@@ -1,6 +1,6 @@
 import * as firebaseService from '../modules/firebaseService.js';
 import { canvas } from './canvas.js';
-import { resetHistory } from './history.js';
+import { resetHistory, isHistoryLocked } from './history.js';
 
 let currentBoardId = null;
 let boardList = [];
@@ -65,7 +65,7 @@ export function initializeBoardManager() {
 
     const saveEvents = ['object:modified', 'object:added', 'object:removed', 'path:created', 'object:rotated', 'object:scaled'];
     saveEvents.forEach(evt => {
-        canvas.on(evt, () => { if (!isReceivingUpdate) saveToFirebase(); });
+        canvas.on(evt, () => { if (!isReceivingUpdate && !isHistoryLocked()) saveToFirebase(); });
     });
 }
 

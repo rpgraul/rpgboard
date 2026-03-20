@@ -4,6 +4,8 @@ let history = [];
 let historyIndex = -1;
 let isLocked = false;
 
+export const isHistoryLocked = () => isLocked;
+
 export function initializeHistory() {
     // Captura o estado inicial do canvas
     saveState();
@@ -86,9 +88,6 @@ function loadState() {
             canvas.setBackgroundColor('#ffffff');
         }
         canvas.renderAll();
-
-        // Avisa outros módulos (como o Firebase) que o canvas mudou
-        canvas.fire('object:modified');
 
         setTimeout(() => {
             isLocked = false;

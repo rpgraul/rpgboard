@@ -63,28 +63,6 @@ FLUXO IDEAL:
 AÇÃO: Chamar cardManager.loadItems(allItems) também nas linhas 345-367
        do script.js, ou migrar todo o fluxo para usar cardManager como SSOT.
 
-------------------------------------------------------------------------------
-3. WHITEBOARD RACE CONDITION (flags não coordenadas)
-------------------------------------------------------------------------------
-
-Arquivo: assets/js/whiteboard/history.js
-  loadState() linha 91: canvas.fire('object:modified')
-  isLocked (local)     → Previne apenas saveState(), NÃO saveToFirebase()
-
-Arquivo: assets/js/whiteboard/boardManager.js
-  Linha 66-68: canvas.on('object:modified', () => { if (!isReceivingUpdate) saveToFirebase(); });
-  isReceivingUpdate    → Flag SEPARADA, não coordenada com isLocked
-
-MECANISMO DO BUG:
-  1. Undo/redo chama loadState()
-  2. loadState() seta isLocked=true e chama canvas.loadFromJSON()
-  3. Callback dispara canvas.fire('object:modified')
-  4. boardManager escuta e verifica isReceivingUpdate (que é FALSE)
-  5. saveToFirebase() é chamado indevidamente
-  6. Estado local do undo sobrescreve o Firebase
-
-AÇÃO: Em loadState(), setar isReceivingUpdate=true antes do fire,
-      ou exportar flag compartilhada entre history.js e boardManager.js.
 
 
 
@@ -409,12 +387,12 @@ Zoom não persiste em localStorage ou Firestore.
 
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
-| SSOT Violations        |    6  | 🔴 Crítico |
+| SSOT Violations        |    5  | 🔴 Crítico |
 | Duplicações            |    8  | 🟠 Alta    |
 | Obsoletos              |    6  | 🟡 Média   |
 | Cleanup                |    5  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   25  |            |
+| TOTAL                  |   24  |            |
 
 
 ================================================================================
@@ -423,9 +401,8 @@ Zoom não persiste em localStorage ou Firestore.
 
 🔴 CRÍTICO (Fazer na próxima sprint):
   1. [Item 2]  cardManager.loadItems() nas atualizações incrementais
-  2. [Item 3]  Coordenar flags isLocked/isReceivingUpdate
-  3. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
-  4. [Item 1]  Migrar auth para Firebase Auth
+  2. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
+  3. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
   7. [Item 9]  Unificar normalizeString() → módulo utils
