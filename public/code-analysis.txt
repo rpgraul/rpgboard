@@ -1,0 +1,523 @@
+================================================================================
+                    ANÁLISE DE CÓDIGO - GameBoard RPG
+                    Consolidado Double-Checked (Final)
+================================================================================
+
+Data: 2026-03-20 (Consolidado após double-check humano + IA)
+Escopo: assets/js/modules/, assets/js/whiteboard/, tiptap-extensions/, CSS, HTML
+
+NOTA: Apenas itens 100% VERIFICADOS contra o código fonte atual.
+      Itens falso-positivos ou não reproduzíveis foram removidos.
+
+================================================================================
+                        🔴 CRÍTICO - SINGLE SOURCE OF TRUTH
+================================================================================
+
+------------------------------------------------------------------------------
+1. AUTENTICAÇÃO LOCAL (NUNCA SINCRONIZA COM FIRESTORE)
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/modules/auth.js
+  Linha   3: const NARRATOR_PASSWORDS = ["dimitrinho", "tomatinho"];
+             ⚠️ SENHAS HARDCODED - Qualquer um vê no source
+
+  Linha  13: export const isNarrator = () => "true" === localStorage.getItem(STORAGE_KEY);
+             ⚠️ isNarrator baseado em localStorage, nunca vai para Firestore
+
+BYPASS CONFIRMADOS:
+  fab.js:184           → localStorage.getItem('isNarrator') === 'true'
+                         Bypassa auth.js, lê localStorage diretamente
+  chat.js:119          → localStorage.getItem('rpgboard_user_name')
+                         Bypassa getCurrentUserName() de auth.js
+
+header.js:1            → CORRETO: importa isNarrator() de auth.js ✅
+
+IMPACTO: Narrador pode ser falsificado via DevTools.
+         Sem server-side enforcement.
+
+AÇÃO: Usar Firebase Auth Custom Claims ou Firestore roles.
+
+------------------------------------------------------------------------------
+2. MÚLTIPLOS CACHES DE CARDS (DESSINCRONIZADOS)
+------------------------------------------------------------------------------
+
+Variáveis locais mantendo a mesma informação:
+
+  script.js:16         let allItems = [];       // Cache do Firestore
+  sheet-mode.js:27     let allItems = [];       // Cache independente
+  text-mode.js:28      let allCards = [];       // Terceiro cache, nome diferente
+  cardManager.js:2     let items = [];          // Cache do módulo
+
+PROBLEMA REAL:
+  - script.js:331-368 mantém allItems atualizado via onSnapshot ✅
+  - script.js:338 chama cardManager.loadItems(allItems) SÓ na inicialização
+  - script.js:345-367 (atualizações incrementais) NUNCA chama cardManager.loadItems()
+  - grid.js:26 usa cardManager.getItems() que retorna dados desatualizados
+
+  sheet-mode.js e text-mode.js têm seus PRÓPRIOS listenToItems() separados,
+  portanto não dependem do cardManager — mas isso é a própria violação SSOT.
+
+FLUXO IDEAL:
+  Firestore → cardManager:items → TODOS os consumidores via subscribe()
+
+AÇÃO: Chamar cardManager.loadItems(allItems) também nas linhas 345-367
+       do script.js, ou migrar todo o fluxo para usar cardManager como SSOT.
+
+------------------------------------------------------------------------------
+3. WHITEBOARD RACE CONDITION (flags não coordenadas)
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/whiteboard/history.js
+  loadState() linha 91: canvas.fire('object:modified')
+  isLocked (local)     → Previne apenas saveState(), NÃO saveToFirebase()
+
+Arquivo: assets/js/whiteboard/boardManager.js
+  Linha 66-68: canvas.on('object:modified', () => { if (!isReceivingUpdate) saveToFirebase(); });
+  isReceivingUpdate    → Flag SEPARADA, não coordenada com isLocked
+
+MECANISMO DO BUG:
+  1. Undo/redo chama loadState()
+  2. loadState() seta isLocked=true e chama canvas.loadFromJSON()
+  3. Callback dispara canvas.fire('object:modified')
+  4. boardManager escuta e verifica isReceivingUpdate (que é FALSE)
+  5. saveToFirebase() é chamado indevidamente
+  6. Estado local do undo sobrescreve o Firebase
+
+AÇÃO: Em loadState(), setar isReceivingUpdate=true antes do fire,
+      ou exportar flag compartilhada entre history.js e boardManager.js.
+
+------------------------------------------------------------------------------
+4. parseMainContent() NÃO EXISTE NO SOURCE
+------------------------------------------------------------------------------
+
+CHAMADA EM:
+  text-mode.js:298     → shortcodeParser.parseMainContent(item.conteudo)
+  sheet-mode.js:876    → shortcodeParser.parseMainContent(item.conteudo)
+  cardRenderer.min.js  → shortcodeParser.parseMainContent() (múltiplas)
+  playerMode.min.js    → shortcodeParser.parseMainContent() (múltiplas)
+
+MAS NÃO EXISTE EM:
+  shortcodeParser.js   → NENHUMA definição ou export de parseMainContent
+
+EXISTE APENAS EM:
+  shortcodeParser.min.js → Definição inline completa (versão alternativa)
+
+IMPACTO: Se o build usa os .js fontes, TypeError runtime em:
+         - text-mode detail modal
+         - sheet-mode detail modal
+         - Grid view card content rendering (via cardRenderer)
+
+AÇÃO: Portar parseMainContent() do .min.js para shortcodeParser.js,
+      ou remover chamadas e substituir pela lógica equivalente.
+
+------------------------------------------------------------------------------
+5. extractContainers() NÃO EXISTE EM NENHUM LUGAR
+------------------------------------------------------------------------------
+
+CHAMADA EM:
+  sheet-mode.js:600    → shortcodeParser.extractContainers(char.conteudo)
+
+NÃO EXISTE EM:
+  shortcodeParser.js      → Não definida
+  shortcodeParser.min.js  → Não definida
+
+IMPACTO: TypeError runtime garantido quando sheet-mode tenta renderizar
+         containers na ficha de personagem.
+
+AÇÃO: Implementar extractContainers() em shortcodeParser.js
+      ou remover a chamada e funcionalidade de containers.
+
+------------------------------------------------------------------------------
+6. fab.js IGNORA PARÂMETRO activeButtons
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/modules/components/fab.js
+
+  Linha 166: export function renderFab(activeButtons = [])
+             Recebe activeButtons como parâmetro
+  Linhas 186-205: Constrói buttonOrder internamente baseado no mode/URL
+                  O parâmetro activeButtons NUNCA é lido
+
+Cada página define fabActions:
+  script.js:134      → fabActions: ['settings', 'bulk-edit', 'converter', ...]
+  sheet-mode.js:45   → fabActions: ['help', 'macros', 'change-char', ...]
+  text-mode.js:39    → fabActions: ['help', 'chat']
+
+MAS fab.js decide sozinho via detecção de URL.
+
+IMPACTO: A API mente sobre a possibilidade de controlar botões FAB.
+         Mudanças em fabActions não surtem efeito.
+
+AÇÃO: Usar o parâmetro activeButtons ao invés da detecção interna,
+      ou remover o parâmetro e documentar que é automático.
+
+------------------------------------------------------------------------------
+7. settings CARREGADOS INDEPENDENTEMENTE (5x)
+------------------------------------------------------------------------------
+
+  script.js:184           firebaseService.getSettings()
+  sheet-mode.js:50        firebaseService.getSettings()
+  text-mode.js:46         firebaseService.getSettings()
+  drawing-mode.js:26      firebaseService.getSettings()
+  upload.js:20            getSettings()
+  converter.js:20         getSettings()
+
+PROBLEMA: Cada página faz request separado ao Firestore.
+NOTA: São páginas independentes (SPAs diferentes), então cada uma
+      PRECISA carregar settings. Porém, window.appSettings existe
+      globalmente mas os módulos não consultam antes de carregar.
+
+AÇÃO SUGERIDA: Cache em sessionStorage ou módulo compartilhado.
+
+------------------------------------------------------------------------------
+8. USER NAME EM MÚLTIPLOS LUGARES
+------------------------------------------------------------------------------
+
+  auth.js:5,15,21,27  → USER_NAME_KEY = 'rpgboard_user_name' (centralizado)
+  script.js:89,111,162,165,197,227  → localStorage.getItem('rpgboard_user_name')
+                        Acessa diretamente ao invés de usar getCurrentUserName()
+  chat.js:119          → localStorage.getItem('rpgboard_user_name')
+                        Bypassa auth.js
+
+AÇÃO: Substituir todos os acessos diretos por getCurrentUserName().
+
+
+================================================================================
+                        🟠 ALTA - DUPLICAÇÕES
+================================================================================
+
+------------------------------------------------------------------------------
+9. normalizeString() DUPLICADA (3x)
+------------------------------------------------------------------------------
+
+  script.js:49-52       → function normalizeString(str)
+  text-mode.js:284-287  → function normalizeString(str)  (com .trim())
+  sheet-mode.js:860     → function normalizeString(str)
+
+LÓGICA IDÊNTICA: str.toLowerCase().normalize('NFD').replace(...)
+
+AÇÃO: Mover para módulo utilitário (ui.js ou novo utils.js).
+
+------------------------------------------------------------------------------
+10. showDetailModal() DUPLICADA (3x)
+------------------------------------------------------------------------------
+
+  script.js:507-524       → showDetailModal(item)
+  text-mode.js:289-311    → showDetailModal(item)
+  sheet-mode.js:865+      → showDetailModal(item)
+
+Cada versão tem HTML levemente diferente mas mesma responsabilidade.
+text-mode e sheet-mode chamam parseMainContent (que não existe no source).
+
+AÇÃO: Centralizar em módulo compartilhado ou cardRenderer.js.
+
+------------------------------------------------------------------------------
+11. Toolbar onclick handler DUPLICADO (3-4x)
+------------------------------------------------------------------------------
+
+Mapeamento data-action → editor.chain().focus().*().run() repetido:
+
+  sheet-mode.js:448-464    → mainEditor toolbar
+  sheet-mode.js:691-707    → sideViewEditor toolbar (cópia exata)
+  text-mode.js:238-250     → mainEditor toolbar
+
+AÇÃO: Extrair função handleToolbarAction(editor, action, val) em editorUtils.js.
+
+------------------------------------------------------------------------------
+12. CardLink suggestion items DUPLICADA (3x)
+------------------------------------------------------------------------------
+
+Lógica de filtrar cards para @mention:
+  script.js:23-32          → window.getSuggestionItems
+  sheet-mode.js:401-410    → inline CardLink config
+  text-mode.js:79-88       → inline CardLink config
+
+Cada versão acessa cache local diferente (allItems/allCards).
+
+AÇÃO: Usar window.getSuggestionItems ou módulo compartilhado.
+
+------------------------------------------------------------------------------
+13. FUNÇÕES DE PARSER DUPLICADAS
+------------------------------------------------------------------------------
+
+parseArguments:
+  Original:    parserUtils.js:9
+  Duplicado:   shortcodeParser.min.js (inline _parseArguments)
+
+parseKeyValueArgs:
+  Original:    parserUtils.js:28
+  Duplicado:   shortcodeParser.min.js (inline _parseKeyValueArgs)
+
+formatNumber:
+  Original:    shortcodeParser.js:47 → regex replace
+  Diferente:   MoneyNode.js:66-69   → Intl.NumberFormat("pt-BR")
+
+NOTA: shortcodeParser.js importa corretamente de parserUtils.js (linhas 1-2)
+      O problema é apenas nos .min.js que são versões alternativas.
+
+------------------------------------------------------------------------------
+14. positionKeywords COM VALORES DIFERENTES
+------------------------------------------------------------------------------
+
+  shortcodeParser.js:53     ["left", "right", "bottom"]
+  shortcodeParser.js:127    ["left", "right", "bottom"]
+  shortcodeParser.js:293    ['left', 'right', 'bottom']
+  editorUtils.js:10         ["left", "right", "bottom", "top"]  ⚠️ EXTRA
+
+PROBLEMA: editorUtils.js inclui "top" que outros arquivos não têm.
+          "top" nunca é usado efetivamente - código morto.
+
+AÇÃO: Remover "top" de editorUtils.js ou adicionar suporte em
+      shortcodeParser.js para consistência.
+
+------------------------------------------------------------------------------
+15. SHORTCODE REGEXES INLINE EM shortcodeParser.js
+------------------------------------------------------------------------------
+
+  shortcodeParser.js:181    /\[(.*?)\]/g    (extractShortcodes)
+  shortcodeParser.js:215    /\[(.*?)\]/g    (parseAllShortcodes)
+  shortcodeParser.js:354    /\[(.*?)\]/g    (extractRawShortcodes)
+
+NOTA: Regexes em tiptap-extensions/*Node.js (addInputRules) são
+      DIFERENTES das de parserUtils.js - usam grupos de captura
+      específicos para extrair atributos. Isso é aceitável por
+      limitação da API do Tiptap textInputRule.
+
+      NÃO é prático unificar tiptap InputRules com shortcodeRegexes.
+
+------------------------------------------------------------------------------
+16. MINIFICADOS DESSINCRONIZADOS (VERSÕES ALTERNATIVAS)
+------------------------------------------------------------------------------
+
+shortcodeParser.min.js:
+  ✅ Código completamente diferente da versão fonte
+  ✅ Contém funções EXTRAS: parseMainContent, _parseStat (versão antiga)
+  ✅ NÃO É minificação - é versão alternativa com API diferente
+  ✅ formatNumber usa regex (idêntica ao source)
+  ✅ parseAllShortcodes retorna sem campo "all" (diferente do source)
+
+cardRenderer.min.js:
+  ✅ Usa shortcodeParser.parseMainContent() (que não existe no source)
+
+playerMode.min.js:
+  ✅ Usa shortcodeParser.parseMainContent() (que não existe no source)
+
+IMPACTO: Projetos usando .js fontes via Vite funcionam diferente
+         dos que usam .min.js direto. SSOT completamente quebrado.
+
+AÇÃO: Regenerar TODOS os .min.js a partir dos fontes, ou eliminar
+      .min.js e usar apenas build Vite.
+
+
+================================================================================
+                        🟡 MÉDIA - OBSOLETOS
+================================================================================
+
+------------------------------------------------------------------------------
+17. board.js - ARQUIVO FANTASMA
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/modules/board.js (4 linhas - placeholder)
+  export function initializeBoard() { /* removed */ }
+  export function setItems() { /* removed */ }
+
+AÇÃO: Remover arquivo e atualizar imports.
+
+------------------------------------------------------------------------------
+18. parseNotas() - DEAD CODE
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/modules/shortcodeParser.js:363-366
+  // Legacy support (opcional, pode ser removido se migrarmos tudo)
+  export function parseNotas(content) {
+      return "";
+  }
+
+AÇÃO: Remover.
+
+------------------------------------------------------------------------------
+19. getMacros() - DEAD CODE
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/sheet-mode.js:504-506
+  function getMacros() {
+      return JSON.parse(localStorage.getItem(`macros_${getCurrentUserName()}`) || '[]');
+  }
+
+Macros agora estão em currentCharacter.macros (Firebase).
+Esta função NUNCA é chamada. Sobra da migração localStorage → Firestore.
+
+AÇÃO: Remover.
+
+------------------------------------------------------------------------------
+20. chat.js FUNÇÕES VAZIAS + OBSERVER
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/modules/chat.js:76-95
+  showChatNotification()     → Corpo vazio
+  removeChatNotification()   → Corpo vazio
+  MutationObserver           → Configurado e ativo, chama funções vazias
+
+AÇÃO: Implementar notificações visuais ou remover tudo (funções + observer).
+
+------------------------------------------------------------------------------
+21. data-field ATRIBUTOS ÓRFÃOS
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/modules/shortcodeParser.js
+  Linha  78:  data-field="${fieldName}"
+  Linha 111:  data-field="stats.hp"
+  Linha 303:  data-field="stats.money"
+  Linha 331:  data-field="stats.xp"
+
+Atributos definidos no HTML gerado mas NUNCA usados para sincronização.
+Sync depende apenas do texto shortcode em 'conteudo'.
+
+AÇÃO: Remover se não houver plano de uso, ou implementar sync baseado
+      em data-field para consistência.
+
+------------------------------------------------------------------------------
+22. PADRÃO FABRIC.JS ANTIGO (monkey-patch)
+------------------------------------------------------------------------------
+
+Arquivo: assets/js/whiteboard/canvas.js:27-31
+  fabric.Object.prototype.toObject = (function (toObject) { ... })
+
+Padrão v1.x/v2.x em uso com Fabric.js v5.3.
+O monkey-patch funciona mas pode causar problemas em atualizações.
+
+AÇÃO: Migrar para objectProperties config do v5.x quando possível.
+
+
+================================================================================
+                        🟢 BAIXA - CLEANUP
+================================================================================
+
+------------------------------------------------------------------------------
+23. CSS DUPLICADO (scoped - verificar necessidade)
+------------------------------------------------------------------------------
+
+.shortcode-money:
+  assets/css/editor.css:144       → .shortcode-money { ... }
+  assets/css/text-mode.css:371    → .ProseMirror .shortcode-money { ... }
+
+.shortcode-hp:
+  assets/css/editor.css:192       → .shortcode-hp { ... }
+  assets/css/text-mode.css:326    → .ProseMirror .shortcode-hp.is-rendered-in-editor
+
+NOTA: text-mode.css usa prefixo .ProseMirror (contexto editor).
+      Pode ser intencional. Verificar se pode ser consolidado.
+
+------------------------------------------------------------------------------
+24. COMENTÁRIOS MORTOS
+------------------------------------------------------------------------------
+
+  grid.js:59           // MODIFICADO: Adicionada a verificação...
+  whiteboard/shapes.js:11  // Removed old dropdown logic
+  sheet-mode.html:92   <!-- Os modais foram removidos -->
+  drawing-mode.html:239  <div id="assets-list" style="display:none;"></div>
+
+------------------------------------------------------------------------------
+25. AI PROMPT HARDCODED
+------------------------------------------------------------------------------
+
+Arquivo: converter.html:104-137 → 34 linhas de prompt inline no HTML.
+AÇÃO: Mover para config/JSON externo.
+
+------------------------------------------------------------------------------
+26. ZOOM SEM PERSISTÊNCIA
+------------------------------------------------------------------------------
+
+  whiteboard/canvas.js:159-161,171
+  whiteboard/boardManager.js:75
+
+Zoom não persiste em localStorage ou Firestore.
+
+------------------------------------------------------------------------------
+27. CANVAS RESET SEM CONFIRMAÇÃO
+------------------------------------------------------------------------------
+
+  boardManager.js:72-78 → canvas.clear() sem aviso
+  canvas.js:165         → TEM confirmação
+  Comportamento inconsistente.
+
+
+================================================================================
+                        📊 RESUMO EXECUTIVO
+================================================================================
+
+| Categoria              | Itens | Severidade |
+|------------------------|-------|------------|
+| SSOT Violations        |    8  | 🔴 Crítico |
+| Duplicações            |    8  | 🟠 Alta    |
+| Obsoletos              |    6  | 🟡 Média   |
+| Cleanup                |    5  | 🟢 Baixa   |
+|------------------------|-------|------------|
+| TOTAL                  |   27  |            |
+
+
+================================================================================
+                        🎯 AÇÕES PRIORITÁRIAS
+================================================================================
+
+🔴 BLOQUANTE (Runtime errors):
+  1. [Item 4]  Portar parseMainContent() para shortcodeParser.js
+  2. [Item 5]  Implementar ou remover extractContainers()
+
+🔴 CRÍTICO (Fazer na próxima sprint):
+  3. [Item 2]  cardManager.loadItems() nas atualizações incrementais
+  4. [Item 3]  Coordenar flags isLocked/isReceivingUpdate
+  5. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
+  6. [Item 1]  Migrar auth para Firebase Auth
+
+🟠 ALTA (Sprint seguinte):
+  7. [Item 9]  Unificar normalizeString() → módulo utils
+  8. [Item 10] Unificar showDetailModal() → módulo compartilhado
+  9. [Item 11] Unificar toolbar handler → editorUtils.js
+  10. [Item 16] Regenerar .min.js ou eliminar
+
+🟡 MÉDIA (Planejar):
+  11. [Item 17-19] Remover dead code (board.js, parseNotas, getMacros)
+  12. [Item 20] Implementar ou remover chat notifications
+  13. [Item 22] Atualizar padrão Fabric.js
+
+🟢 BAIXA (Nice to have):
+  14. [Item 24-27] Cleanup geral
+
+
+================================================================================
+                        📁 ARQUIVOS VERIFICADOS
+================================================================================
+
+✅ assets/js/modules/auth.js           (68 linhas)
+✅ assets/js/modules/cardManager.js    (55 linhas)
+✅ assets/js/modules/parserUtils.js    (76 linhas)
+✅ assets/js/modules/shortcodeParser.js (366 linhas)
+✅ assets/js/modules/shortcodeParser.min.js (1 linha - diff confirmado)
+✅ assets/js/modules/editorUtils.js    (109 linhas)
+✅ assets/js/modules/grid.js           (159 linhas)
+✅ assets/js/modules/chat.js           (140 linhas)
+✅ assets/js/modules/board.js          (4 linhas - placeholder)
+✅ assets/js/modules/components/header.js (179 linhas)
+✅ assets/js/modules/components/fab.js (232 linhas)
+✅ assets/js/modules/cardModal.js      (12591 bytes)
+✅ assets/js/script.js                 (672 linhas)
+✅ assets/js/sheet-mode.js             (893 linhas)
+✅ assets/js/text-mode.js              (311 linhas)
+✅ assets/js/drawing-mode.js           (49 linhas)
+✅ assets/js/upload.js                 (94 linhas)
+✅ assets/js/converter.js              (226 linhas)
+✅ assets/js/whiteboard/boardManager.js (159 linhas)
+✅ assets/js/whiteboard/history.js     (114 linhas)
+✅ assets/js/whiteboard/canvas.js      (parcial)
+✅ assets/js/tiptap-extensions/HpNode.js (162 linhas)
+✅ assets/js/tiptap-extensions/StatNode.js (110 linhas)
+✅ assets/js/tiptap-extensions/MoneyNode.js (150 linhas)
+✅ assets/js/tiptap-extensions/CountNode.js (188 linhas)
+✅ assets/js/tiptap-extensions/XpNode.js (134 linhas)
+✅ assets/css/editor.css               (grep verificado)
+✅ assets/css/text-mode.css            (grep verificado)
+
+================================================================================
+                               FIM DO RELATÓRIO
+================================================================================
