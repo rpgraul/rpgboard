@@ -174,97 +174,36 @@ function _parseCount(args, itemId, originalShortcode) {
 }
 
 /**
- * Renderiza o conteúdo principal para o Grid/Visualização Padrão.
- * Transforma [container] em HTML colapsável simples.
+ * Extrai todos os shortcodes ativos de um conteúdo em um array estruturado.
  */
-export function parseMainContent(content) {
-    if (!content) return "";
-    let processedContent = content;
-
-    // Novo Parser de Containers (Substitui [nota])
-    // Formato: [container label="Mochila" type="inventory" isHidden="false"]...[/container]
-    const containerRegex = new RegExp(shortcodeRegexes.container.source, 'gi');
-
-    processedContent = processedContent.replace(containerRegex, (match, argsStr, innerContent) => {
-        const args = parseKeyValueArgs(parseArguments(argsStr));
-        const label = args.label || "Container";
-        const type = args.type || "default";
-        const isHidden = argsStr.includes('#') || args.ishidden === "true";
-        const isClosed = /\bclose\b/i.test(argsStr);
-
-        // Ícone baseado no tipo
-        let icon = "fa-box";
-        if (type === 'inventory') icon = "fa-suitcase";
-        if (type === 'spells') icon = "fa-scroll";
-        if (type === 'skills') icon = "fa-fist-raised";
-
-        return `<div class="shortcode-container-view ${isHidden ? 'is-hidden-from-players' : ''} ${!isClosed ? 'is-open' : ''} type-${type}">
-            <div class="container-header" onclick="this.parentElement.classList.toggle('is-open')">
-                <span class="icon"><i class="fas ${icon}"></i></span>
-                <span class="container-label">${label}</span>
-                <span class="icon toggle-icon"><i class="fas fa-chevron-down"></i></span>
-            </div>
-            <div class="container-body">
-                ${innerContent.trim()}
-            </div>
-        </div>`;
-    });
-
-    // Novo Parser de Ficha (Isola no editor, remove no grid para narrativa pura)
-    const fichaRegex = new RegExp(shortcodeRegexes.ficha.source, 'gi');
-    processedContent = processedContent.replace(fichaRegex, "");
-
-    // Remove tags de Hide isoladas, stats soltos, etc, que não devem aparecer no texto corrido
-    processedContent = processedContent.replace(/\[(hide|#)\]([\s\S]*?)\[\/(hide|#)\]/gi, (match, startTag, hiddenContent, endTag) => {
-        if (startTag.toLowerCase() !== endTag.toLowerCase()) return match;
-        return `<div class="is-hidden-from-players">${hiddenContent}</div>`;
-    });
-
-    processedContent = processedContent.replace(/\[(\*?)(stat|hp|count|money)\s.*?\]/gi, '');
-    processedContent = processedContent.replace(/<p>\s*<\/p>/gi, '');
-
-    return processedContent.trim();
-}
-
-/**
- * Extrai apenas os containers para serem usados como botões/modais na Ficha.
- * Retorna um array de objetos com label, type, content, isHidden.
- */
-export function extractContainers(content) {
+export function extractShortcodes(content) {
     if (!content) return [];
-    const containers = [];
-    // Regex aprimorada para capturar atributos e conteúdo de forma mais robusta
-    const containerRegex = new RegExp(shortcodeRegexes.container.source, 'gi');
+    const shortcodeRegex = /\[(.*?)\]/g;
+    const results = [];
     let match;
-
-    while ((match = containerRegex.exec(content)) !== null) {
-        const argsStr = match[1];
-        const innerContent = match[2];
-        const args = parseKeyValueArgs(parseArguments(argsStr));
-
-        const type = args.type || "default";
-        // Fallback: se não houver label, usa o type com inicial maiúscula
-        const label = args.label || (type.charAt(0).toUpperCase() + type.slice(1));
-
-        containers.push({
-            label: label,
-            type: type,
-            isHidden: argsStr.includes('#') || args.ishidden === "true",
-            isClosed: /\bclose\b/i.test(argsStr),
-            content: innerContent.trim(),
-            fullMatch: match[0]
+    
+    while ((match = shortcodeRegex.exec(content)) !== null) {
+        const full = match[0];
+        const inner = match[1];
+        const args = parseArguments(inner);
+        const commandRaw = args[0] || '';
+        const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
+        
+        if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) continue;
+        
+        const isHidden = commandRaw.startsWith('#') || args.includes('#');
+        const params = parseKeyValueArgs(args.slice(1));
+        
+        results.push({
+            command,
+            full,
+            args: args.slice(1),
+            params,
+            isHidden,
+            index: match.index
         });
     }
-    return containers;
-}
-
-/**
- * Extrai apenas o conteúdo dentro das tags [ficha].
- */
-export function extractFichaContent(content) {
-    if (!content) return "";
-    const match = content.match(new RegExp(shortcodeRegexes.ficha.source, "i"));
-    return match ? match[1].trim() : "";
+    return results;
 }
 
 export function parseAllShortcodes(item, options = {}) {
@@ -278,11 +217,7 @@ export function parseAllShortcodes(item, options = {}) {
 
     const foundShortcodes = [];
     while ((match = shortcodeRegex.exec(content)) !== null) {
-        // Ignorar se estiver dentro de um container (hack simples, ideal seria parser de árvore)
-        // Por enquanto, assumimos que shortcodes globais não estão aninhados profundamente em texto
-        if (!match[0].startsWith('[container') && !match[0].startsWith('[/container')) {
-            foundShortcodes.push({ full: match[0], inner: match[1], index: match.index });
-        }
+        foundShortcodes.push({ full: match[0], inner: match[1], index: match.index });
     }
 
     const hiddenRanges = [];
@@ -296,26 +231,12 @@ export function parseAllShortcodes(item, options = {}) {
         }
     }
 
-    // Isolar shortcodes dentro de containers
-    const containerRanges = [];
-    const containerFullRegex = /\[container(?:\s+[^\]]*)?\]([\s\S]*?)\[\/container\]/gi;
-    let containerMatch;
-    while ((containerMatch = containerFullRegex.exec(content)) !== null) {
-        const innerContent = containerMatch[1];
-        const startIndex = containerMatch.index + containerMatch[0].indexOf(innerContent);
-        containerRanges.push({ start: startIndex, end: startIndex + innerContent.length });
-    }
-
     const parsedShortcodes = foundShortcodes.map(sc => {
         const args = parseArguments(sc.inner);
         const commandRaw = args[0] || '';
         const command = commandRaw.replace(/^[#*]+/, '').toLowerCase();
 
         if (!['stat', 'hp', 'count', 'money', 'xp'].includes(command)) return null;
-
-        // Regra 1: Ignorar se estiver dentro de um container
-        const isInsideContainer = containerRanges.some(range => sc.index >= range.start && sc.index < range.end);
-        if (isInsideContainer) return null;
 
         const isHashHidden = commandRaw.startsWith('#');
         const isArgHidden = args.includes('#');

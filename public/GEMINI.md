@@ -43,12 +43,12 @@ Estilos de `.top-bar`, `.fab-container`, `#chat-sidebar`, `.modal`, `#dice-conta
 - `chat.js` - Chat e notificações (acoplado ao layout.js)
 - `cardManager.js` - Estado/cache dos cards
 - `cardRenderer.js` - HTML dos cards (View/Edit)
-- `shortcodeParser.js` - Processa `[hp]`, `[stat]`
+- `shortcodeParser.js` - Processa `[hp]`, `[stat]`, `[money]`, `[count]`, `[xp]` (Removidos [container]/[ficha])
 - `ui.js` - Toasts, Loaders, Confirmações
 
-Scripts de entrada (assets/js/): `script.js`, `sheet-mode.js`, etc.
+Scripts de entrada (assets/js/): `script.js`, `sheet-mode.js` (Abas: Narrativa/Ficha), etc.
 
 ## Ações Comuns
-**Criar Card**: `firebaseService.addItem(data)`
+**Criar Card**: `firebaseService.addItem(data)` (Campos: titulo, conteudo, tags, category, isVisibleToPlayers)
 **Rolagem**: `diceLogic.processRoll() → firebaseService.sendDiceRoll() → dice3d.visualizeDiceRoll()`
-**Shortcodes**: Parse via `shortcodeParser.js`, render via tiptap-extensions (editor) ou HTML string (grid)
+**Shortcodes**: Parse via `shortcodeParser.js`, render via tiptap-extensions (editor) ou HTML string (grid/sidebar)

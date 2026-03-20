@@ -57,11 +57,6 @@ export function parseKeyValueArgs(input) {
  * Unified Regexes for Shortcodes to ensure Editor and Grid View identify shortcodes identically.
  */
 export const shortcodeRegexes = {
-    // Matches [container ... ] ... [/container]
-    container: /\[container\s+([^\]]*)\]([\s\S]*?)\[\/container\]/gi,
-
-    // Matches [ficha] ... [/ficha]
-    ficha: /\[ficha\]([\s\S]*?)\[\/ficha\]/gi,
 
     // Matches [money ...]
     money: /\[money\s+([^\]]+)\]/gi,

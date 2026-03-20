@@ -52,84 +52,77 @@ export default Node.create({
   addNodeView() {
     return ({ node: t, getPos: e, editor: r }) => {
       const n = document.createElement("span");
-      n.className = "shortcode-money is-interactive";
+      n.className = "shortcode-money interactive-node-view";
       if (t.attrs.isHidden) n.classList.add("is-hidden-preview");
       n.contentEditable = "false";
-      n.style.display = "inline-flex";
-      n.style.alignItems = "center";
-      n.style.gap = "0.25rem";
 
       const icon = document.createElement("i");
-      icon.className = "fas fa-coins";
-      icon.style.color = "#ffdd57";
+      icon.className = "fas fa-coins money-icon";
 
       const display = document.createElement("span");
-      display.className = "money-value-display";
-      display.style.cursor = "pointer";
-      display.style.borderBottom = "1px dashed rgba(255,255,255,0.3)";
+      display.className = "money-display";
 
-      const updateDisplay = (val, curr) => {
-        const formatted = new Intl.NumberFormat("pt-BR", {
-          style: "decimal",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        }).format(val);
-        display.textContent = curr ? `${formatted} ${curr}` : formatted;
+      const updateUI = (val, curr) => {
+          const formatted = new Intl.NumberFormat("pt-BR", {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+          }).format(val);
+          display.textContent = curr ? `${formatted} ${curr}` : formatted;
       };
 
-      updateDisplay(t.attrs.current, t.attrs.currency);
-
       if (!t.attrs.currency) {
-        getSettings().then(s => s?.defaultCurrency && updateDisplay(t.attrs.current, s.defaultCurrency));
+          getSettings().then(s => {
+              if (s?.defaultCurrency) updateUI(t.attrs.current, s.defaultCurrency);
+          });
       }
+      updateUI(t.attrs.current, t.attrs.currency);
 
       const input = document.createElement("input");
       input.type = "text";
-      input.className = "money-value-input is-hidden";
-      input.style.width = "60px";
-      input.style.background = "transparent";
-      input.style.border = "none";
-      input.style.borderBottom = "1px solid #fff";
-      input.style.color = "#fff";
-      input.style.outline = "none";
-      input.value = t.attrs.current;
+      input.className = "money-inline-input";
+      input.placeholder = "±";
 
-      const save = (val) => {
-        if (typeof e !== "function") return;
-        const result = calculateMathExpression(t.attrs.current || 0, val);
-
-        r.view.dispatch(
-          r.view.state.tr.setNodeMarkup(e(), undefined, {
-            ...t.attrs,
-            current: Math.round(result * 100) / 100,
-          })
-        );
+      const syncValue = (val) => {
+          if (typeof e !== "function") return;
+          const result = calculateMathExpression(t.attrs.current || 0, val);
+          const finalVal = Math.round(result * 100) / 100;
+          
+          r.view.dispatch(
+              r.view.state.tr.setNodeMarkup(e(), undefined, {
+                  ...t.attrs,
+                  current: finalVal,
+              })
+          );
       };
 
-      display.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        display.classList.add("is-hidden");
-        input.classList.remove("is-hidden");
-        input.focus();
-        input.select();
-      });
+      // Buttons for +/-
+      const btnMinus = document.createElement("button");
+      btnMinus.className = "money-btn minus";
+      btnMinus.innerHTML = '<i class="fas fa-minus"></i>';
+      btnMinus.onclick = (ev) => {
+          ev.stopPropagation();
+          syncValue("-1");
+      };
 
-      input.addEventListener("blur", () => {
-        save(input.value);
-        input.classList.add("is-hidden");
-        display.classList.remove("is-hidden");
-      });
+      const btnPlus = document.createElement("button");
+      btnPlus.className = "money-btn plus";
+      btnPlus.innerHTML = '<i class="fas fa-plus"></i>';
+      btnPlus.onclick = (ev) => {
+          ev.stopPropagation();
+          syncValue("+1");
+      };
 
-      input.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") {
-          ev.preventDefault();
-          input.blur();
-        }
-      });
+      input.onclick = (ev) => ev.stopPropagation();
+      input.onkeydown = (ev) => {
+          if (ev.key === "Enter") {
+              ev.preventDefault();
+              syncValue(input.value);
+              input.value = "";
+              input.blur();
+          }
+      };
 
-      input.addEventListener("click", (ev) => ev.stopPropagation());
-
-      n.append(icon, display, input);
+      n.append(icon, btnMinus, display, btnPlus, input);
 
       n.addEventListener("dblclick", (ev) => {
         ev.stopPropagation();
@@ -142,8 +135,14 @@ export default Node.create({
 
       return {
         dom: n,
+        update: (newNode) => {
+            if (newNode.type !== this.type) return false;
+            updateUI(newNode.attrs.current, newNode.attrs.currency);
+            t = newNode;
+            return true;
+        },
         ignoreMutation: () => true,
-        stopEvent: (e) => e.target.tagName === "INPUT",
+        stopEvent: (e) => ["INPUT", "BUTTON", "I"].some(tag => e.target.tagName === tag) || e.target.closest("button"),
       };
     };
   },

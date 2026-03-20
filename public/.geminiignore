@@ -1,0 +1,43 @@
+# Dependências e Builds
+node_modules/
+dist/
+build/
+.cache/
+.vite/
+
+# Arquivos Minificados (O Gemini deve ler apenas os fontes originais)
+*.min.html
+*.min.js
+*.min.css
+
+# Travas de Pacotes (Arquivos gigantes de texto redundantes)
+package-lock.json
+yarn.lock
+
+# Assets Binários (Imagens, Fontes, etc)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.pdf
+assets/fonts/
+assets/img/
+assets/images/
+
+# Configurações de Ambiente e Segredos
+.env
+.env.*
+*.local
+
+# Logs e Temporários
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Configurações de IDE
+.vscode/
+.idea/
+.project

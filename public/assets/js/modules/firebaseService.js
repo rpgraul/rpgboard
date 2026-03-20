@@ -60,6 +60,8 @@ export async function addItem(itemData, file = null) {
     delete cleanData.removeImage;
     delete cleanData.isLoading;
     delete cleanData.isUpdating;
+    delete cleanData.category;
+    delete cleanData.categoria;
 
     const newItem = { ...cleanData, createdAt: serverTimestamp(), order: snapshot.size + 1 };
 
@@ -89,6 +91,8 @@ export async function updateItem(item, data, file = null) {
     delete cleanData.isLoading;
     delete cleanData.isUpdating;
     delete cleanData.removeImage;
+    delete cleanData.category;
+    delete cleanData.categoria;
 
     if (file) {
       const img = await uploadImageToImgBB(file);

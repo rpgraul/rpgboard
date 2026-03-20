@@ -10,28 +10,43 @@ body, html {
 }
 
 .sheet-layout {
-    display: grid;
-    grid-template-columns: 320px 1fr 320px;
+    display: flex;
     gap: 1rem;
+    height: 100%;
+}
+
+.sheet-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sheet-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     height: 100%;
 }
 
 @media (max-width: 1024px) {
     .sheet-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto;
+        flex-direction: column;
         overflow-y: auto;
         padding-bottom: 70px;
     }
+    .sheet-sidebar {
+        width: 100%;
+        height: auto;
+    }
+    .sheet-main {
+        width: 100%;
+        height: auto;
+    }
 }
 
-/* Colunas e Containers */
-.sheet-column {
-    height: 100%;
-    overflow: hidden; /* Remove scroll da coluna, deixa pro box */
-    display: flex;
-    flex-direction: column;
-}
+
 
 .box.is-full-height {
     height: 100%;
@@ -171,13 +186,13 @@ body, html {
 
 
 
-#desc-editor.tiptap-editor-content {
+#editor.tiptap-editor-content {
     flex: 1;
     overflow-y: auto;
-    min-height: 0;
+    min-height: 70vh;
 }
 
-#desc-editor.tiptap-editor-content .ProseMirror {
+#editor.tiptap-editor-content .ProseMirror {
     min-height: 100%;
     padding: 1rem;
 }
@@ -308,4 +323,33 @@ h3.title.is-6 {
 #content-editor.tiptap-editor-content .ProseMirror {
     background-color: #262626;
     color: #f2f2f2;
+}
+
+/* Tabs logic */
+.tabs li:not(.is-active) a {
+    color: #888;
+    background: transparent;
+}
+.tabs.is-boxed li.is-active a {
+    background-color: #2a2a2a;
+    border-bottom-color: #2a2a2a;
+    color: #fff;
+}
+
+/* Sidebar dynamic groupings */
+.sheet-sidebar-group {
+    background: rgba(0,0,0,0.15);
+    border-radius: 6px;
+    padding: 1rem;
+    border: 1px solid #333;
+}
+
+.tab-content.is-hidden {
+    display: none !important;
+}
+
+#category-filters .button.active {
+    background-color: #3273dc !important;
+    border-color: transparent !important;
+    color: #fff !important;
 }

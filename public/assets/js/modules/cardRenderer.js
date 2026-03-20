@@ -39,17 +39,15 @@ export function renderCardViewMode(s, t) {
 
   e += `<div class="card-content">\n        <p class="title is-4">${t.titulo}</p>`;
   if (t.conteudo) {
-    const main = shortcodeParser.parseMainContent(t.conteudo);
-    if (main) e += `<div class="content">${main}</div>`;
+    // Agora o conteúdo é renderizado diretamente, sem containers/fichas especiais.
+    // Shortcodes numéricos são ocultados do texto pois aparecem no Info Layer.
+    const cleanContent = t.conteudo.replace(/\[(\*?)(stat|hp|count|money|xp)\s[^\]]*\]/gi, '').trim();
+    if (cleanContent) e += `<div class="content">${cleanContent}</div>`;
   }
   if (t.tags && t.tags.length > 0) {
     e += `<div class="tags">${t.tags.map((tag) => `<span class="tag is-info">${tag}</span>`).join(" ")}</div>`;
   }
 
-  // Botão Ver Ficha se contiver [ficha]
-  if (t.conteudo && t.conteudo.includes("[ficha]")) {
-    e += `<div class="mt-2"><a href="sheet-mode.html#${t.id}" class="button is-small is-dark is-fullwidth"><span class="icon is-small"><i class="fas fa-id-card"></i></span> <span>Ver Ficha</span></a></div>`;
-  }
 
   e += "</div>";
   s.innerHTML = `\n        <div class="card-actions-top">\n            <button class="action-icon edit-btn"><i class="fas fa-pencil-alt"></i></button>\n            <button class="action-icon delete-btn"><i class="fas fa-trash-alt"></i></button>\n        </div>\n    ` + e;
@@ -80,7 +78,7 @@ function updateCardView(s, t) {
   if (i) {
     let s = `<p class="title is-4">${t.titulo}</p>`;
     if (t.conteudo) {
-      const e = shortcodeParser.parseMainContent(t.conteudo);
+      const e = t.conteudo.replace(/\[(\*?)(stat|hp|count|money|xp)\s[^\]]*\]/gi, '').trim();
       e && (s += `<div class="content">${e}</div>`);
     }
     t.tags &&
@@ -89,9 +87,6 @@ function updateCardView(s, t) {
         .map((s) => `<span class="tag is-info">${s}</span>`)
         .join(" ")}</div>`);
 
-    if (t.conteudo && t.conteudo.includes("[ficha]")) {
-      s += `<div class="mt-2"><a href="sheet-mode.html#${t.id}" class="button is-small is-dark is-fullwidth"><span class="icon is-small"><i class="fas fa-id-card"></i></span> <span>Ver Ficha</span></a></div>`;
-    }
 
     i.innerHTML = s;
   }

@@ -17,6 +17,7 @@ let allItems = [];
 let isInitialGridLoaded = false;
 let appSettings = {};
 let tagSuggestionsContainer = null;
+let currentCategoryFilter = 'all';
 
 // Expose card suggestion logic for Tiptap (cardModal)
 window.getSuggestionItems = (query) => {
@@ -143,6 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const activeFiltersContainer = document.getElementById('active-filters-container');
     const clearFiltersBtn = document.getElementById('clear-filters-btn');
     const tagFiltersContainer = document.getElementById('tag-filters');
+    const categoryFiltersContainer = document.getElementById('category-filters');
     const viewWrapper = document.getElementById('view-wrapper');
     const detailModal = document.getElementById('detail-modal');
     const userLoginBtn = document.getElementById('user-login-btn');
@@ -370,6 +372,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const searchTerm = searchInput.value.trim();
         const selectedTags = Array.from(tagFiltersContainer.querySelectorAll('input:not([value="visible"]):not([value="hidden"]):checked')).map(checkbox => checkbox.value);
         const normalizedSearchTerm = normalizeString(searchTerm);
+        
+        const categoryFilter = currentCategoryFilter;
         const visibilityFilters = {
             visible: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.VISIBLE}"]`)?.checked,
             hidden: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.HIDDEN}"]`)?.checked
@@ -382,12 +386,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 [dataItem.titulo, dataItem.conteudo].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) ||
                 dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
             const tagMatch = selectedTags.length === 0 || selectedTags.every(selectedTag => dataItem.tags.some(itemTag => normalizeString(itemTag) === selectedTag));
+            const dataCategory = dataItem.cat || dataItem.category || dataItem.categoria;
+            // Caso a categoria seja 'pj' no filtro, buscar PJs retrocompatíveis
+            let categoryMatch = false;
+            if (!categoryFilter || categoryFilter === 'all') {
+                categoryMatch = true;
+            } else if (categoryFilter === 'pj') {
+                const val = (dataCategory || "").toLowerCase();
+                categoryMatch = ['pj', 'personagem', 'personagens'].includes(val) || (dataItem.tags && dataItem.tags.some(t => t.toLowerCase() === 'pj'));
+            } else {
+                categoryMatch = dataCategory === categoryFilter;
+            }
+            
             let visibilityMatch = true;
             if (auth.isNarrator() && (visibilityFilters.visible || visibilityFilters.hidden)) {
                 if (visibilityFilters.visible && !visibilityFilters.hidden) visibilityMatch = dataItem.isVisibleToPlayers !== false;
                 else if (!visibilityFilters.visible && visibilityFilters.hidden) visibilityMatch = dataItem.isVisibleToPlayers === false;
             }
-            return textMatch && tagMatch && visibilityMatch;
+            return textMatch && tagMatch && visibilityMatch && categoryMatch;
         });
 
         if (viewWrapper.classList.contains('view-grid')) {
@@ -400,7 +416,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateClearButtonVisibility() {
         const isSearchActive = searchInput.value.trim() !== '';
         const areFiltersActive = tagFiltersContainer.querySelector('input:checked') !== null;
-        if (clearFiltersBtn) clearFiltersBtn.classList.toggle('is-hidden', !isSearchActive && !areFiltersActive);
+        const isCategoryActive = currentCategoryFilter !== 'all';
+        if (clearFiltersBtn) clearFiltersBtn.classList.toggle('is-hidden', !isSearchActive && !areFiltersActive && !isCategoryActive);
     }
 
     function updateActiveFiltersDisplay() {
@@ -417,10 +434,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     searchInput.addEventListener('input', applyFilters);
     tagFiltersContainer.addEventListener('change', applyFilters);
+
+    if (categoryFiltersContainer) {
+        categoryFiltersContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            categoryFiltersContainer.querySelectorAll('button').forEach(b => b.classList.remove('is-link', 'active'));
+            btn.classList.add('is-link', 'active');
+            currentCategoryFilter = btn.dataset.category;
+            applyFilters();
+        });
+    }
+
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', () => {
             searchInput.value = '';
             tagFiltersContainer.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = false; });
+            if (categoryFiltersContainer) {
+                categoryFiltersContainer.querySelectorAll('button').forEach(b => b.classList.remove('is-link', 'active'));
+                const allBtn = categoryFiltersContainer.querySelector('[data-category="all"]');
+                if (allBtn) allBtn.classList.add('active');
+                currentCategoryFilter = 'all';
+            }
             applyFilters();
         });
     }

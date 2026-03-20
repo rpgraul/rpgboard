@@ -32,13 +32,11 @@ let contentEditor = null;
 let contentEditorSaveTimeout = null;
 
 // Referências de elementos que serão preenchidos após o layout carregar
-let imgEl, nameEl, visualStatsContainer, visualCountsContainer, notesEditor;
+let imgEl, nameEl, notesEditor;
 let mainEditor, mainEditorSaveTimeout;
 let sideViewEditor;
-let isProcessingUpdate = false;
 let editingNodePos = null;
-let currentFichaBlock = ""; // Armazena o bloco [ficha] integral
-let fichaEditor = null;
+let isDataLoading = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. INICIALIZAÇÃO DO LAYOUT MODULAR
@@ -80,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
-    document.getElementById('ficha-save-btn').addEventListener('click', saveFichaEditorContent);
+
 
     const fabMacros = document.getElementById('fab-macros');
     if (fabMacros) {
@@ -93,13 +91,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. CONFIGURAÇÃO DOS ELEMENTOS DA PÁGINA (após injeção)
     imgEl = document.getElementById('char-image');
     nameEl = document.getElementById('char-name');
-    visualStatsContainer = document.getElementById('visual-stats-container');
-    visualCountsContainer = document.getElementById('visual-counts-container');
     notesEditor = document.getElementById('player-notes-editor');
 
     // 5.1 INICIALIZAR EDITOR TIPTAP (após injeção)
     await initializeMainEditor();
-    await initializeFichaEditor();
 
     // Listener global para CardLinks (@mentions)
     document.addEventListener('click', (e) => {
@@ -122,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSheetSpecificListeners();
     setupInteractiveSheetListeners();
     loadMacros();
+
 });
 
 // Função para injetar o HTML da ficha na .sheet-layout
@@ -129,73 +125,25 @@ function injectSheetLayoutHTML() {
     const layout = document.querySelector('.sheet-layout');
     if (!layout) return;
     layout.innerHTML = `
-            <div class="sheet-column column-visual">
-                <div class="box is-full-height">
-                    <div id="char-image-container" class="char-image-container">
-                        <img id="char-image" src="" alt="Personagem">
-                        <label class="image-change-btn" data-tooltip="Trocar Imagem do Personagem">
-                            <i class="fas fa-camera"></i>
-                            <input type="file" id="char-image-upload" class="is-hidden" accept="image/*">
-                        </label>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; margin-bottom: 1rem;">
-                        <h2 id="char-name" class="title is-4" style="margin: 0; flex: 1;"></h2>
-                        <button id="edit-sheet-btn" class="button is-small is-dark" title="Editar Ficha Técnica">
-                            <i class="fas fa-edit mr-1"></i> Ficha
-                        </button>
-                    </div>
-                    <div id="visual-stats-container" class="content mt-4"></div>
-                    <div id="visual-counts-container" class="content mt-4"></div>
+            <aside class="sheet-sidebar box is-full-height">
+                <div id="char-image-container" class="char-image-container">
+                    <img id="char-image" src="" alt="Personagem">
+                    <label class="image-change-btn" data-tooltip="Trocar Imagem do Personagem">
+                        <i class="fas fa-camera"></i>
+                        <input type="file" id="char-image-upload" class="is-hidden" accept="image/*">
+                    </label>
                 </div>
-            </div>
-            <div class="sheet-column column-raw-editor">
-                <div class="box is-full-height" style="display: flex; flex-direction: column;">
-                    <h3 class="title is-6"><i class="fas fa-align-left"></i> Conteúdo Principal</h3>
-                    <div id="tiptap-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                        <div role="toolbar" aria-label="toolbar" class="tiptap-toolbar">
-                            <div role="group" class="tiptap-toolbar-group">
-                                <button class="tiptap-button" data-action="undo" data-tooltip="Desfazer"><i class="fas fa-undo"></i></button>
-                                <button class="tiptap-button" data-action="redo" data-tooltip="Refazer"><i class="fas fa-redo"></i></button>
-                            </div>
-                            <div class="tiptap-separator"></div>
-                             <div role="group" class="tiptap-toolbar-group">
-                                <button class="tiptap-button" data-action="toggleHeading" data-level="1" data-tooltip="Título 1">H1</button>
-                                <button class="tiptap-button" data-action="toggleHeading" data-level="2" data-tooltip="Título 2">H2</button>
-                                <button class="tiptap-button" data-action="toggleHeading" data-level="3" data-tooltip="Título 3">H3</button>
-                                <button class="tiptap-button" data-action="toggleBulletList" data-tooltip="Lista"><i class="fas fa-list-ul"></i></button>
-                                <button class="tiptap-button" data-action="toggleOrderedList" data-tooltip="Lista Numerada"><i class="fas fa-list-ol"></i></button>
-                            </div>
-                             <div class="tiptap-separator"></div>
-                            <div role="group" class="tiptap-toolbar-group">
-                                <button class="tiptap-button" data-action="toggleBold" data-tooltip="Negrito"><i class="fas fa-bold"></i></button>
-                                <button class="tiptap-button" data-action="toggleItalic" data-tooltip="Itálico"><i class="fas fa-italic"></i></button>
-                                 <button class="tiptap-button" data-action="toggleStrike" data-tooltip="Riscado"><i class="fas fa-strikethrough"></i></button>
-                                <button class="tiptap-button" data-action="toggleHighlight" data-tooltip="Destacar"><i class="fas fa-highlighter"></i></button>
-                            </div>
-                            <div class="tiptap-separator"></div>
-                            <div role="group" class="tiptap-toolbar-group">
-                                <button class="tiptap-button" data-action="setTextAlign" data-align="left" data-tooltip="Alinhar à Esquerda"><i class="fas fa-align-left"></i></button>
-                                <button class="tiptap-button" data-action="setTextAlign" data-align="center" data-tooltip="Centralizar"><i class="fas fa-align-center"></i></button>
-                                <button class="tiptap-button" data-action="setTextAlign" data-align="right" data-tooltip="Alinhar à Direita"><i class="fas fa-align-right"></i></button>
-                            </div>
-                             <div class="tiptap-separator"></div>
-                             <div role="group" class="tiptap-toolbar-group" id="sheet-mode-shortcode-container"></div>
-                        </div>
-                        <div id="editor" style="flex: 1; overflow-y: auto; padding: 1rem;"></div>
-                    </div>
-                    <p class="help">Alterações são salvas automaticamente.</p>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; margin-bottom: 1rem;">
+                    <span id="char-category-label" class="tag is-info is-light is-uppercase" style="align-self: flex-start; font-weight: bold; font-size: 10px;">PERSONAGEM</span>
+                    <h2 id="char-name" class="title is-4" style="margin: 0;"></h2>
                 </div>
-            </div>
-            <div class="sheet-column column-notes">
-                <div class="box is-full-height">
-                    <h3 class="title is-6"><i class="fas fa-sticky-note"></i> Notas Rápidas</h3>
-                    <div class="field is-full-height">
-                        <div class="control is-full-height">
-                            <textarea id="player-notes-editor" class="textarea player-notes-area" placeholder="Suas anotações pessoais (salvas no servidor)..."></textarea>
-                        </div>
-                    </div>
+            </aside>
+            <main class="sheet-main box is-full-height" style="display: flex; flex-direction: column; padding: 0;">
+                <div id="tiptap-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 1rem;">
+                    <!-- Tiptap Toolbar e Editor aqui -->
                 </div>
-            </div>
+                <p class="help mx-4 mb-2">Alterações são salvas automaticamente.</p>
+            </main>
             <footer class="sheet-footer">
                 <div class="dice-bar">
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d4">D4</button>
@@ -229,7 +177,16 @@ function openCharSelection() {
     const modal = document.getElementById('char-selection-modal');
     const container = document.getElementById('char-selection-body');
     if (!modal || !container) return;
-    const pjs = allItems.filter(i => i.tags && i.tags.some(t => t.toLowerCase() === 'pj'));
+    
+    // Filtra por categoria 'pj' suportando retrocompatibilidade com 'personagem' e tag 'pj'
+    const isPJ = (c) => {
+        const val = String(c.cat || c.category || c.categoria || "").toLowerCase();
+        const validValues = ['pj', 'personagem', 'personagens'];
+        const hasPJTag = Array.isArray(c.tags) && c.tags.some(t => String(t).toLowerCase() === 'pj');
+        return validValues.includes(val) || hasPJTag;
+    };
+    const pjs = allItems.filter(isPJ);
+    
     container.innerHTML = '';
     if (pjs.length === 0) container.innerHTML = '<p>Nenhum personagem PJ encontrado.</p>';
     else {
@@ -248,6 +205,7 @@ function openCharSelection() {
 }
 
 function loadCharacter(id) {
+    isDataReady = false;
     const char = allItems.find(i => i.id === id);
     if (!char) return;
     currentCharacterId = id;
@@ -258,52 +216,43 @@ function loadCharacter(id) {
     if (imgEl) imgEl.src = char.url || '';
     if (nameEl) nameEl.textContent = char.titulo;
 
+    const catLabel = document.getElementById('char-category-label');
+    if (catLabel) {
+        const catValue = char.cat || char.category || char.categoria || 'pj';
+        catLabel.textContent = catValue.toUpperCase();
+        catLabel.className = `tag is-${catValue === 'monstro' ? 'danger' : (catValue === 'item' ? 'warning' : 'info')} is-light is-uppercase`;
+    }
+
     if (visualStatsContainer) {
         visualStatsContainer.innerHTML = '';
         if (visualCountsContainer) visualCountsContainer.innerHTML = '';
 
-        // Extrai apenas o conteúdo dentro de [ficha] para a lógica técnica
-        const fichaContent = shortcodeParser.extractFichaContent(char.conteudo || "");
-        const finalTechContent = fichaContent || char.conteudo || ""; // Fallback para conteúdo completo se não houver wrapper
-
-        const parsed = shortcodeParser.parseAllShortcodes({ conteudo: finalTechContent }, { isPlayerSheet: true });
+        const parsed = shortcodeParser.parseAllShortcodes({ conteudo: char.conteudo || "" }, { isPlayerSheet: true });
 
         visualStatsContainer.innerHTML = parsed.all.filter(s => s.type === 'stat' || s.type === 'money').map(s => s.html).join('');
         if (visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
 
-        // Renderizar Containers Dinâmicos (Sempre lendo do conteúdo global)
         renderContainers(char);
-
-        // Renderizar Macros (Firebase)
         renderMacroButtons();
     }
 
     if (mainEditor) {
-        isProcessingUpdate = true;
-
-        // Isolar a ficha da narrativa
-        const fichaMatch = char.conteudo ? char.conteudo.match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i) : null;
-        currentFichaBlock = fichaMatch ? fichaMatch[0] : "";
-
-        let narrativeContent = char.conteudo || "";
-        if (fichaMatch) {
-            narrativeContent = char.conteudo.replace(fichaMatch[0], "").trim();
-        }
-
-        const parsed = preParseShortcodesForEditor(narrativeContent);
-        if (!mainEditor.isFocused) {
-            mainEditor.commands.setContent(parsed, false);
-        }
-        isProcessingUpdate = false;
+        const parsedContext = preParseShortcodesForEditor(char.conteudo || "");
+        mainEditor.commands.setContent(parsedContext, false);
     }
 
     if (notesEditor && document.activeElement !== notesEditor) notesEditor.value = char.playerNotes || '';
 
-    // Visibilidade narrativa-only no modal
     if (isNarrator()) {
         document.querySelectorAll(".narrator-only").forEach(el => el.classList.remove("is-hidden"));
     }
+
+    setTimeout(() => {
+        isDataReady = true;
+    }, 100);
 }
+
+
 
 function htmlToRaw(html) {
     if (!html) return "";
@@ -318,6 +267,11 @@ function setupSheetSpecificListeners() {
     if (editSheetBtn) {
         editSheetBtn.addEventListener('click', openSheetEditor);
     }
+
+    const tabs = document.querySelectorAll('.tabs li');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
 
     if (notesEditor) notesEditor.addEventListener('input', (e) => handleAutoSave('playerNotes', e.target.value, false));
 
@@ -390,6 +344,50 @@ function handleAutoSave(field, value, isRaw) {
 }
 
 async function initializeMainEditor() {
+    const editorContainer = document.querySelector("#tiptap-container");
+    if (!editorContainer) return;
+    
+    // Injetar Toolbar
+    editorContainer.innerHTML = `
+        <div role="toolbar" aria-label="toolbar" class="tiptap-toolbar">
+            <div role="group" class="tiptap-toolbar-group">
+                <button class="tiptap-button" data-action="undo" data-tooltip="Desfazer"><i class="fas fa-undo"></i></button>
+                <button class="tiptap-button" data-action="redo" data-tooltip="Refazer"><i class="fas fa-redo"></i></button>
+            </div>
+            <div class="tiptap-separator"></div>
+             <div role="group" class="tiptap-toolbar-group">
+                <button class="tiptap-button" data-action="toggleHeading" data-level="1" data-tooltip="Título 1">H1</button>
+                <button class="tiptap-button" data-action="toggleHeading" data-level="2" data-tooltip="Título 2">H2</button>
+                <button class="tiptap-button" data-action="toggleHeading" data-level="3" data-tooltip="Título 3">H3</button>
+                <button class="tiptap-button" data-action="toggleBulletList" data-tooltip="Lista"><i class="fas fa-list-ul"></i></button>
+                <button class="tiptap-button" data-action="toggleOrderedList" data-tooltip="Lista Numerada"><i class="fas fa-list-ol"></i></button>
+            </div>
+             <div class="tiptap-separator"></div>
+            <div role="group" class="tiptap-toolbar-group">
+                <button class="tiptap-button" data-action="toggleBold" data-tooltip="Negrito"><i class="fas fa-bold"></i></button>
+                <button class="tiptap-button" data-action="toggleItalic" data-tooltip="Itálico"><i class="fas fa-italic"></i></button>
+                 <button class="tiptap-button" data-action="toggleStrike" data-tooltip="Riscado"><i class="fas fa-strikethrough"></i></button>
+                <button class="tiptap-button" data-action="toggleHighlight" data-tooltip="Destacar"><i class="fas fa-highlighter"></i></button>
+            </div>
+            <div class="tiptap-separator"></div>
+            <div role="group" class="tiptap-toolbar-group">
+                <button class="tiptap-button" data-action="setTextAlign" data-align="left" data-tooltip="Alinhar à Esquerda"><i class="fas fa-align-left"></i></button>
+                <button class="tiptap-button" data-action="setTextAlign" data-align="center" data-tooltip="Centralizar"><i class="fas fa-align-center"></i></button>
+                <button class="tiptap-button" data-action="setTextAlign" data-align="right" data-tooltip="Alinhar à Direita"><i class="fas fa-align-right"></i></button>
+            </div>
+             <div class="tiptap-separator"></div>
+             <div role="group" class="tiptap-toolbar-group">
+                <button class="tiptap-button sc-shortcut" data-type="hp" data-tooltip="Novo HP"><i class="fas fa-heartbeat"></i></button>
+                <button class="tiptap-button sc-shortcut" data-type="stat" data-tooltip="Novo Atributo"><i class="fas fa-dice-d20"></i></button>
+                <button class="tiptap-button sc-shortcut" data-type="money" data-tooltip="Novo Dinheiro"><i class="fas fa-coins"></i></button>
+                <button class="tiptap-button sc-shortcut" data-type="count" data-tooltip="Novo Contador"><i class="fas fa-list-ol"></i></button>
+            </div>
+            <div class="tiptap-separator"></div>
+             <div role="group" class="tiptap-toolbar-group" id="sheet-mode-shortcode-container"></div>
+        </div>
+        <div id="editor" style="flex: 1; overflow-y: auto; padding: 1rem;"></div>
+    `;
+
     mainEditor = new Editor({
         element: document.querySelector("#editor"),
         extensions: [
@@ -426,7 +424,8 @@ async function initializeMainEditor() {
                     setTimeout(() => {
                         const html = mainEditor.getHTML();
                         if (html.includes("[stat") || html.includes("[hp") || html.includes("[money") || html.includes("[count") || html.includes("[container") || html.includes("[#") || html.includes("[ficha")) {
-                            forceEditorReparse(mainEditor, html);
+                            const parsed = preParseShortcodesForEditor(html);
+                            mainEditor.commands.setContent(parsed, true);
                         }
                     }, 10);
                 }
@@ -434,15 +433,14 @@ async function initializeMainEditor() {
             }
         },
         onUpdate: () => {
-            if (isProcessingUpdate) return;
+            if (!isDataReady || !currentCharacterId) return;
             clearTimeout(mainEditorSaveTimeout);
-            mainEditorSaveTimeout = setTimeout(saveMainEditorContent, 3000);
+            mainEditorSaveTimeout = setTimeout(syncToFirebase, 2000);
         },
         onBlur: () => {
-            if (!isProcessingUpdate) {
-                clearTimeout(mainEditorSaveTimeout);
-                saveMainEditorContent();
-            }
+            if (!isDataReady || !currentCharacterId) return;
+            clearTimeout(mainEditorSaveTimeout);
+            syncToFirebase();
         }
     });
 
@@ -465,6 +463,15 @@ async function initializeMainEditor() {
         else if (action === "setTextAlign") chain.setTextAlign(val).run();
     };
 
+    // Shortcut Buttons Events
+    document.querySelectorAll(".sc-shortcut").forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            const type = btn.dataset.type;
+            openConfigModal(type, mainEditor);
+        };
+    });
+
     const scContainer = document.getElementById('sheet-mode-shortcode-container');
     if (scContainer) {
         setupShortcodeMenu(scContainer, mainEditor);
@@ -486,38 +493,12 @@ async function initializeMainEditor() {
     });
 }
 
-function saveMainEditorContent() {
-    if (!currentCharacterId || isProcessingUpdate) return;
+function syncToFirebase() {
+    if (!currentCharacterId || !isDataReady) return;
     const html = mainEditor.getHTML();
-    const narrativeShortcodes = convertEditorHtmlToShortcodes(html);
-
-    // Usa a versão mais recente registrada em currentCharacter (que a sheet-ui pode ter atualizado via autosave do firebaseService)
-    // ao invés de depender apenas de currentFichaBlock se ele for nulo. Isso previne o editor de pisar por cima
-    let latestFichaBlock = currentFichaBlock;
-    if (!latestFichaBlock && currentCharacter?.conteudo) {
-        const fichaMatch = currentCharacter.conteudo.match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i);
-        if (fichaMatch) latestFichaBlock = fichaMatch[0];
-    }
-
-    // Recombina com a ficha
-    const fullContent = latestFichaBlock
-        ? `${latestFichaBlock}\n\n${narrativeShortcodes}`
-        : narrativeShortcodes;
-
-    // Atualiza localmente
-    currentCharacter.conteudo = fullContent;
-
-    updateItem({ id: currentCharacterId }, { conteudo: fullContent }).catch(console.error);
-}
-
-function forceEditorReparse(editor, html) {
-    if (isProcessingUpdate) return;
-    isProcessingUpdate = true;
-    const parsed = preParseShortcodesForEditor(html);
-    editor.commands.setContent(parsed, true);
-    setTimeout(() => {
-        isProcessingUpdate = false;
-    }, 0);
+    const finalContent = convertEditorHtmlToShortcodes(html);
+    currentCharacter.conteudo = finalContent;
+    updateItem({ id: currentCharacterId }, { conteudo: finalContent }).catch(console.error);
 }
 
 function getMacros() {
@@ -875,135 +856,6 @@ function setupInteractiveSheetListeners() {
     });
 }
 
-/**
- * Atualiza um shortcode específico dentro do bloco [ficha] e sincroniza tudo.
- */
-async function updateFichaShortcode(oldSc, newSc) {
-    if (!currentCharacter || !currentCharacterId) return;
-
-    // Como o conteúdo pode ter mudado externamente, nós buscamos a versão local da memória antes
-    let currentHtml = currentCharacter.conteudo || "";
-
-    const escapedSearch = oldSc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const globalRegex = new RegExp(escapedSearch, 'g');
-
-    if (currentFichaBlock && currentFichaBlock.includes(oldSc)) {
-        currentFichaBlock = currentFichaBlock.replace(globalRegex, newSc);
-    }
-    
-    currentHtml = currentHtml.replace(globalRegex, newSc);
-
-    currentCharacter.conteudo = currentHtml;
-
-    // Sincronização Local Imediata: Atualiza o cache para evitar race conditions no re-render
-    const itemIdx = allItems.findIndex(i => i.id === currentCharacterId);
-    if (itemIdx !== -1) allItems[itemIdx].conteudo = currentHtml;
-
-    // Salvamos localmente o conteudo completo pois ele tem todos os shortcodes de ficha/stats juntos
-    await updateItem({ id: currentCharacterId }, { conteudo: currentHtml });
-
-    // isProcessingUpdate desabilita eventos onUpdate do Tiptap temporariamente 
-    // para evitar trigger circular de salvageamento
-    isProcessingUpdate = true;
-    loadCharacter(currentCharacterId);
-    setTimeout(() => { isProcessingUpdate = false; }, 100);
-}
-async function saveContainerContent() {
-    if (!currentCharacterId || !sideViewEditor) return;
-
-    const modal = document.getElementById('content-editor-modal');
-    const index = parseInt(modal.dataset.containerIndex, 10);
-    const containers = shortcodeParser.extractContainers(currentCharacter.conteudo);
-
-    if (containers[index]) {
-        const newInnerContent = convertEditorHtmlToShortcodes(sideViewEditor.getHTML());
-        const oldFullMatch = containers[index].fullMatch;
-
-        const headerMatch = oldFullMatch.match(/\[container\s+[^\]]*\]/i)[0];
-        const newFullShortcode = `${headerMatch}\n${newInnerContent}\n[/container]`;
-
-        const newConteudo = currentCharacter.conteudo.replace(oldFullMatch, newFullShortcode);
-
-        // Se o container está dentro da ficha técnica, atualizamos também o bloco isolado
-        if (currentFichaBlock && currentFichaBlock.includes(oldFullMatch)) {
-            currentFichaBlock = currentFichaBlock.replace(oldFullMatch, newFullShortcode);
-        }
-
-        await updateItem({ id: currentCharacterId }, { conteudo: newConteudo });
-        currentCharacter.conteudo = newConteudo;
-
-        if (mainEditor) {
-            isProcessingUpdate = true;
-            // Se mudou um container, precisamos regenerar a narrativa sem ficha
-            const narrative = currentCharacter.conteudo.replace(/\[ficha\]([\s\S]*?)\[\/ficha\]/i, "").trim();
-            mainEditor.commands.setContent(preParseShortcodesForEditor(narrative), false);
-            isProcessingUpdate = false;
-        }
-
-        closeModal(modal);
-    }
-}
-
-async function initializeFichaEditor() {
-    fichaEditor = new Editor({
-        element: document.querySelector("#ficha-tiptap-editor"),
-        extensions: [
-            StarterKit,
-            Highlight,
-            Underline,
-            Link.configure({ openOnClick: false }),
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
-            StatNode,
-            HpNode,
-            MoneyNode,
-            CountNode,
-            ContainerShortcode,
-        ],
-        editorProps: { attributes: { class: "ProseMirror" } }
-    });
-
-    // Injetar toolbar no modal de ficha (reutilizando a existente na tela)
-    const toolbarHTML = document.querySelector(".column-raw-editor .tiptap-toolbar").innerHTML;
-    const fichaToolbar = document.querySelector("#ficha-tiptap-container .tiptap-toolbar");
-    if (fichaToolbar) {
-        fichaToolbar.innerHTML = toolbarHTML;
-
-        // Fix duplicate ID para o shortcode button container
-        const copiedScContainer = fichaToolbar.querySelector('#sheet-mode-shortcode-container');
-        if (copiedScContainer) {
-            copiedScContainer.id = 'ficha-mode-shortcode-container';
-            copiedScContainer.innerHTML = '';
-            setupShortcodeMenu(copiedScContainer, fichaEditor);
-        }
-
-        fichaToolbar.onclick = (e) => {
-            const btn = e.target.closest("button[data-action]");
-            if (!btn) return;
-            const action = btn.dataset.action;
-            const chain = fichaEditor.chain().focus();
-            if (action === "toggleBold") chain.toggleBold().run();
-            // ... (adicionar outros se necessário, ou unificar função de toolbar)
-        };
-        // Unificar botões comuns
-        fichaToolbar.querySelectorAll(".tiptap-button").forEach(btn => {
-            btn.addEventListener("click", (e) => {
-                const action = btn.dataset.action;
-                const val = btn.dataset.level || btn.dataset.align;
-                const chain = fichaEditor.chain().focus();
-                if (action === "undo") chain.undo().run();
-                else if (action === "redo") chain.redo().run();
-                else if (action === "toggleBold") chain.toggleBold().run();
-                else if (action === "toggleItalic") chain.toggleItalic().run();
-                else if (action === "toggleStrike") chain.toggleStrike().run();
-                else if (action === "toggleHighlight") chain.toggleHighlight().run();
-                else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
-                else if (action === "toggleBulletList") chain.toggleBulletList().run();
-                else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
-                else if (action === "setTextAlign") chain.setTextAlign(val).run();
-            });
-        });
-    }
-}
 
 function normalizeString(str) {
     if (!str) return "";
@@ -1038,61 +890,3 @@ function showDetailModal(item) {
     openModal(modal);
 }
 
-function openSheetEditor() {
-    if (!fichaEditor || !currentCharacter) return;
-
-    // Extração via Regex: Localize o bloco [ficha]([\s\S]*?)[\/ficha] dentro de currentCharacter.conteudo
-    const fichaMatch = (currentCharacter.conteudo || "").match(/\[ficha\]([\s\S]*?)\[\/ficha\]/i);
-    const innerContent = fichaMatch ? fichaMatch[1].trim() : "";
-
-    // Parse para Editor: Transforma conteúdo extraído em HTML compatível
-    const parsed = preParseShortcodesForEditor(innerContent);
-
-    // Carga no Editor
-    fichaEditor.commands.setContent(parsed);
-
-    // UI: Abre o modal
-    openModal(document.getElementById("ficha-editor-modal"));
-
-    // Foco automático para visibilidade do cursor
-    setTimeout(() => fichaEditor.commands.focus(), 100);
-}
-
-async function saveFichaEditorContent() {
-    if (!currentCharacterId || !fichaEditor || !currentCharacter) return;
-
-    // Conversão de Saída: HTML -> Shortcodes brutos
-    const innerShortcodes = convertEditorHtmlToShortcodes(fichaEditor.getHTML());
-    const newFichaBlock = `[ficha]\n${innerShortcodes}\n[/ficha]`;
-
-    // Reconstrução do Card: Substitui apenas o bloco [ficha] preservando narrativa via Regex
-    let newFullContent = "";
-    const regex = /\[ficha\]([\s\S]*?)\[\/ficha\]/i;
-
-    if (regex.test(currentCharacter.conteudo || "")) {
-        newFullContent = currentCharacter.conteudo.replace(regex, newFichaBlock);
-    } else {
-        // Fallback: Se não houver bloco, adicionamos no topo
-        newFullContent = `${newFichaBlock}\n\n${currentCharacter.conteudo || ""}`;
-    }
-
-    // Persistência: Firestore
-    try {
-        await updateItem({ id: currentCharacterId }, { conteudo: newFullContent });
-
-        // Sincronização Local: Atualiza referências locais para refletir a mudança imediata
-        currentCharacter.conteudo = newFullContent;
-        // Atualiza no array allItems para garantir que loadCharacter pegue os dados novos
-        const itemIdx = allItems.findIndex(i => i.id === currentCharacterId);
-        if (itemIdx !== -1) allItems[itemIdx].conteudo = newFullContent;
-
-        loadCharacter(currentCharacterId);
-
-        // UI Feedback e Fechamento
-        showToast("Ficha atualizada com sucesso!", "is-success");
-        closeModal(document.getElementById("ficha-editor-modal"));
-    } catch (error) {
-        console.error("Erro ao salvar ficha:", error);
-        showToast("Erro ao salvar ficha técnica.", "is-danger");
-    }
-}

@@ -25,7 +25,7 @@ export function renderHeader() {
 
   const menu = [
     { id: 'nav-login', label: narrator ? 'Mestre' : (storedName !== 'Visitante' ? storedName : 'Entrar'), icon: narrator ? 'fas fa-user-shield' : (storedName !== 'Visitante' ? 'fas fa-user-edit' : 'fas fa-sign-in-alt'), action: 'login' },
-    { id: 'nav-sheet', label: 'Ficha', icon: 'fas fa-file-invoice', href: 'sheet-mode.html', page: 'sheet' },
+    { id: 'nav-sheet', label: 'Ficha', icon: 'fas fa-file-invoice', href: (currentPage === 'grid' || currentPage === 'notas') ? 'sheet-mode.html?tab=narrativa' : 'sheet-mode.html', page: 'sheet' },
     { id: 'nav-grid', label: 'Grid', icon: 'fas fa-th', href: 'index.html', page: 'grid' },
     { id: 'nav-notas', label: 'Notas', icon: 'fas fa-edit', href: 'text-mode.html', page: 'notas' },
     { id: 'nav-whiteboard', label: 'Whiteboard', icon: 'fas fa-pencil-ruler', href: 'drawing-mode.html', page: 'whiteboard' }

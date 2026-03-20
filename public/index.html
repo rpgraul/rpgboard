@@ -42,6 +42,27 @@
                             </p>
                         </div>
                         
+                        <div id="category-filters" class="field is-grouped is-grouped-multiline mb-4">
+                            <div class="control">
+                                <button class="button is-small is-rounded is-dark active" data-category="all">Todos</button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-small is-rounded is-dark" data-category="pj">Personagem</button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-small is-rounded is-dark" data-category="monstro">Monstro</button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-small is-rounded is-dark" data-category="npc">NPC</button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-small is-rounded is-dark" data-category="item">Item</button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-small is-rounded is-dark" data-category="anotacao">Anotação</button>
+                            </div>
+                        </div>
+
                         <div id="tag-filters" class="field is-grouped is-grouped-multiline mb-4">
                             <div class="control narrator-only is-hidden">
                                 <label class="checkbox"><input type="checkbox" value="visible"> <span>Visível</span></label>
@@ -113,6 +134,21 @@
 
                             <!-- Metadados -->
                             <div class="card-modal-meta">
+                                <!-- Categoria -->
+                                <div class="field">
+                                    <label class="label" for="card-category">Categoria</label>
+                                    <div class="control">
+                                        <div class="select is-small is-fullwidth">
+                                            <select id="card-category">
+                                                <option value="pj">Personagem</option>
+                                                <option value="monstro">Monstro</option>
+                                                <option value="npc">NPC</option>
+                                                <option value="item">Item</option>
+                                                <option value="anotacao">Anotação</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
                                 <!-- Tags -->
                                 <div class="field">
                                     <label class="label" for="card-tags">Tags</label>

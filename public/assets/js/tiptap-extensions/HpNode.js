@@ -44,82 +44,101 @@ export default Node.create({
   addNodeView() {
     return ({ node: t, editor: e, getPos: a }) => {
       const n = document.createElement("div");
-      n.className = "shortcode-hp";
+      n.className = "shortcode-hp interactive-node-view";
       if (t.attrs.isHidden) n.classList.add("is-hidden-preview");
       n.contentEditable = "false";
+
+      // Progress bar logic
+      const updateUI = (current, max) => {
+          const percent = Math.min(100, Math.max(0, Math.round((current / max) * 100)));
+          barFill.style.width = `${percent}%`;
+          hpText.textContent = `${current} / ${max}`;
+          
+          barFill.classList.remove("is-low", "is-medium", "is-high", "is-critical");
+          if (percent <= 20) barFill.classList.add("is-critical");
+          else if (percent <= 40) barFill.classList.add("is-low");
+          else if (percent <= 70) barFill.classList.add("is-medium");
+          else barFill.classList.add("is-high");
+      };
+
+      const container = document.createElement("div");
+      container.className = "hp-widget-container";
 
       const header = document.createElement("div");
       header.className = "hp-header";
 
-      const label = document.createElement("strong");
-      label.className = "hp-label";
+      const label = document.createElement("span");
+      label.className = "hp-label-tag";
       label.textContent = "PV";
 
       const hpText = document.createElement("span");
-      hpText.className = "hp-text";
-      hpText.textContent = `${t.attrs.current} / ${t.attrs.max}`;
-
+      hpText.className = "hp-text-value";
+      
       header.append(label, hpText);
 
       const barContainer = document.createElement("div");
-      barContainer.className = "hp-bar-container";
-
+      barContainer.className = "hp-bar-track";
       const barFill = document.createElement("div");
       barFill.className = "hp-bar-fill";
-
-      const updateBar = (current) => {
-        const percent = Math.round((current / t.attrs.max) * 100);
-        barFill.style.width = `${percent}%`;
-        barFill.classList.remove("is-low", "is-medium", "is-high");
-        if (percent < 25) barFill.classList.add("is-low");
-        else if (percent < 50) barFill.classList.add("is-medium");
-        else barFill.classList.add("is-high");
-        hpText.textContent = `${current} / ${t.attrs.max}`;
-      };
-
-      updateBar(t.attrs.current);
       barContainer.appendChild(barFill);
 
-      // Hidden Input for editing
-      const i = document.createElement("input");
-      (i.type = "number"),
-        (i.className = "hp-current-input is-hidden"),
-        (i.value = t.attrs.current),
-        (i.max = t.attrs.max),
-        (i.min = "0");
+      // Controls
+      const controls = document.createElement("div");
+      controls.className = "hp-controls";
 
-      i.addEventListener("input", (event) => {
-        let val = parseInt(event.target.value, 10) || 0;
-        val = Math.max(0, Math.min(val, t.attrs.max));
-        updateBar(val);
-      });
+      const btnMinus = document.createElement("button");
+      btnMinus.className = "hp-btn minus";
+      btnMinus.innerHTML = '<i class="fas fa-minus"></i>';
+      
+      const btnPlus = document.createElement("button");
+      btnPlus.className = "hp-btn plus";
+      btnPlus.innerHTML = '<i class="fas fa-plus"></i>';
 
-      i.addEventListener("change", () => {
-        if ("number" == typeof a()) {
-          const result = calculateMathExpression(t.attrs.current, i.value);
-          let r = Math.max(-10, Math.min(Math.round(result), t.attrs.max));
-          i.value = r;
-          updateBar(r);
-          e.view.dispatch(
-            e.view.state.tr.setNodeMarkup(a(), void 0, {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "hp-inline-input";
+      input.placeholder = "±";
+
+      const syncValue = (val) => {
+          if (typeof a !== "function") return;
+          const pos = a();
+          e.view.dispatch(e.view.state.tr.setNodeMarkup(pos, undefined, {
               ...t.attrs,
-              current: r,
-            })
-          );
-        }
-      });
+              current: val
+          }));
+      };
 
-      n.addEventListener("click", (e) => {
-        e.stopPropagation();
-        i.classList.toggle("is-hidden");
-        if (!i.classList.contains("is-hidden")) i.focus();
-      });
+      btnMinus.onclick = (ev) => {
+          ev.stopPropagation();
+          const newVal = Math.max(0, t.attrs.current - 1);
+          syncValue(newVal);
+      };
 
-      i.addEventListener("click", (t) => t.stopPropagation());
-      i.addEventListener("dblclick", (t) => t.stopPropagation());
+      btnPlus.onclick = (ev) => {
+          ev.stopPropagation();
+          const newVal = Math.min(t.attrs.max, t.attrs.current + 1);
+          syncValue(newVal);
+      };
 
-      n.append(header, barContainer, i);
-      n.addEventListener("dblclick", () => {
+      input.onclick = (ev) => ev.stopPropagation();
+      input.onkeydown = (ev) => {
+          if (ev.key === "Enter") {
+              ev.preventDefault();
+              const result = calculateMathExpression(t.attrs.current, input.value);
+              const finalVal = Math.max(0, Math.min(Math.round(result), t.attrs.max));
+              syncValue(finalVal);
+              input.value = "";
+              input.blur();
+          }
+      };
+
+      updateUI(t.attrs.current, t.attrs.max);
+      controls.append(btnMinus, input, btnPlus);
+      container.append(header, barContainer, controls);
+      n.appendChild(container);
+
+      n.addEventListener("dblclick", (ev) => {
+        ev.stopPropagation();
         document.dispatchEvent(
           new CustomEvent("edit-shortcode", {
             detail: { type: this.name, attrs: t.attrs, pos: a(), editor: e },
@@ -129,9 +148,15 @@ export default Node.create({
 
       return {
         dom: n,
-        ignoreMutation: () => !0,
-        stopEvent: (t) => "INPUT" === t.target.tagName,
+        update: (newNode) => {
+            if (newNode.type !== this.type) return false;
+            updateUI(newNode.attrs.current, newNode.attrs.max);
+            t = newNode; // Sync local reference
+            return true;
+        },
+        ignoreMutation: () => true,
+        stopEvent: (t) => ["INPUT", "BUTTON", "I"].some(tag => t.target.tagName === tag) || t.target.closest("button"),
       };
     };
   },
-});
+});

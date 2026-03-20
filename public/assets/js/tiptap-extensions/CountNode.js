@@ -78,115 +78,87 @@ export default Node.create({
   addNodeView() {
     return ({ node: t, getPos: e, editor: n }) => {
       const a = document.createElement("span");
-      a.className = `shortcode-count is-interactive theme-${t.attrs.theme}`;
+      a.className = `shortcode-count interactive-node-view theme-${t.attrs.theme}`;
       if (t.attrs.isHidden) a.classList.add("is-hidden-preview");
       a.contentEditable = "false";
 
       const r = document.createElement("span");
-      r.className = "count-representation";
+      r.className = "count-widget-container";
+
+      const syncValue = (val) => {
+        if (typeof e === "function") {
+          n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
+            ...t.attrs,
+            current: val,
+          }));
+        }
+      };
 
       if (t.attrs.theme === "checkbox") {
         for (let i = 1; i <= t.attrs.max; i++) {
           const cb = document.createElement("span");
-          cb.className = "count-checkbox " + (i <= t.attrs.current ? "is-checked" : "");
-          cb.textContent = "✔";
+          cb.className = "count-check-box " + (i <= t.attrs.current ? "is-checked" : "");
+          cb.innerHTML = '<i class="fas fa-check"></i>';
           cb.addEventListener("click", (ev) => {
             ev.stopPropagation();
-            let newCurrent = i === t.attrs.current ? i - 1 : i;
-            if (typeof e === "function") {
-              n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
-                ...t.attrs,
-                current: newCurrent,
-              }));
-            }
+            const newCurrent = i === t.attrs.current ? i - 1 : i;
+            syncValue(newCurrent);
           });
           r.appendChild(cb);
         }
       } else {
         const btnDec = document.createElement("button");
-        btnDec.className = "count-btn";
-        btnDec.textContent = "-";
+        btnDec.className = "count-btn minus";
+        btnDec.innerHTML = '<i class="fas fa-minus"></i>';
         btnDec.onclick = (ev) => {
           ev.stopPropagation();
-          if (typeof e === "function") {
-            const next = Math.max(0, t.attrs.current - 1);
-            n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
-              ...t.attrs,
-              current: next,
-            }));
-          }
+          syncValue(Math.max(0, t.attrs.current - 1));
         };
 
         const btnInc = document.createElement("button");
-        btnInc.className = "count-btn";
-        btnInc.textContent = "+";
+        btnInc.className = "count-btn plus";
+        btnInc.innerHTML = '<i class="fas fa-plus"></i>';
         btnInc.onclick = (ev) => {
           ev.stopPropagation();
-          if (typeof e === "function") {
-            const next = Math.min(t.attrs.max, t.attrs.current + 1);
-            n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
-              ...t.attrs,
-              current: next,
-            }));
-          }
+          syncValue(Math.min(t.attrs.max, t.attrs.current + 1));
         };
+
+        const label = document.createElement("span");
+        label.className = "count-label-text";
+        if (t.attrs.icon) {
+            label.innerHTML = `<i class="fas fa-${t.attrs.icon}"></i> ${t.attrs.label}`;
+        } else {
+            label.textContent = t.attrs.label;
+        }
 
         const display = document.createElement("span");
-        display.className = "count-current-value";
-        display.textContent = t.attrs.current;
-        display.style.cursor = "pointer";
-        display.style.borderBottom = "1px dashed rgba(255,255,255,0.3)";
+        display.className = "count-value-display";
+        display.textContent = `${t.attrs.current} / ${t.attrs.max}`;
 
         const input = document.createElement("input");
-        input.type = "number";
-        input.className = "count-value-input is-hidden";
-        input.style.width = "40px";
-        input.style.background = "transparent";
-        input.style.border = "none";
-        input.style.color = "#fff";
-        input.value = t.attrs.current;
+        input.type = "text";
+        input.className = "count-inline-input";
+        input.placeholder = "±";
 
-        const save = (val) => {
-          if (typeof e !== "function") return;
-          const next = Math.max(0, Math.min(t.attrs.max, parseInt(val, 10) || 0));
-          n.view.dispatch(n.view.state.tr.setNodeMarkup(e(), undefined, {
-            ...t.attrs,
-            current: next,
-          }));
-        };
-
-        display.onclick = (ev) => {
-          ev.stopPropagation();
-          display.classList.add("is-hidden");
-          input.classList.remove("is-hidden");
-          input.focus();
-        };
-
-        input.onblur = () => {
-          save(input.value);
-          input.classList.add("is-hidden");
-          display.classList.remove("is-hidden");
-        };
-
+        input.onclick = (ev) => ev.stopPropagation();
         input.onkeydown = (ev) => {
           if (ev.key === "Enter") {
             ev.preventDefault();
+            const val = parseInt(input.value, 10);
+            if (!isNaN(val)) {
+                // Support ± syntax or just number
+                let next = t.attrs.current;
+                if (input.value.startsWith("+")) next += val;
+                else if (input.value.startsWith("-")) next += val;
+                else next = val;
+                syncValue(Math.max(0, Math.min(t.attrs.max, next)));
+            }
+            input.value = "";
             input.blur();
           }
         };
-        input.onclick = (ev) => ev.stopPropagation();
 
-        if (t.attrs.icon) {
-          const icon = document.createElement("i");
-          icon.className = `fas fa-${t.attrs.icon} mr-1`;
-          r.appendChild(icon);
-        }
-
-        const nameSpace = document.createElement("span");
-        nameSpace.className = "count-name mr-1";
-        nameSpace.textContent = t.attrs.label;
-
-        r.append(btnDec, nameSpace, display, input, document.createTextNode(` / ${t.attrs.max}`), btnInc);
+        r.append(btnDec, label, display, btnInc, input);
       }
 
       a.appendChild(r);
@@ -201,8 +173,15 @@ export default Node.create({
 
       return {
         dom: a,
+        update: (newNode) => {
+            if (newNode.type !== this.type) return false;
+            t = newNode;
+            // Update UI would be complex here due to DOM recreation, simpler to let Tiptap handle it or selectively update
+            // For now, returning false will force recreation which is safe for small widgets
+            return false; 
+        },
         ignoreMutation: () => true,
-        stopEvent: (e) => ["INPUT", "BUTTON"].includes(e.target.tagName),
+        stopEvent: (e) => ["INPUT", "BUTTON", "I"].some(tag => e.target.tagName === tag) || e.target.closest("button"),
       };
     };
   },

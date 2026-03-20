@@ -43,16 +43,17 @@ export default Node.create({
   addNodeView() {
     return ({ node: t, getPos: e, editor: r }) => {
       const a = document.createElement("span");
-      a.className = "shortcode-stat is-rendered-in-editor";
+      a.className = "shortcode-stat interactive-node-view";
       if (t.attrs.isHidden) a.classList.add("is-hidden-preview");
       a.contentEditable = "false";
 
-      const n = document.createElement("strong");
+      const n = document.createElement("span");
+      n.className = "stat-label";
       n.textContent = t.attrs.label ? `${t.attrs.label}: ` : "";
 
       const i = document.createElement("input");
       i.type = "text";
-      i.className = "stat-value-input-inline";
+      i.className = "stat-value-input";
       i.value = t.attrs.value || "";
       i.style.width = `${Math.max(2, (i.value.length || 1) + 1)}ch`;
 
@@ -71,10 +72,10 @@ export default Node.create({
         }
       });
 
-      i.addEventListener("click", (e) => e.stopPropagation());
-      i.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
+      i.addEventListener("click", (ev) => ev.stopPropagation());
+      i.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
           i.blur();
           r.commands.focus();
         }
@@ -93,6 +94,13 @@ export default Node.create({
 
       return {
         dom: a,
+        update: (newNode) => {
+            if (newNode.type !== this.type) return false;
+            i.value = newNode.attrs.value || "";
+            i.style.width = `${Math.max(2, i.value.length + 1)}ch`;
+            t = newNode;
+            return true;
+        },
         ignoreMutation: () => true,
         stopEvent: (e) => e.target.tagName === "INPUT"
       };

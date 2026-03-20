@@ -29,7 +29,7 @@ let _onSave = null;
 let _onTagInputInit = null;
 let _saveTimeout = null;
 
-let _modal, _form, _titleInput, _tagsInput, _visibilityField,
+let _modal, _form, _titleInput, _categorySelect, _tagsInput, _visibilityField,
     _visibilityWrap, _imagePreview, _imageEl, _imagePlaceholder,
     _fileInput, _removeBtn, _editorArea, _submitBtn;
 
@@ -152,6 +152,10 @@ function handleToolbarClick(e) {
     else if (action === 'heading' && arg) chain.toggleHeading({ level: parseInt(arg) }).run();
     else if (action === 'undo') chain.undo().run();
     else if (action === 'redo') chain.redo().run();
+    else if (action === 'insertShortcode') {
+        const type = btn.dataset.tiptapType;
+        if (type) openConfigModal(type, _editor);
+    }
 
     updateToolbarState();
 }
@@ -184,6 +188,7 @@ async function resetModal() {
     _removeImage = false;
 
     _titleInput.value = '';
+    _categorySelect.value = 'pj';
     _tagsInput.value = '';
     _fileInput.value = '';
     setImagePreview(null);
@@ -207,6 +212,7 @@ async function populateModal(item) {
     _editingItem = item;
 
     _titleInput.value = item.titulo || '';
+    _categorySelect.value = item.cat || item.category || item.categoria || 'pj';
     _tagsInput.value = (item.tags || []).join(', ');
 
     if (_visibilityField) _visibilityField.checked = item.isVisibleToPlayers !== false;
@@ -236,6 +242,7 @@ export async function openCardModal(item = null) {
 export function getCardModalData() {
     return {
         titulo: _titleInput.value.trim(),
+        cat: _categorySelect.value,
         conteudo: _editor ? _editor.getText({ blockSeparator: '\n' }) && _editor.getHTML() : '',
         tags: _tagsInput.value.split(',').map(t => t.trim()).filter(Boolean),
         isVisibleToPlayers: isNarrator()
@@ -259,6 +266,7 @@ export async function initializeCardModal({ onSave, onTagInputInit } = {}) {
     _modal = document.getElementById('add-card-modal');
     _form = document.getElementById('form-add-card');
     _titleInput = document.getElementById('card-titulo');
+    _categorySelect = document.getElementById('card-category');
     _tagsInput = document.getElementById('card-tags');
     _visibilityField = document.getElementById('card-visibility');
     _visibilityWrap = _modal.querySelector('.card-modal-visibility');

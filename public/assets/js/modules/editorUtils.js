@@ -1,23 +1,7 @@
 import { parseArguments, parseKeyValueArgs, shortcodeRegexes } from './parserUtils.js';
 
-// 1. ATUALIZAÇÃO DO PARSER DE ENTRADA (Texto -> Editor)
 export function preParseShortcodesForEditor(t) {
     if (!t) return "";
-
-    // ContainerShortcode: [container label="..." type="..." # close]...[/container]
-    t = t.replace(shortcodeRegexes.container, (match, argsStr, content) => {
-        const params = parseKeyValueArgs(argsStr);
-        const label = params.label || "Container";
-        const type = params.type || "default";
-        const isHidden = argsStr.includes("#") || params.ishidden === "true";
-        const isClosed = /\bclose\b/i.test(argsStr);
-        return `<div data-node-type="containerShortcode" data-label="${label}" data-type="${type}" data-is-hidden="${isHidden}" data-is-closed="${isClosed}"><div class="container-content-area">${content}</div></div>`;
-    });
-
-    // Ficha Wrapper: [ficha]...[/ficha]
-    t = t.replace(shortcodeRegexes.ficha, (match, content) => {
-        return `<div data-node-type="fichaShortcode"><div class="ficha-content-area">${content}</div></div>`;
-    });
 
     // Money: [money current="100" gold #]
     t = t.replace(shortcodeRegexes.money, (match, args) => {
@@ -75,34 +59,10 @@ export function preParseShortcodesForEditor(t) {
     return t;
 }
 
-// 2. ATUALIZAÇÃO DO PARSER DE SAÍDA (Editor -> Texto)
 export function convertEditorHtmlToShortcodes(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
     const body = doc.body;
-
-    // Processa os containers de forma limpa
-    body.querySelectorAll('[data-node-type="containerShortcode"]').forEach((e) => {
-        const label = e.getAttribute("data-label") || "Container";
-        const type = e.getAttribute("data-type") || "default";
-        const isHidden = e.getAttribute("data-is-hidden") === "true";
-        const isClosed = e.getAttribute("data-is-closed") === "true";
-
-        const openTag = `[container label="${label}" type="${type}"${isClosed ? ' close' : ''}${isHidden ? ' #' : ''}]\n`;
-        const closeTag = `\n[/container]`;
-
-        const contentArea = e.querySelector('.container-content-area') || e;
-        const innerHTML = contentArea.innerHTML;
-
-        e.replaceWith(document.createTextNode(openTag), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode(closeTag));
-    });
-
-    // Processa Wrapper de Ficha
-    body.querySelectorAll('[data-node-type="fichaShortcode"]').forEach((e) => {
-        const contentArea = e.querySelector('.ficha-content-area') || e;
-        const innerHTML = contentArea.innerHTML;
-        e.replaceWith(document.createTextNode("[ficha]\n"), ...parser.parseFromString(innerHTML, "text/html").body.childNodes, document.createTextNode("\n[/ficha]"));
-    });
 
     body.querySelectorAll('[data-node-type="moneyNode"]').forEach((e) => {
         const args = [];

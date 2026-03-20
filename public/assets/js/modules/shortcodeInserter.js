@@ -6,11 +6,7 @@ const MENU_ITEMS = [
     { configType: 'stat', icon: 'fa-dice-d20', label: 'Atributo / Stat', preview: '[stat]' },
     { configType: 'count', icon: 'fa-list-ol', label: 'Contador', preview: '[count]' },
     { configType: 'money', icon: 'fa-coins', label: 'Dinheiro', preview: '[money]' },
-    { configType: 'xp', icon: 'fa-star', label: 'XP / Experiência', preview: '[xp]' },
-    { configType: 'nota', icon: 'fa-sticky-note', label: 'Nota Recolhível', preview: '[nota]' },
-    { configType: 'container', icon: 'fa-box', label: 'Container de Itens', preview: '[container]' },
-    { configType: 'link', icon: 'fa-link', label: 'Link de Card', preview: '[link]' },
-    { shortcode: '[ficha]\n\n[/ficha]', icon: 'fa-id-card', label: 'Ficha (Sheet)', preview: '[ficha]' },
+    { configType: 'xp', icon: 'fa-star', label: 'XP / Experiência', preview: '[xp]' }
 ];
 
 export function setupShortcodeMenu(toolbarContainer, editorInstance) {
@@ -215,45 +211,7 @@ export function openConfigModal(type, editor, existingNodeInfo = null) {
             build: (data) => {
                 const t = data.sc_overlay ? '*' : 'count';
                 let s = `[${t} "${data.sc_nome}" max=${data.sc_max} current=${data.sc_current}`;
-                if (data.sc_theme && data.sc_theme !== 'number') s += ` theme="${data.sc_theme}"`;
-                if (data.sc_icon) s += ` icon="${data.sc_icon}"`;
-                if (data.sc_hidden) s += ' #';
-                s += ']';
                 return { text: s, attrs: { label: data.sc_nome, max: data.sc_max, current: data.sc_current, icon: data.sc_icon, theme: data.sc_theme, isOverlay: data.sc_overlay, isHidden: data.sc_hidden } };
-            }
-        },
-        link: {
-            title: existingNodeInfo ? 'Editar: Link de Card' : 'Configurar: Link de Card',
-            fields: [
-                { id: 'sc_card', label: 'Nome exato do Card', type: 'text', default: getDef('sc_card', ''), placeholder: 'Nome do card', req: true }
-            ],
-            build: (data) => ({ text: `[link card="${data.sc_card}"]`, attrs: { card: data.sc_card } })
-        },
-        nota: {
-            title: existingNodeInfo ? 'Editar: Nota' : 'Configurar: Nota Recolhível',
-            fields: [
-                { id: 'sc_titulo', label: 'Título da Nota', type: 'text', default: getDef('sc_titulo', 'Nota'), req: true },
-                { id: 'sc_conteudo', label: 'Conteúdo inicial', type: 'textarea', default: getDef('sc_conteudo', 'Escreva o texto aqui...') }
-            ],
-            build: (data) => ({ text: `[nota titulo="${data.sc_titulo}"]\n${data.sc_conteudo}\n[/nota]`, attrs: { titulo: data.sc_titulo, conteudo: data.sc_conteudo } })
-        },
-        container: {
-            title: existingNodeInfo ? 'Editar: Container' : 'Configurar: Container',
-            fields: [
-                { id: 'container_label', label: 'Rótulo / Título', type: 'text', default: getDef('container_label', 'Mochila'), req: true },
-                { id: 'container_type', label: 'Tipo (Ícone/Cor)', type: 'select', options: ['default', 'inventory', 'spells', 'skills'], default: getDef('container_type', 'default') },
-                { id: 'container_closed', label: 'Iniciar Fechado', type: 'checkbox', default: getDef('container_closed', false) },
-                ...naratorOnlyField('sc_hidden', 'Oculto para Jogadores', false)
-            ],
-            build: (data) => {
-                let tag = `[container label="${data.container_label}" type="${data.container_type}"`;
-                if (data.container_closed) tag += ' close';
-                if (data.sc_hidden) tag += ' #';
-                tag += ']';
-                return {
-                    text: `${tag}\n\n[/container]`,
-                    attrs: { label: data.container_label, type: data.container_type, isClosed: data.container_closed, isHidden: data.sc_hidden }
-                };
             }
         }
     };
