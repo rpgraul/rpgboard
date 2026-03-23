@@ -106,3 +106,18 @@ export function convertEditorHtmlToShortcodes(html) {
 
     return body.innerHTML;
 }
+
+export function handleToolbarAction(editor, action, val) {
+    if (!editor || !action) return;
+    const chain = editor.chain().focus();
+    if (action === "undo") chain.undo().run();
+    else if (action === "redo") chain.redo().run();
+    else if (action === "toggleBold") chain.toggleBold().run();
+    else if (action === "toggleItalic") chain.toggleItalic().run();
+    else if (action === "toggleStrike") chain.toggleStrike().run();
+    else if (action === "toggleHighlight") chain.toggleHighlight().run();
+    else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
+    else if (action === "toggleBulletList") chain.toggleBulletList().run();
+    else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
+    else if (action === "setTextAlign") chain.setTextAlign(val).run();
+}

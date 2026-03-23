@@ -4,7 +4,7 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
-import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes } from './modules/editorUtils.js';
+import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes, handleToolbarAction } from './modules/editorUtils.js';
 import CardLink from "./tiptap-extensions/cardLink.js";
 import StatNode from "./tiptap-extensions/StatNode.js";
 import HpNode from "./tiptap-extensions/HpNode.js";
@@ -240,15 +240,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelector(".tiptap-toolbar").onclick = (e) => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
-    const action = btn.dataset.action;
-    const val = btn.dataset.level || btn.dataset.align;
-    const chain = mainEditor.chain().focus();
-    if (action === "undo") chain.undo().run();
-    else if (action === "redo") chain.redo().run();
-    else if (action === "toggleBold") chain.toggleBold().run();
-    else if (action === "toggleItalic") chain.toggleItalic().run();
-    else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
-    else if (action === "setTextAlign") chain.setTextAlign(val).run();
+    handleToolbarAction(mainEditor, btn.dataset.action, btn.dataset.level || btn.dataset.align);
   };
 
   const scContainer = document.getElementById('text-mode-shortcode-container');

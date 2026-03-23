@@ -80,18 +80,6 @@ AÇÃO: Substituir todos os acessos diretos por getCurrentUserName().
 ================================================================================
 
 ------------------------------------------------------------------------------
-11. Toolbar onclick handler DUPLICADO (3-4x)
-------------------------------------------------------------------------------
-
-Mapeamento data-action → editor.chain().focus().*().run() repetido:
-
-  sheet-mode.js:448-464    → mainEditor toolbar
-  sheet-mode.js:691-707    → sideViewEditor toolbar (cópia exata)
-  text-mode.js:238-250     → mainEditor toolbar
-
-AÇÃO: Extrair função handleToolbarAction(editor, action, val) em editorUtils.js.
-
-------------------------------------------------------------------------------
 12. CardLink suggestion items DUPLICADA (3x)
 ------------------------------------------------------------------------------
 
@@ -317,11 +305,11 @@ Zoom não persiste em localStorage ou Firestore.
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
 | SSOT Violations        |    4  | 🔴 Crítico |
-| Duplicações            |    6  | 🟠 Alta    |
+| Duplicações            |    5  | 🟠 Alta    |
 | Obsoletos              |    5  | 🟡 Média   |
 | Cleanup                |    4  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   19  |            |
+| TOTAL                  |   18  |            |
 
 
 ================================================================================
@@ -332,7 +320,6 @@ Zoom não persiste em localStorage ou Firestore.
   1. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
-  9. [Item 11] Unificar toolbar handler → editorUtils.js
   10. [Item 16] Regenerar .min.js ou eliminar
 
 🟡 MÉDIA (Planejar):

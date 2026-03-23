@@ -22,7 +22,7 @@ import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as chat from './modules/chat.js';
 import { visualizeDiceRoll } from './modules/dice3d.js';
 import { processRoll, initializeDice } from './modules/diceLogic.js';
-import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes } from './modules/editorUtils.js';
+import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes, handleToolbarAction } from './modules/editorUtils.js';
 import { showToast } from './modules/ui.js';
 
 let allItems = [];
@@ -447,19 +447,7 @@ async function initializeMainEditor() {
     document.querySelector(".tiptap-toolbar").onclick = (e) => {
         const btn = e.target.closest("button[data-action]");
         if (!btn) return;
-        const action = btn.dataset.action;
-        const val = btn.dataset.level || btn.dataset.align;
-        const chain = mainEditor.chain().focus();
-        if (action === "undo") chain.undo().run();
-        else if (action === "redo") chain.redo().run();
-        else if (action === "toggleBold") chain.toggleBold().run();
-        else if (action === "toggleItalic") chain.toggleItalic().run();
-        else if (action === "toggleStrike") chain.toggleStrike().run();
-        else if (action === "toggleHighlight") chain.toggleHighlight().run();
-        else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
-        else if (action === "toggleBulletList") chain.toggleBulletList().run();
-        else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
-        else if (action === "setTextAlign") chain.setTextAlign(val).run();
+        handleToolbarAction(mainEditor, btn.dataset.action, btn.dataset.level || btn.dataset.align);
     };
 
     // Shortcut Buttons Events
@@ -690,19 +678,7 @@ function initializeSideViewEditor() {
         toolbarWrap.onclick = (e) => {
             const btn = e.target.closest("button[data-action]");
             if (!btn) return;
-            const action = btn.dataset.action;
-            const val = btn.dataset.level || btn.dataset.align;
-            const chain = sideViewEditor.chain().focus();
-            if (action === "undo") chain.undo().run();
-            else if (action === "redo") chain.redo().run();
-            else if (action === "toggleBold") chain.toggleBold().run();
-            else if (action === "toggleItalic") chain.toggleItalic().run();
-            else if (action === "toggleStrike") chain.toggleStrike().run();
-            else if (action === "toggleHighlight") chain.toggleHighlight().run();
-            else if (action === "toggleHeading") chain.toggleHeading({ level: parseInt(val) }).run();
-            else if (action === "toggleBulletList") chain.toggleBulletList().run();
-            else if (action === "toggleOrderedList") chain.toggleOrderedList().run();
-            else if (action === "setTextAlign") chain.setTextAlign(val).run();
+            handleToolbarAction(sideViewEditor, btn.dataset.action, btn.dataset.level || btn.dataset.align);
         };
     }
 
