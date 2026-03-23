@@ -37,31 +37,7 @@ IMPACTO: Narrador pode ser falsificado via DevTools.
 
 AÇÃO: Usar Firebase Auth Custom Claims ou Firestore roles.
 
-------------------------------------------------------------------------------
-2. MÚLTIPLOS CACHES DE CARDS (DESSINCRONIZADOS)
-------------------------------------------------------------------------------
 
-Variáveis locais mantendo a mesma informação:
-
-  script.js:16         let allItems = [];       // Cache do Firestore
-  sheet-mode.js:27     let allItems = [];       // Cache independente
-  text-mode.js:28      let allCards = [];       // Terceiro cache, nome diferente
-  cardManager.js:2     let items = [];          // Cache do módulo
-
-PROBLEMA REAL:
-  - script.js:331-368 mantém allItems atualizado via onSnapshot ✅
-  - script.js:338 chama cardManager.loadItems(allItems) SÓ na inicialização
-  - script.js:345-367 (atualizações incrementais) NUNCA chama cardManager.loadItems()
-  - grid.js:26 usa cardManager.getItems() que retorna dados desatualizados
-
-  sheet-mode.js e text-mode.js têm seus PRÓPRIOS listenToItems() separados,
-  portanto não dependem do cardManager — mas isso é a própria violação SSOT.
-
-FLUXO IDEAL:
-  Firestore → cardManager:items → TODOS os consumidores via subscribe()
-
-AÇÃO: Chamar cardManager.loadItems(allItems) também nas linhas 345-367
-       do script.js, ou migrar todo o fluxo para usar cardManager como SSOT.
 
 
 
@@ -387,12 +363,12 @@ Zoom não persiste em localStorage ou Firestore.
 
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
-| SSOT Violations        |    5  | 🔴 Crítico |
+| SSOT Violations        |    4  | 🔴 Crítico |
 | Duplicações            |    8  | 🟠 Alta    |
 | Obsoletos              |    6  | 🟡 Média   |
 | Cleanup                |    5  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   24  |            |
+| TOTAL                  |   23  |            |
 
 
 ================================================================================
@@ -400,9 +376,8 @@ Zoom não persiste em localStorage ou Firestore.
 ================================================================================
 
 🔴 CRÍTICO (Fazer na próxima sprint):
-  1. [Item 2]  cardManager.loadItems() nas atualizações incrementais
-  2. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
-  3. [Item 1]  Migrar auth para Firebase Auth
+  1. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
+  2. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
   7. [Item 9]  Unificar normalizeString() → módulo utils

@@ -364,6 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
         allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+        cardManager.loadItems(allItems);
         applyFilters();
     });
 
