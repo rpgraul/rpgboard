@@ -142,28 +142,6 @@ NOTA: Regexes em tiptap-extensions/*Node.js (addInputRules) são
       NÃO é prático unificar tiptap InputRules com shortcodeRegexes.
 
 ------------------------------------------------------------------------------
-16. MINIFICADOS DESSINCRONIZADOS (VERSÕES ALTERNATIVAS)
-------------------------------------------------------------------------------
-
-shortcodeParser.min.js:
-  ✅ Código completamente diferente da versão fonte
-  ✅ Contém funções EXTRAS: parseMainContent, _parseStat (versão antiga)
-  ✅ NÃO É minificação - é versão alternativa com API diferente
-  ✅ formatNumber usa regex (idêntica ao source)
-  ✅ parseAllShortcodes retorna sem campo "all" (diferente do source)
-
-cardRenderer.min.js:
-  ✅ Usa shortcodeParser.parseMainContent() (que não existe no source)
-
-playerMode.min.js:
-  ✅ Usa shortcodeParser.parseMainContent() (que não existe no source)
-
-IMPACTO: Projetos usando .js fontes via Vite funcionam diferente
-         dos que usam .min.js direto. SSOT completamente quebrado.
-
-AÇÃO: Regenerar TODOS os .min.js a partir dos fontes, ou eliminar
-      .min.js e usar apenas build Vite.
-
 
 ================================================================================
                         🟡 MÉDIA - OBSOLETOS
@@ -305,11 +283,11 @@ Zoom não persiste em localStorage ou Firestore.
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
 | SSOT Violations        |    4  | 🔴 Crítico |
-| Duplicações            |    5  | 🟠 Alta    |
+| Duplicações            |    4  | 🟠 Alta    |
 | Obsoletos              |    5  | 🟡 Média   |
 | Cleanup                |    4  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   18  |            |
+| TOTAL                  |   17  |            |
 
 
 ================================================================================
@@ -320,7 +298,7 @@ Zoom não persiste em localStorage ou Firestore.
   1. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
-  10. [Item 16] Regenerar .min.js ou eliminar
+  (Vazio - Todos os itens de alta prioridade foram resolvidos)
 
 🟡 MÉDIA (Planejar):
   11. [Item 17-19] Remover dead code (board.js, parseNotas, getMacros)
