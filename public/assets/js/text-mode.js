@@ -23,6 +23,7 @@ import { showConfirmationPopover, showToast } from "./modules/ui.js";
 import { initializeLayout } from "./modules/layout.js";
 import * as chat from "./modules/chat.js";
 import { initializeDice } from "./modules/diceLogic.js";
+import { showDetailModal } from './modules/modal.js';
 import { openModal, closeModal, initializeModals } from "./modules/modal.js";
 
 
@@ -280,27 +281,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     const found = allCards.find(it => normalizeString(it.titulo) === normalizeString(cardName));
     if (found) showDetailModal(found);
   }, true);
-});
-function showDetailModal(item) {
-  const modal = document.getElementById('detail-modal');
-  if (!modal) return;
-  document.getElementById('detail-title').textContent = item.titulo;
-  const body = document.getElementById('detail-body');
-  let html = "";
-  if (item.url) {
-    html += `<figure class="image mb-4"><img src="${item.url}" alt="${item.titulo}" style="max-height: 400px; object-fit: contain;"></figure>`;
-  }
-  html += `<div class="content">${shortcodeParser.parseMainContent(item.conteudo)}</div>`;
-  const sc = shortcodeParser.parseAllShortcodes(item);
-  if (sc.all.length > 0) {
-    html += `<div class="box mt-4 has-background-dark">
-            <div class="columns is-multiline is-mobile">
-                <div class="column is-narrow">${sc.left}</div>
-                <div class="column is-narrow">${sc.right}</div>
-                <div class="column is-12">${sc.bottom}</div>
-            </div>
-        </div>`;
-  }
-  body.innerHTML = html;
-  openModal(modal);
-}
+});

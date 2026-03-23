@@ -1,4 +1,4 @@
-import { initializeModals, openModal, closeModal } from './modules/modal.js';
+import { initializeModals, openModal, closeModal, showDetailModal } from './modules/modal.js';
 import * as auth from './modules/auth.js';
 import * as firebaseService from './modules/firebaseService.js';
 import * as narrator from './modules/narrator.js';
@@ -501,24 +501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeTagInput(searchInput, { isMultiTag: false, showRecsOnFocus: false });
 
     // 14. Modal Detalhes
-    function showDetailModal(item) {
-        if (!item || !detailModal) return;
-        const content = detailModal.querySelector('.modal-content');
-        content.innerHTML = '';
-        const box = document.createElement('div');
-        box.className = 'box';
-        const parsed = shortcodeParser.parseAllShortcodes(item);
-        const allShortcodes = (parsed.left || '') + (parsed.right || '') + (parsed.bottom || '') + (parsed.details || '');
-        box.innerHTML = `
-            ${item.url ? `<div class="modal-image-container"><img src="${item.url}"></div>` : ''}
-            <div class="modal-text-container">
-                <h2 class="title is-3">${item.titulo}</h2>
-                <div class="content modal-shortcodes">${allShortcodes}</div>
-            </div>
-        `;
-        content.appendChild(box);
-        openModal(detailModal);
-    }
+
 
     // 15. Eventos globais (money, HP, card-link, count)
     document.body.addEventListener('click', (event) => {

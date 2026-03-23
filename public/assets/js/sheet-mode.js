@@ -17,7 +17,7 @@ import { normalizeString } from './modules/utils.js';
 import { listenToItems, updateItem, updateCharacterStat, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
 import { initializeLayout } from './modules/layout.js';
-import { openModal, closeModal, initializeModals } from './modules/modal.js';
+import { openModal, closeModal, initializeModals, showDetailModal } from './modules/modal.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as chat from './modules/chat.js';
 import { visualizeDiceRoll } from './modules/dice3d.js';
@@ -855,31 +855,5 @@ function setupInteractiveSheetListeners() {
     });
 }
 
-function showDetailModal(item) {
-    const modal = document.getElementById('detail-modal');
-    if (!modal) return;
 
-    document.getElementById('detail-title').textContent = item.titulo;
-    const body = document.getElementById('detail-body');
-
-    let html = "";
-    if (item.url) {
-        html += `<figure class="image mb-4"><img src="${item.url}" alt="${item.titulo}" style="max-height: 400px; object-fit: contain;"></figure>`;
-    }
-    html += `<div class="content">${shortcodeParser.parseMainContent(item.conteudo)}</div>`;
-
-    const sc = shortcodeParser.parseAllShortcodes(item);
-    if (sc.all.length > 0) {
-        html += `<div class="box mt-4 has-background-dark">
-            <div class="columns is-multiline is-mobile">
-                <div class="column is-narrow">${sc.left}</div>
-                <div class="column is-narrow">${sc.right}</div>
-                <div class="column is-12">${sc.bottom}</div>
-            </div>
-        </div>`;
-    }
-
-    body.innerHTML = html;
-    openModal(modal);
-}
 
