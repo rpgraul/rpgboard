@@ -17,9 +17,7 @@ import { openModal } from './modal.js';
  * @param {string[]} [config.fabActions=[]] - FAB button keys to render
  * @returns {Promise<Object>} Object containing references to all major UI elements.
  */
-export async function initializeLayout(config = {}) {
-  const { fabActions = [] } = config;
-
+export async function initializeLayout() {
   console.log('[Layout] Initializing layout rendering...');
 
   // Step 1: Render overlays (Chat, Modals, Dice Container)
@@ -35,7 +33,7 @@ export async function initializeLayout(config = {}) {
   }
 
   // Step 3: Render FAB
-  const fabElement = renderFab(fabActions);
+  const fabElement = renderFab();
   if (!fabElement) {
     throw new Error('Layout failed: FAB not rendered');
   }

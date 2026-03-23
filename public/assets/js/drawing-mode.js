@@ -8,9 +8,7 @@ import { initializeCardModal } from './modules/cardModal.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Layout Base
-    const layout = await initializeLayout({
-        fabActions: ['help', 'chat', 'settings']
-    });
+    const layout = await initializeLayout();
 
     // 2. Autenticação e Modais
     initializeAuth();

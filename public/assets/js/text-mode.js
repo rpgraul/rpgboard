@@ -36,7 +36,7 @@ let sideViewSaveTimeout = null;
 let isProcessingUpdate = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const layout = await initializeLayout({ fabActions: ['help', 'chat'] });
+  const layout = await initializeLayout();
   initializeAuth();
   initializeModals();
   chat.initializeChat();

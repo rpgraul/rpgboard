@@ -42,29 +42,7 @@ AÇÃO: Usar Firebase Auth Custom Claims ou Firestore roles.
 
 
 
-------------------------------------------------------------------------------
-6. fab.js IGNORA PARÂMETRO activeButtons
-------------------------------------------------------------------------------
 
-Arquivo: assets/js/modules/components/fab.js
-
-  Linha 166: export function renderFab(activeButtons = [])
-             Recebe activeButtons como parâmetro
-  Linhas 186-205: Constrói buttonOrder internamente baseado no mode/URL
-                  O parâmetro activeButtons NUNCA é lido
-
-Cada página define fabActions:
-  script.js:134      → fabActions: ['settings', 'bulk-edit', 'converter', ...]
-  sheet-mode.js:45   → fabActions: ['help', 'macros', 'change-char', ...]
-  text-mode.js:39    → fabActions: ['help', 'chat']
-
-MAS fab.js decide sozinho via detecção de URL.
-
-IMPACTO: A API mente sobre a possibilidade de controlar botões FAB.
-         Mudanças em fabActions não surtem efeito.
-
-AÇÃO: Usar o parâmetro activeButtons ao invés da detecção interna,
-      ou remover o parâmetro e documentar que é automático.
 
 ------------------------------------------------------------------------------
 7. settings CARREGADOS INDEPENDENTEMENTE (5x)
@@ -365,10 +343,10 @@ Zoom não persiste em localStorage ou Firestore.
 |------------------------|-------|------------|
 | SSOT Violations        |    4  | 🔴 Crítico |
 | Duplicações            |    8  | 🟠 Alta    |
-| Obsoletos              |    6  | 🟡 Média   |
-| Cleanup                |    5  | 🟢 Baixa   |
+| Obsoletos              |    5  | 🟡 Média   |
+| Cleanup                |    4  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   23  |            |
+| TOTAL                  |   21  |            |
 
 
 ================================================================================
@@ -376,8 +354,7 @@ Zoom não persiste em localStorage ou Firestore.
 ================================================================================
 
 🔴 CRÍTICO (Fazer na próxima sprint):
-  1. [Item 6]  fab.js: usar activeButtons ou remover parâmetro
-  2. [Item 1]  Migrar auth para Firebase Auth
+  1. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
   7. [Item 9]  Unificar normalizeString() → módulo utils

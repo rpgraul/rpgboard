@@ -130,9 +130,7 @@ async function handleReorder(orderedIds) {
 document.addEventListener('DOMContentLoaded', async () => {
 
     // 1. Layout
-    const layout = await initializeLayout({
-        fabActions: ['settings', 'bulk-edit', 'converter', 'help', 'chat', 'dice', 'add-card']
-    });
+    const layout = await initializeLayout();
 
     // 2. Chat & Dice
     chat.initializeChat();

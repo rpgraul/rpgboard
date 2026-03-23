@@ -163,7 +163,7 @@ const FAB_BUTTONS = {
  * // Now attach event listeners to buttons as needed:
  * fabContainer.querySelector('#toggle-chat-btn').addEventListener('click', toggleChat);
  */
-export function renderFab(activeButtons = []) {
+export function renderFab() {
   // Sempre renderiza todos os botões, visibilidade será controlada por classes
   let appFab = document.getElementById('app-fab');
   if (!appFab) {

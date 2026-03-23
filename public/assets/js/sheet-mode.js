@@ -41,9 +41,7 @@ let isDataLoading = false;
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. INICIALIZAÇÃO DO LAYOUT MODULAR
     // Aqui definimos o título da página e quais botões queremos no FAB desta tela
-    const layout = await initializeLayout({
-        fabActions: ['help', 'macros', 'change-char', 'chat', 'dice']
-    });
+    const layout = await initializeLayout();
     // Carregar configurações globais e atualizar título/header
     try {
         const firebaseService = await import('./modules/firebaseService.js');

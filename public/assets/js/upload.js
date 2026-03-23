@@ -6,9 +6,7 @@ import { initializeModals } from './modules/modal.js';
 
 export async function initializeUpload() {
     // 1. Inicializar Interface Global (Header, FAB, Modais)
-    await initializeLayout({
-        fabActions: ['settings', 'chat', 'help']
-    });
+    await initializeLayout();
 
     // 2. Inicializar Módulos Globais (Autenticação, Modais, Chat)
     initializeAuth();
