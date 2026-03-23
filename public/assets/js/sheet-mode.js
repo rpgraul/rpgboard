@@ -12,6 +12,7 @@ import CountNode from "./tiptap-extensions/CountNode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
+import { normalizeString } from './modules/utils.js';
 
 import { listenToItems, updateItem, updateCharacterStat, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
@@ -852,12 +853,6 @@ function setupInteractiveSheetListeners() {
             }
         });
     });
-}
-
-
-function normalizeString(str) {
-    if (!str) return "";
-    return str.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function showDetailModal(item) {

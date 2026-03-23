@@ -10,6 +10,7 @@ import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as chat from './modules/chat.js';
 import * as cardManager from './modules/cardManager.js';
 import { initializeLayout } from './modules/layout.js';
+import { normalizeString } from './modules/utils.js';
 import { initializeCardModal, openCardModal } from './modules/cardModal.js';
 import { initializeDice } from './modules/diceLogic.js';
 
@@ -46,10 +47,7 @@ async function fetchRandomFantasyName() {
     }
 }
 
-function normalizeString(str) {
-    if (!str) return '';
-    return str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
+
 
 function generateTagFilters(filters, container) {
     if (!container || !Array.isArray(filters)) return;

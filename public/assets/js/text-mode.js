@@ -13,6 +13,7 @@ import XpNode from "./tiptap-extensions/XpNode.js";
 import CountNode from "./tiptap-extensions/CountNode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
+import { normalizeString } from './modules/utils.js';
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
 import * as firebaseService from "./modules/firebaseService.js";
@@ -280,12 +281,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (found) showDetailModal(found);
   }, true);
 });
-
-function normalizeString(str) {
-  if (!str) return "";
-  return str.toString().toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
 function showDetailModal(item) {
   const modal = document.getElementById('detail-modal');
   if (!modal) return;

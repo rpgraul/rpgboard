@@ -80,18 +80,6 @@ AÇÃO: Substituir todos os acessos diretos por getCurrentUserName().
 ================================================================================
 
 ------------------------------------------------------------------------------
-9. normalizeString() DUPLICADA (3x)
-------------------------------------------------------------------------------
-
-  script.js:49-52       → function normalizeString(str)
-  text-mode.js:284-287  → function normalizeString(str)  (com .trim())
-  sheet-mode.js:860     → function normalizeString(str)
-
-LÓGICA IDÊNTICA: str.toLowerCase().normalize('NFD').replace(...)
-
-AÇÃO: Mover para módulo utilitário (ui.js ou novo utils.js).
-
-------------------------------------------------------------------------------
 10. showDetailModal() DUPLICADA (3x)
 ------------------------------------------------------------------------------
 
@@ -342,11 +330,11 @@ Zoom não persiste em localStorage ou Firestore.
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
 | SSOT Violations        |    4  | 🔴 Crítico |
-| Duplicações            |    8  | 🟠 Alta    |
+| Duplicações            |    7  | 🟠 Alta    |
 | Obsoletos              |    5  | 🟡 Média   |
 | Cleanup                |    4  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   21  |            |
+| TOTAL                  |   20  |            |
 
 
 ================================================================================
@@ -357,7 +345,6 @@ Zoom não persiste em localStorage ou Firestore.
   1. [Item 1]  Migrar auth para Firebase Auth
 
 🟠 ALTA (Sprint seguinte):
-  7. [Item 9]  Unificar normalizeString() → módulo utils
   8. [Item 10] Unificar showDetailModal() → módulo compartilhado
   9. [Item 11] Unificar toolbar handler → editorUtils.js
   10. [Item 16] Regenerar .min.js ou eliminar
