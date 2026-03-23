@@ -488,9 +488,6 @@ function syncToFirebase() {
     updateItem({ id: currentCharacterId }, { conteudo: finalContent }).catch(console.error);
 }
 
-function getMacros() {
-    return JSON.parse(localStorage.getItem(`macros_${getCurrentUserName()}`) || '[]');
-}
 
 async function saveMacro() {
     const n = document.getElementById('macro-name').value.trim();

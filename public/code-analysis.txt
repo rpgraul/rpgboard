@@ -148,42 +148,6 @@ NOTA: Regexes em tiptap-extensions/*Node.js (addInputRules) são
 ================================================================================
 
 ------------------------------------------------------------------------------
-17. board.js - ARQUIVO FANTASMA
-------------------------------------------------------------------------------
-
-Arquivo: assets/js/modules/board.js (4 linhas - placeholder)
-  export function initializeBoard() { /* removed */ }
-  export function setItems() { /* removed */ }
-
-AÇÃO: Remover arquivo e atualizar imports.
-
-------------------------------------------------------------------------------
-18. parseNotas() - DEAD CODE
-------------------------------------------------------------------------------
-
-Arquivo: assets/js/modules/shortcodeParser.js:363-366
-  // Legacy support (opcional, pode ser removido se migrarmos tudo)
-  export function parseNotas(content) {
-      return "";
-  }
-
-AÇÃO: Remover.
-
-------------------------------------------------------------------------------
-19. getMacros() - DEAD CODE
-------------------------------------------------------------------------------
-
-Arquivo: assets/js/sheet-mode.js:504-506
-  function getMacros() {
-      return JSON.parse(localStorage.getItem(`macros_${getCurrentUserName()}`) || '[]');
-  }
-
-Macros agora estão em currentCharacter.macros (Firebase).
-Esta função NUNCA é chamada. Sobra da migração localStorage → Firestore.
-
-AÇÃO: Remover.
-
-------------------------------------------------------------------------------
 20. chat.js FUNÇÕES VAZIAS + OBSERVER
 ------------------------------------------------------------------------------
 
@@ -284,10 +248,10 @@ Zoom não persiste em localStorage ou Firestore.
 |------------------------|-------|------------|
 | SSOT Violations        |    4  | 🔴 Crítico |
 | Duplicações            |    4  | 🟠 Alta    |
-| Obsoletos              |    5  | 🟡 Média   |
+| Obsoletos              |    2  | 🟡 Média   |
 | Cleanup                |    4  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   17  |            |
+| TOTAL                  |   14  |            |
 
 
 ================================================================================
@@ -301,7 +265,7 @@ Zoom não persiste em localStorage ou Firestore.
   (Vazio - Todos os itens de alta prioridade foram resolvidos)
 
 🟡 MÉDIA (Planejar):
-  11. [Item 17-19] Remover dead code (board.js, parseNotas, getMacros)
+
   12. [Item 20] Implementar ou remover chat notifications
   13. [Item 22] Atualizar padrão Fabric.js
 

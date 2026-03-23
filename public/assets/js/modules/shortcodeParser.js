@@ -404,8 +404,4 @@ export function extractRawShortcodes(content) {
     }
     return shortcodes;
 }
-
-// Legacy support (opcional, pode ser removido se migrarmos tudo)
-export function parseNotas(content) {
-    return "";
-}
+
