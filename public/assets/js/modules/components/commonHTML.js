@@ -26,6 +26,78 @@ export function renderOverlays() {
     </form>
   </aside>
 
+  <!-- Audio Player Sidebar -->
+  <aside id="audio-sidebar" class="audio-sidebar is-hidden">
+    <div class="audio-header">
+      <h3><i class="fas fa-music"></i> Player</h3>
+      <button id="close-audio-btn" class="audio-close-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="audio-content">
+      <div class="audio-now-playing">
+        <div class="audio-now-playing-title is-hidden">Nenhuma música</div>
+      </div>
+      
+      <!-- Progress Bar -->
+      <div class="audio-progress-container">
+        <div class="audio-progress-time">
+          <span id="audio-current-time">0:00</span>
+          <span id="audio-duration">0:00</span>
+        </div>
+        <div id="audio-progress-bar" class="audio-progress-bar">
+          <div id="audio-progress-fill" class="audio-progress-fill" style="width: 0%"></div>
+          <div id="audio-progress-thumb" class="audio-progress-thumb" style="left: 0%"></div>
+        </div>
+      </div>
+      
+      <!-- Controls -->
+      <div class="audio-controls">
+        <button id="audio-btn-shuffle" class="audio-btn-shuffle" title="Aleatório">
+          <i class="fas fa-random"></i>
+        </button>
+        <button id="audio-btn-prev" class="audio-btn-prev" title="Anterior">
+          <i class="fas fa-step-backward"></i>
+        </button>
+        <button id="audio-btn-play" class="audio-btn-play" title="Play/Pause">
+          <i class="fas fa-play"></i>
+        </button>
+        <button id="audio-btn-next" class="audio-btn-next" title="Próxima">
+          <i class="fas fa-step-forward"></i>
+        </button>
+        <button id="audio-btn-repeat" class="audio-btn-repeat" title="Repetir">
+          <i class="fas fa-redo"></i>
+        </button>
+      </div>
+      
+      <!-- Volume -->
+      <div class="audio-volume">
+        <button id="audio-btn-mute" class="audio-volume-btn" title="Mute">
+          <i class="fas fa-volume-up"></i>
+        </button>
+        <input type="range" id="audio-volume" class="audio-volume-slider" min="0" max="100" value="50">
+      </div>
+      
+      <!-- Playlist Header -->
+      <div class="audio-playlist-header">
+        <span>FILA (<span id="audio-playlist-count">0</span>)</span>
+      </div>
+      <div id="audio-playlist-items" class="audio-playlist-items"></div>
+      
+      <!-- Add Form -->
+      <div class="audio-add-form">
+        <p>Adicionar música</p>
+        <div class="field">
+          <input type="text" id="audio-url-input" placeholder="Cole link do YouTube...">
+          <button id="audio-add-btn">+</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- YouTube Player (hidden) -->
+  <div id="audio-yt-player"></div>
+
   <!-- Container de Dados 3D -->
   <div id="dice-container"></div>
 

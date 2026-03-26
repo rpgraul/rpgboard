@@ -14,6 +14,7 @@ import { normalizeString } from './modules/utils.js';
 import { initializeCardModal, openCardModal } from './modules/cardModal.js';
 import { initializeDice } from './modules/diceLogic.js';
 import { getSuggestionItems } from './modules/suggestionItems.js';
+import * as audio from './modules/audio.js';
 
 let allItems = [];
 let isInitialGridLoaded = false;
@@ -125,6 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Chat & Dice
     chat.initializeChat();
     initializeDice(layout);
+    audio.initializeAudio();
 
     // 3. Referências
     const addCardButton = document.getElementById('fab-add-card');

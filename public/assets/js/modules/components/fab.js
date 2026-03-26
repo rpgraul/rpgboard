@@ -64,6 +64,15 @@ const FAB_BUTTONS = {
     </button>`,
 
   /**
+   * Audio Toggle Button - Opens/closes audio player sidebar
+   * @key audio
+   */
+  'audio': `
+    <button id="toggle-audio-btn" class="button is-warning is-rounded fab-button" title="Audio">
+      <span class="icon"><i class="fas fa-music"></i></span>
+    </button>`,
+
+  /**
    * Dice Roller Button - Expandable button with quick dice selection
    * @key dice
    * @expandable Hovers to reveal d4-d20 buttons
@@ -186,17 +195,17 @@ export function renderFab() {
   // Botões por modo
   let buttonOrder = [];
   if (mode === 'sheet') {
-    buttonOrder = ['dice', 'macros', 'change-char', 'chat', 'help'];
+    buttonOrder = ['audio', 'dice', 'macros', 'change-char', 'chat', 'help'];
   } else if (mode === 'grid') {
-    buttonOrder = ['add-card', 'dice', 'chat', 'converter'];
+    buttonOrder = ['audio', 'add-card', 'dice', 'chat', 'converter'];
     if (isNarrator) buttonOrder.push('bulk-edit', 'settings');
     buttonOrder.push('help');
   } else if (mode === 'notas') {
-    buttonOrder = ['dice', 'chat'];
+    buttonOrder = ['audio', 'dice', 'chat'];
     if (isNarrator) buttonOrder.push('settings');
     buttonOrder.push('help');
   } else if (mode === 'whiteboard') {
-    buttonOrder = ['dice', 'chat'];
+    buttonOrder = ['audio', 'dice', 'chat'];
     if (isNarrator) buttonOrder.push('settings');
     buttonOrder.push('help');
   } else {

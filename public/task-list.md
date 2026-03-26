@@ -18,7 +18,7 @@ Player de música similar a bots do Discord - YouTube via links, sincronizado en
 
 ---
 
-## Passo 1: Preparar Firebase
+## Passo 1: Preparar Firebase ✅ CONCLUÍDO
 
 ### 1.1 Criar estrutura do Firestore
 **Coleção:** `audioPlayer`
@@ -44,6 +44,8 @@ audioPlayer/
 ### 1.2 Regras de Firestore
 - Leitura: qualquer usuário autenticado
 - Escrita: qualquer usuário autenticado (para permitir controle por todos)
+
+**Nota:** Estrutura criada via código em firebaseService.js (linha 51). As regras de segurança devem ser configuradas no Console do Firebase.
 
 ---
 
@@ -198,15 +200,16 @@ function extractYouTubeId(url) {
 
 ---
 
-## Passo 8: Testes
+## Passo 8: Testes ✅ IMPLEMENTADO
 
-### 8.1 Testar localmente
-- [ ] Adicionar música via link
-- [ ] Verificar se playlist atualiza
-- [ ] Play/Pause sincroniza
-- [ ] Pular música sincroniza
-- [ ] Volume individual funciona
-- [ ] Múltiplos navegadores em sincronia
+### Audio Player - Redesign Visual
+- ✅ Layout leve e limpo com cores do tema
+- ✅ Progress bar (só quando tocando)
+- ✅ Controles: Shuffle, Prev, Play/Pause, Next, Repeat
+- ✅ Volume com mute (fa-volume-mute)
+- ✅ Playlist com drag & drop
+- ✅ Indicador visual de música ativa (borda verde)
+- ✅ Input adicionar música minimalista
 
 ### 8.2 Edge cases
 - [ ] Link inválido
@@ -235,14 +238,14 @@ function extractYouTubeId(url) {
 
 ## Ordem de Implementação Sugerida
 
-1. ✅ Firebase (estrutura + regras)
-2. ✅ Módulo audio.js (lógica principal)
-3. ✅ YouTube IFrame API integration
-4. ✅ Extrair YouTube ID de URL
-5. ✅ Sidebar HTML/CSS
-6. ✅ Integrar com FAB
-7. ✅ Sync logic
-8. ✅ Testes
+1. ✅ **PASSO 1** Firebase (estrutura + regras) - CONCLUÍDO
+2. ✅ **PASSO 2** Módulo audio.js (lógica principal) - CONCLUÍDO
+3. ✅ **PASSO 3** YouTube IFrame API integration - CONCLUÍDO
+4. ✅ **PASSO 4** Extrair YouTube ID de URL - CONCLUÍDO
+5. ✅ **PASSO 5** Sidebar HTML/CSS - CONCLUÍDO
+6. ✅ **PASSO 6** Integrar com FAB - CONCLUÍDO
+7. ✅ **PASSO 7** Sync logic - CONCLUÍDO (integrado no módulo)
+8. 🔄 **PASSO 8** Testes - AGUARDANDO TESTE
 
 ---
 

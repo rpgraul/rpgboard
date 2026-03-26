@@ -47,6 +47,7 @@ const usersCollectionRef = collection(db, "rpg-users");
 const chatCollectionRef = collection(db, "rpg-chat");
 const rollsCollectionRef = collection(db, "rpg-rolls");
 const whiteboardAssetsCollectionRef = collection(db, "rpg-whiteboard-assets");
+const audioPlayerDocRef = doc(db, "audioPlayer", "main");
 
 export const listenToItems = (cb) => onSnapshot(query(itemsCollectionRef, orderBy("order", "asc")), cb);
 export const saveUser = (name) => setDoc(doc(usersCollectionRef, name.toLowerCase()), { name, lastSeen: serverTimestamp() }, { merge: true });
@@ -309,4 +310,118 @@ export async function importCards(cards, onProgress = () => { }) {
     await batch.commit();
     return cards.length;
   })());
+}
+
+// ============================================
+// AUDIO PLAYER FIRESTORE FUNCTIONS
+// ============================================
+
+export function listenToAudioPlayer(callback) {
+  return onSnapshot(audioPlayerDocRef, (docSnap) => {
+    if (docSnap.exists()) {
+      callback(docSnap.data());
+    } else {
+      callback(null);
+    }
+  });
+}
+
+export async function issueAudioCommand(commandType, payload = {}) {
+  const baseState = {
+    commandTime: Date.now(),
+    lastUpdated: serverTimestamp()
+  };
+  
+  if (commandType === 'playPause') {
+    return wrapSync(updateDoc(audioPlayerDocRef, {
+      ...baseState,
+      isPlaying: payload.isPlaying,
+      seekTime: payload.seekTime || 0
+    }));
+  }
+  
+  if (commandType === 'skip') {
+    return wrapSync(updateDoc(audioPlayerDocRef, {
+      ...baseState,
+      currentVideoId: payload.currentVideoId,
+      isPlaying: payload.isPlaying,
+      seekTime: payload.seekTime || 0
+    }));
+  }
+  
+  if (commandType === 'seek') {
+    return wrapSync(updateDoc(audioPlayerDocRef, {
+      ...baseState,
+      seekTime: payload.seekTime,
+      isPlaying: true
+    }));
+  }
+  
+  if (commandType === 'stop') {
+    return wrapSync(updateDoc(audioPlayerDocRef, {
+      ...baseState,
+      currentVideoId: null,
+      isPlaying: false,
+      seekTime: 0
+    }));
+  }
+  
+  return wrapSync(updateDoc(audioPlayerDocRef, { ...baseState, ...payload }));
+}
+
+export async function initAudioPlayer() {
+  const docSnap = await getDoc(audioPlayerDocRef);
+  if (!docSnap.exists()) {
+    await setDoc(audioPlayerDocRef, {
+      currentVideoId: null,
+      isPlaying: false,
+      seekTime: 0,
+      commandTime: 0,
+      lastUpdated: serverTimestamp(),
+      volume: 50,
+      playlist: []
+    });
+  }
+}
+
+// ============================================
+// AUDIO PLAYER COMMAND FUNCTIONS
+// (escrevem com commandTime, disparam listener)
+// ============================================
+
+export async function addToAudioPlaylistCommand(videoId, title, addedBy) {
+  const docSnap = await getDoc(audioPlayerDocRef);
+  const data = docSnap.data() || { playlist: [] };
+  const newItem = {
+    id: crypto.randomUUID(),
+    videoId,
+    title,
+    addedBy,
+    addedAt: Date.now()
+  };
+  const newPlaylist = [...data.playlist, newItem];
+  return wrapSync(updateDoc(audioPlayerDocRef, {
+    playlist: newPlaylist,
+    commandTime: Date.now(),
+    lastUpdated: serverTimestamp()
+  }));
+}
+
+export async function removeFromAudioPlaylistCommand(itemId) {
+  const docSnap = await getDoc(audioPlayerDocRef);
+  const data = docSnap.data() || { playlist: [] };
+  const newPlaylist = data.playlist.filter(item => item.id !== itemId);
+  return wrapSync(updateDoc(audioPlayerDocRef, {
+    playlist: newPlaylist,
+    commandTime: Date.now(),
+    lastUpdated: serverTimestamp()
+  }));
+}
+
+export async function reorderAudioPlaylistCommand(newOrder) {
+  return wrapSync(updateDoc(audioPlayerDocRef, {
+    playlist: newOrder,
+    commandTime: Date.now(),
+    lastUpdated: serverTimestamp()
+  }));
 }
