@@ -1,5 +1,5 @@
-import { parseArguments, parseKeyValueArgs, shortcodeRegexes } from './parserUtils.js';
-export { parseArguments, parseKeyValueArgs, shortcodeRegexes };
+import { parseArguments, parseKeyValueArgs, shortcodeRegexes, formatNumber, genericShortcodeRegex } from './parserUtils.js';
+export { parseArguments, parseKeyValueArgs, shortcodeRegexes, formatNumber, genericShortcodeRegex };
 
 /**
  * Calculates a value based on a math expression string.
@@ -44,11 +44,6 @@ export function calculateMathExpression(current, input) {
     return !isNaN(pureNum) ? pureNum : current;
 }
 
-function formatNumber(num) {
-    if (typeof num !== 'number' && typeof num !== 'string') return num;
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-
 function _parseStat(args, originalShortcode) {
     const positionKeywords = ["left", "right", "bottom"];
     const mainArgs = args.filter(arg => !positionKeywords.includes(arg) && arg !== 'isPlayerSheet');
@@ -75,7 +70,7 @@ function _parseStat(args, originalShortcode) {
     return `<div class="shortcode-stat is-interactive" ${dataAttrs}>
                 ${label ? `<strong>${label}:</strong> ` : ""}
                 <span class="stat-value-display">${addTooltip(value)}</span>
-                <input type="text" class="stat-value-input is-hidden" data-field="${fieldName}" value="${value}">
+                <input type="text" class="stat-value-input is-hidden" value="${value}">
             </div>`;
 }
 
@@ -108,7 +103,7 @@ function _parseHp(args, itemId, originalShortcode) {
                   </div>
               </div>
               <div class="hp-edit-mode is-hidden">
-                  <input type="text" class="hp-current-input" data-field="stats.hp" value="${finalCurrentHp}" placeholder="Add +/- or value">
+                  <input type="text" class="hp-current-input" value="${finalCurrentHp}" placeholder="Add +/- or value">
               </div>
           </div>`;
 }
@@ -178,11 +173,10 @@ function _parseCount(args, itemId, originalShortcode) {
  */
 export function extractShortcodes(content) {
     if (!content) return [];
-    const shortcodeRegex = /\[(.*?)\]/g;
     const results = [];
     let match;
     
-    while ((match = shortcodeRegex.exec(content)) !== null) {
+    while ((match = genericShortcodeRegex.exec(content)) !== null) {
         const full = match[0];
         const inner = match[1];
         const args = parseArguments(inner);
@@ -212,11 +206,10 @@ export function parseAllShortcodes(item, options = {}) {
     const result = { all: [], left: [], right: [], bottom: [], details: [] };
     const commandOrder = { stat: 1, money: 2, hp: 3, count: 4, xp: 5, default: 99 };
     const content = item.conteudo;
-    const shortcodeRegex = /\[(.*?)\]/g;
     let match;
 
     const foundShortcodes = [];
-    while ((match = shortcodeRegex.exec(content)) !== null) {
+    while ((match = genericShortcodeRegex.exec(content)) !== null) {
         foundShortcodes.push({ full: match[0], inner: match[1], index: match.index });
     }
 
@@ -300,7 +293,7 @@ export function parseAllShortcodes(item, options = {}) {
                 html = `<div class="shortcode-money is-interactive" data-item-id="${item.id}" data-shortcode="${encodeURIComponent(sc.originalShortcode)}">
                           <i class="fas fa-coins"></i>
                           <span class="money-value-display">${formattedValue}</span>
-                          <input type="text" class="money-value-input is-hidden" data-field="stats.money" value="${currentValue}">
+                          <input type="text" class="money-value-input is-hidden" value="${currentValue}">
                           <span class="money-currency">${currency}</span>
                         </div>`.replace(/\s+/g, ' ');
                 result[position || 'left'].push(wrapIfHidden(html, sc.isHidden));
@@ -328,7 +321,7 @@ export function parseAllShortcodes(item, options = {}) {
                           ${xpLabel ? `<strong>${xpLabel}:</strong> ` : ''}
                           <i class="fas fa-star"></i>
                           <span class="xp-value-display">${xpValue} XP</span>
-                          <input type="text" class="xp-value-input is-hidden" data-field="stats.xp" value="${xpValue}">
+                          <input type="text" class="xp-value-input is-hidden" value="${xpValue}">
                         </div>`.replace(/\s+/g, ' ');
                 result[position || 'left'].push(wrapIfHidden(html, sc.isHidden));
                 break;
@@ -396,10 +389,9 @@ export function extractContainers(content) {
 
 export function extractRawShortcodes(content) {
     if (!content) return [];
-    const regex = /\[(.*?)\]/g;
     const shortcodes = [];
     let match;
-    while ((match = regex.exec(content)) !== null) {
+    while ((match = genericShortcodeRegex.exec(content)) !== null) {
         shortcodes.push(match[0]);
     }
     return shortcodes;

@@ -1,9 +1,9 @@
 ================================================================================
                     ANÁLISE DE CÓDIGO - GameBoard RPG
-                    Consolidado Double-Checked (Final)
+                    Consolidado (Atualizado 2026-03-26)
 ================================================================================
 
-Data: 2026-03-20 (Consolidado após double-check humano + IA)
+Data: 2026-03-26
 Escopo: assets/js/modules/, assets/js/whiteboard/, tiptap-extensions/, CSS, HTML
 
 NOTA: Apenas itens 100% VERIFICADOS contra o código fonte atual.
@@ -26,9 +26,9 @@ Arquivo: assets/js/modules/auth.js
 
 BYPASS CONFIRMADOS:
   fab.js:184           → localStorage.getItem('isNarrator') === 'true'
-                         Bypassa auth.js, lê localStorage diretamente
-  chat.js:119          → localStorage.getItem('rpgboard_user_name')
-                         Bypassa getCurrentUserName() de auth.js
+                        Bypassa auth.js, lê localStorage diretamente
+  script.js:79,92,153 → localStorage.getItem/setItem('rpgboard_user_name')
+                        Bypassa getCurrentUserName() de auth.js
 
 header.js:1            → CORRETO: importa isNarrator() de auth.js ✅
 
@@ -39,13 +39,8 @@ AÇÃO: Usar Firebase Auth Custom Claims ou Firestore roles.
 
 
 
-
-
-
-
-
 ------------------------------------------------------------------------------
-7. settings CARREGADOS INDEPENDENTEMENTE (5x)
+2. settings CARREGADOS INDEPENDENTEMENTE (5x)
 ------------------------------------------------------------------------------
 
   script.js:184           firebaseService.getSettings()
@@ -62,17 +57,18 @@ NOTA: São páginas independentes (SPAs diferentes), então cada uma
 
 AÇÃO SUGERIDA: Cache em sessionStorage ou módulo compartilhado.
 
+
+
 ------------------------------------------------------------------------------
-8. USER NAME EM MÚLTIPLOS LUGARES
+3. USER NAME EM MÚLTIPLOS LUGARES
 ------------------------------------------------------------------------------
 
   auth.js:5,15,21,27  → USER_NAME_KEY = 'rpgboard_user_name' (centralizado)
-  script.js:89,111,162,165,197,227  → localStorage.getItem('rpgboard_user_name')
+  script.js:79,92,153 → localStorage.getItem('rpgboard_user_name')
                         Acessa diretamente ao invés de usar getCurrentUserName()
-  chat.js:119          → localStorage.getItem('rpgboard_user_name')
-                        Bypassa auth.js
 
 AÇÃO: Substituir todos os acessos diretos por getCurrentUserName().
+
 
 
 ================================================================================
@@ -80,7 +76,7 @@ AÇÃO: Substituir todos os acessos diretos por getCurrentUserName().
 ================================================================================
 
 ------------------------------------------------------------------------------
-12. CardLink suggestion items DUPLICADA (3x)
+4. CardLink suggestion items DUPLICADA (3x)
 ------------------------------------------------------------------------------
 
 Lógica de filtrar cards para @mention:
@@ -92,8 +88,10 @@ Cada versão acessa cache local diferente (allItems/allCards).
 
 AÇÃO: Usar window.getSuggestionItems ou módulo compartilhado.
 
+
+
 ------------------------------------------------------------------------------
-13. FUNÇÕES DE PARSER DUPLICADAS
+5. FUNÇÕES DE PARSER DUPLICADAS
 ------------------------------------------------------------------------------
 
 parseArguments:
@@ -111,23 +109,10 @@ formatNumber:
 NOTA: shortcodeParser.js importa corretamente de parserUtils.js (linhas 1-2)
       O problema é apenas nos .min.js que são versões alternativas.
 
-------------------------------------------------------------------------------
-14. positionKeywords COM VALORES DIFERENTES
-------------------------------------------------------------------------------
 
-  shortcodeParser.js:53     ["left", "right", "bottom"]
-  shortcodeParser.js:127    ["left", "right", "bottom"]
-  shortcodeParser.js:293    ['left', 'right', 'bottom']
-  editorUtils.js:10         ["left", "right", "bottom", "top"]  ⚠️ EXTRA
-
-PROBLEMA: editorUtils.js inclui "top" que outros arquivos não têm.
-          "top" nunca é usado efetivamente - código morto.
-
-AÇÃO: Remover "top" de editorUtils.js ou adicionar suporte em
-      shortcodeParser.js para consistência.
 
 ------------------------------------------------------------------------------
-15. SHORTCODE REGEXES INLINE EM shortcodeParser.js
+6. SHORTCODE REGEXES INLINE EM shortcodeParser.js
 ------------------------------------------------------------------------------
 
   shortcodeParser.js:181    /\[(.*?)\]/g    (extractShortcodes)
@@ -141,41 +126,14 @@ NOTA: Regexes em tiptap-extensions/*Node.js (addInputRules) são
 
       NÃO é prático unificar tiptap InputRules com shortcodeRegexes.
 
-------------------------------------------------------------------------------
+
 
 ================================================================================
                         🟡 MÉDIA - OBSOLETOS
 ================================================================================
 
 ------------------------------------------------------------------------------
-20. chat.js FUNÇÕES VAZIAS + OBSERVER
-------------------------------------------------------------------------------
-
-Arquivo: assets/js/modules/chat.js:76-95
-  showChatNotification()     → Corpo vazio
-  removeChatNotification()   → Corpo vazio
-  MutationObserver           → Configurado e ativo, chama funções vazias
-
-AÇÃO: Implementar notificações visuais ou remover tudo (funções + observer).
-
-------------------------------------------------------------------------------
-21. data-field ATRIBUTOS ÓRFÃOS
-------------------------------------------------------------------------------
-
-Arquivo: assets/js/modules/shortcodeParser.js
-  Linha  78:  data-field="${fieldName}"
-  Linha 111:  data-field="stats.hp"
-  Linha 303:  data-field="stats.money"
-  Linha 331:  data-field="stats.xp"
-
-Atributos definidos no HTML gerado mas NUNCA usados para sincronização.
-Sync depende apenas do texto shortcode em 'conteudo'.
-
-AÇÃO: Remover se não houver plano de uso, ou implementar sync baseado
-      em data-field para consistência.
-
-------------------------------------------------------------------------------
-22. PADRÃO FABRIC.JS ANTIGO (monkey-patch)
+7. PADRÃO FABRIC.JS ANTIGO (monkey-patch)
 ------------------------------------------------------------------------------
 
 Arquivo: assets/js/whiteboard/canvas.js:27-31
@@ -187,12 +145,13 @@ O monkey-patch funciona mas pode causar problemas em atualizações.
 AÇÃO: Migrar para objectProperties config do v5.x quando possível.
 
 
+
 ================================================================================
                         🟢 BAIXA - CLEANUP
 ================================================================================
 
 ------------------------------------------------------------------------------
-23. CSS DUPLICADO (scoped - verificar necessidade)
+8. CSS DUPLICADO (scoped - verificar necessidade)
 ------------------------------------------------------------------------------
 
 .shortcode-money:
@@ -206,24 +165,22 @@ AÇÃO: Migrar para objectProperties config do v5.x quando possível.
 NOTA: text-mode.css usa prefixo .ProseMirror (contexto editor).
       Pode ser intencional. Verificar se pode ser consolidado.
 
+
+
 ------------------------------------------------------------------------------
-24. COMENTÁRIOS MORTOS
+9. COMENTÁRIOS MORTOS
 ------------------------------------------------------------------------------
 
   grid.js:59           // MODIFICADO: Adicionada a verificação...
   whiteboard/shapes.js:11  // Removed old dropdown logic
   sheet-mode.html:92   <!-- Os modais foram removidos -->
   drawing-mode.html:239  <div id="assets-list" style="display:none;"></div>
+  converter.html:104-137 → AI prompt inline de 34 linhas
+
+
 
 ------------------------------------------------------------------------------
-25. AI PROMPT HARDCODED
-------------------------------------------------------------------------------
-
-Arquivo: converter.html:104-137 → 34 linhas de prompt inline no HTML.
-AÇÃO: Mover para config/JSON externo.
-
-------------------------------------------------------------------------------
-26. ZOOM SEM PERSISTÊNCIA
+10. ZOOM SEM PERSISTÊNCIA
 ------------------------------------------------------------------------------
 
   whiteboard/canvas.js:159-161,171
@@ -231,13 +188,16 @@ AÇÃO: Mover para config/JSON externo.
 
 Zoom não persiste em localStorage ou Firestore.
 
+
+
 ------------------------------------------------------------------------------
-27. CANVAS RESET SEM CONFIRMAÇÃO
+11. CANVAS RESET SEM CONFIRMAÇÃO
 ------------------------------------------------------------------------------
 
   boardManager.js:72-78 → canvas.clear() sem aviso
   canvas.js:165         → TEM confirmação
   Comportamento inconsistente.
+
 
 
 ================================================================================
@@ -246,12 +206,13 @@ Zoom não persiste em localStorage ou Firestore.
 
 | Categoria              | Itens | Severidade |
 |------------------------|-------|------------|
-| SSOT Violations        |    4  | 🔴 Crítico |
-| Duplicações            |    4  | 🟠 Alta    |
-| Obsoletos              |    2  | 🟡 Média   |
+| SSOT Violations        |    3  | 🔴 Crítico |
+| Duplicações            |    3  | 🟠 Alta    |
+| Obsoletos              |    1  | 🟡 Média   |
 | Cleanup                |    4  | 🟢 Baixa   |
 |------------------------|-------|------------|
-| TOTAL                  |   14  |            |
+| TOTAL                  |   11  |            |
+
 
 
 ================================================================================
@@ -260,44 +221,47 @@ Zoom não persiste em localStorage ou Firestore.
 
 🔴 CRÍTICO (Fazer na próxima sprint):
   1. [Item 1]  Migrar auth para Firebase Auth
+  2. [Item 2]  Implementar cache de settings
+  3. [Item 3]  Centralizar acesso ao user name
 
 🟠 ALTA (Sprint seguinte):
-  (Vazio - Todos os itens de alta prioridade foram resolvidos)
+  4. [Item 4]  Unificar CardLink suggestion items
+  5. [Item 5]  Remover funções duplicadas do .min.js
+  6. [Item 6]  Consolidar regexes (baixa prioridade)
 
 🟡 MÉDIA (Planejar):
-
-  12. [Item 20] Implementar ou remover chat notifications
-  13. [Item 22] Atualizar padrão Fabric.js
+  7. [Item 7]  Atualizar padrão Fabric.js
 
 🟢 BAIXA (Nice to have):
-  14. [Item 24-27] Cleanup geral
+  8. [Item 8-11] Cleanup geral
+
 
 
 ================================================================================
                         📁 ARQUIVOS VERIFICADOS
 ================================================================================
 
-✅ assets/js/modules/auth.js           (68 linhas)
+✅ assets/js/modules/auth.js           (67 linhas)
 ✅ assets/js/modules/cardManager.js    (55 linhas)
 ✅ assets/js/modules/parserUtils.js    (76 linhas)
-✅ assets/js/modules/shortcodeParser.js (366 linhas)
+✅ assets/js/modules/shortcodeParser.js (399 linhas)
 ✅ assets/js/modules/shortcodeParser.min.js (1 linha - diff confirmado)
-✅ assets/js/modules/editorUtils.js    (109 linhas)
+✅ assets/js/modules/editorUtils.js    (123 linhas)
 ✅ assets/js/modules/grid.js           (159 linhas)
-✅ assets/js/modules/chat.js           (140 linhas)
+✅ assets/js/modules/chat.js           (116 linhas)
 ✅ assets/js/modules/board.js          (4 linhas - placeholder)
 ✅ assets/js/modules/components/header.js (179 linhas)
 ✅ assets/js/modules/components/fab.js (232 linhas)
 ✅ assets/js/modules/cardModal.js      (12591 bytes)
-✅ assets/js/script.js                 (672 linhas)
+✅ assets/js/script.js                 (644 linhas)
 ✅ assets/js/sheet-mode.js             (893 linhas)
 ✅ assets/js/text-mode.js              (311 linhas)
 ✅ assets/js/drawing-mode.js           (49 linhas)
 ✅ assets/js/upload.js                 (94 linhas)
 ✅ assets/js/converter.js              (226 linhas)
-✅ assets/js/whiteboard/boardManager.js (159 linhas)
+✅ assets/js/whiteboard/boardManager.js (158 linhas)
 ✅ assets/js/whiteboard/history.js     (114 linhas)
-✅ assets/js/whiteboard/canvas.js      (parcial)
+✅ assets/js/whiteboard/canvas.js      (170 linhas)
 ✅ assets/js/tiptap-extensions/HpNode.js (162 linhas)
 ✅ assets/js/tiptap-extensions/StatNode.js (110 linhas)
 ✅ assets/js/tiptap-extensions/MoneyNode.js (150 linhas)

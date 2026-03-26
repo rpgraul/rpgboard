@@ -13,6 +13,7 @@ import { initializeLayout } from './modules/layout.js';
 import { normalizeString } from './modules/utils.js';
 import { initializeCardModal, openCardModal } from './modules/cardModal.js';
 import { initializeDice } from './modules/diceLogic.js';
+import { getSuggestionItems } from './modules/suggestionItems.js';
 
 let allItems = [];
 let isInitialGridLoaded = false;
@@ -21,16 +22,7 @@ let tagSuggestionsContainer = null;
 let currentCategoryFilter = 'all';
 
 // Expose card suggestion logic for Tiptap (cardModal)
-window.getSuggestionItems = (query) => {
-    const cleanQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    return allItems
-        .filter(c => {
-            const cleanTitle = (c.titulo || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            return cleanTitle.includes(cleanQuery);
-        })
-        .map(c => ({ id: c.titulo, title: c.titulo }))
-        .slice(0, 10);
-};
+window.getSuggestionItems = (query) => getSuggestionItems(allItems, query);
 
 const VISIBILITY_FILTERS = { VISIBLE: 'visible', HIDDEN: 'hidden' };
 
@@ -106,7 +98,7 @@ async function updateUserState(userName) {
 function handleDeleteItem(item) {
     firebaseService.deleteItem(item).then(() => {
         try {
-            const u = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+            const u = auth.getCurrentUserName();
             chat.logSystemMessage(`${u} deletou o card "${item.titulo || item.id}"`);
         } catch (e) { }
     }).catch(err => { console.error(err); alert("Erro ao deletar."); });
@@ -155,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeModals();
 
     // 5. Usuário
-    let savedUserName = localStorage.getItem('rpgboard_user_name');
+    let savedUserName = auth.getCurrentUserName();
     if (!savedUserName) {
         savedUserName = await fetchRandomFantasyName();
         localStorage.setItem('rpgboard_user_name', savedUserName);
@@ -190,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 7. Card Modal (Tiptap) ─────────────────────────────────────────────────
     await initializeCardModal({
         onSave: async (data, newImageFile, editingItem) => {
-            const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+            const userName = auth.getCurrentUserName();
             if (editingItem) {
                 await firebaseService.updateItem(editingItem, data, newImageFile || null);
                 try { chat.logSystemMessage(`${userName} atualizou o card "${data.titulo || editingItem.titulo}"`); } catch (_) { }
@@ -220,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await firebaseService.updateItem(item, updatedData, newImageFile);
                 if (cardElement._newImageFile) delete cardElement._newImageFile;
                 try {
-                    const userName = localStorage.getItem('rpgboard_user_name') || 'Visitante';
+                    const userName = auth.getCurrentUserName();
                     chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
                 } catch (e) { }
                 return { ...item, ...updatedData };

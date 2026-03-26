@@ -7,7 +7,7 @@ export function preParseShortcodesForEditor(t) {
     t = t.replace(shortcodeRegexes.money, (match, args) => {
         const params = parseKeyValueArgs(args);
         const hidden = args.includes("#");
-        const pos = ["left", "right", "bottom", "top"].find(a => args.toLowerCase().includes(a)) || "";
+        const pos = ["left", "right", "bottom"].find(a => args.toLowerCase().includes(a)) || "";
         const curr = args.toLowerCase().includes("gold") ? "gold" : (args.toLowerCase().includes("silver") ? "silver" : "copper");
         return `<span data-node-type="moneyNode" data-current="${params.current || "0"}" data-currency="${curr}" data-is-hidden="${hidden}" data-position="${pos}"></span>`;
     });
@@ -16,14 +16,14 @@ export function preParseShortcodesForEditor(t) {
     t = t.replace(shortcodeRegexes.hp, (match, args) => {
         const params = parseKeyValueArgs(args);
         const hidden = args.includes("#");
-        const pos = ["left", "right", "bottom", "top"].find(a => args.toLowerCase().includes(a)) || "";
+        const pos = ["left", "right", "bottom"].find(a => args.toLowerCase().includes(a)) || "";
         return `<span data-node-type="hpNode" data-max="${params.max || "0"}" data-current="${params.current || "0"}" data-is-hidden="${hidden}" data-position="${pos}"></span>`;
     });
 
     // Stat: [stat "Força" "18" #]
     t = t.replace(shortcodeRegexes.stat, (match, args) => {
         const hidden = args.includes("#");
-        const pos = ["left", "right", "bottom", "top"].find(a => args.toLowerCase().includes(a)) || "";
+        const pos = ["left", "right", "bottom"].find(a => args.toLowerCase().includes(a)) || "";
         const parts = parseArguments(args);
         const label = parts[0] || "Stat";
         const value = parts[1] || "0";

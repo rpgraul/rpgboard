@@ -1,5 +1,6 @@
 import { addChatMessage, listenToChat } from './firebaseService.js';
 import { processRoll } from './diceLogic.js';
+import { getCurrentUserName } from './auth.js';
 
 const messagesContainer = () => document.getElementById('chat-messages');
 const sidebar = () => document.getElementById('chat-sidebar');
@@ -43,7 +44,6 @@ export function toggleChat() {
             const input = inputField();
             if (input) setTimeout(() => input.focus(), 100);
             scrollToBottom();
-            removeChatNotification();
         }
     }
 }
@@ -72,28 +72,6 @@ export async function sendMessage(text, user, characterContext = null, macroName
     }
 }
 
-// --- Notificações ---
-function showChatNotification() {
-}
-
-function removeChatNotification() {
-}
-
-function initNotifications() {
-    const container = messagesContainer();
-    if (!container) return;
-
-    const observer = new MutationObserver((mutations) => {
-        const s = sidebar();
-        if (s && s.classList.contains('is-hidden')) {
-            if (mutations.some(m => m.addedNodes.length > 0)) {
-                showChatNotification();
-            }
-        }
-    });
-    observer.observe(container, { childList: true });
-}
-
 // --- Inicialização ---
 export function initializeChat() {
     const btnToggle = document.getElementById('toggle-chat-btn');
@@ -116,7 +94,7 @@ export function initializeChat() {
             const text = input.value.trim();
             if (!text) return;
 
-            const user = localStorage.getItem('rpgboard_user_name') || 'Anônimo';
+            const user = getCurrentUserName() || 'Anônimo';
             input.value = '';
 
             await sendMessage(text, user, null);
@@ -131,8 +109,6 @@ export function initializeChat() {
         snapshot.docs.forEach(doc => container.appendChild(renderMessage(doc)));
         scrollToBottom();
     });
-
-    initNotifications();
 }
 
 export function logSystemMessage(text, senderName = 'Sistema') {

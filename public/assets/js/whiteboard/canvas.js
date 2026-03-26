@@ -19,16 +19,13 @@ export function initializeCanvas(canvasId, scrollContainerId) {
         isDrawingMode: false,
         selection: true,
         preserveObjectStacking: true,
-        fireMiddleClick: true,
-        stopContextMenu: true
+        fireMiddleClick: false,
+        fireRightClick: false,
+        stopContextMenu: false
     });
 
-    // Ensure UID and cardId are saved in JSON for all objects
-    fabric.Object.prototype.toObject = (function (toObject) {
-        return function (propertiesToInclude) {
-            return toObject.call(this, ['uid', 'cardId'].concat(propertiesToInclude || []));
-        };
-    })(fabric.Object.prototype.toObject);
+    // Ensure UID and cardId are saved in JSON for all objects (Fabric 7.0+)
+    fabric.Object.customProperties = ['uid', 'cardId'];
 
     // Helper to generate Unique IDs
     window.generateUid = () => {

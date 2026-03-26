@@ -83,7 +83,7 @@ export function redo() {
 
 function loadState() {
     const json = history[historyIndex];
-    canvas.loadFromJSON(json, () => {
+    canvas.loadFromJSON(json).then(() => {
         if (!canvas.backgroundColor) {
             canvas.setBackgroundColor('#ffffff');
         }

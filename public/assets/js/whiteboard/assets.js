@@ -38,13 +38,14 @@ export function initializeAssets() {
     let allCards = [];
     let prevCardUrls = {}; // cardId -> url cache for diff
 
-    listenToItems((snapshot) => {
+    listenToItems(async (snapshot) => {
         const updated = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Sync canvas images if any card URL changed
-        updated.forEach(card => {
+        for (const card of updated) {
             if (card.url && prevCardUrls[card.id] && prevCardUrls[card.id] !== card.url) {
-                canvas.getObjects().filter(o => o.type === 'group' && o.cardId === card.id).forEach(group => {
+                const groups = canvas.getObjects().filter(o => o.type === 'group' && o.cardId === card.id);
+                for (const group of groups) {
                     const textObj = (group._objects || []).find(o => o.type === 'i-text');
                     const titleText = textObj ? textObj.text : '';
 
@@ -59,7 +60,8 @@ export function initializeAssets() {
 
                     canvas.remove(group);
 
-                    fabric.Image.fromURL(card.url, (img) => {
+                    try {
+                        const img = await fabric.Image.fromURL(card.url, { crossOrigin: 'anonymous' });
                         if (img.width > 300) img.scaleToWidth(300);
 
                         // Center image at origin so Fabric group math works
@@ -85,11 +87,13 @@ export function initializeAssets() {
 
                         canvas.add(newGroup);
                         canvas.requestRenderAll();
-                    }, { crossOrigin: 'anonymous' });
-                });
+                    } catch (err) {
+                        console.error('Error loading card image:', err);
+                    }
+                }
             }
             prevCardUrls[card.id] = card.url || null;
-        });
+        }
 
         allCards = updated;
         renderCards(allCards);
@@ -243,7 +247,7 @@ export function initializeAssets() {
         scrollArea.addEventListener('dragover', (e) => e.preventDefault());
 
         // Drop (Canvas)
-        scrollArea.addEventListener('drop', (e) => {
+        scrollArea.addEventListener('drop', async (e) => {
             e.preventDefault();
             const imgUrl = e.dataTransfer.getData('imgUrl');
             const cardTitle = e.dataTransfer.getData('cardTitle');
@@ -254,7 +258,8 @@ export function initializeAssets() {
             const y = e.clientY - rect.top;
 
             if (imgUrl) {
-                fabric.Image.fromURL(imgUrl, (img) => {
+                try {
+                    const img = await fabric.Image.fromURL(imgUrl, { crossOrigin: 'anonymous' });
                     // Set origin directly when dropping so x,y are accurate
                     img.set({
                         left: x, top: y, originX: 'center', originY: 'center',
@@ -290,7 +295,9 @@ export function initializeAssets() {
                     }
 
                     setMode('select');
-                }, { crossOrigin: 'anonymous' });
+                } catch (err) {
+                    console.error('Error loading dropped image:', err);
+                }
             } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 const file = e.dataTransfer.files[0];
                 if (file.type.startsWith('image/')) {
@@ -336,31 +343,30 @@ async function handleImageFile(file, left, top) {
         showToast("Subindo imagem...", "is-info");
         const { url } = await uploadImageToImgBB(file);
 
-        fabric.Image.fromURL(url, (img) => {
-            const finalLeft = left !== undefined ? left : canvas.width / 2;
-            const finalTop = top !== undefined ? top : canvas.height / 2;
+        const img = await fabric.Image.fromURL(url, { crossOrigin: 'anonymous' });
+        const finalLeft = left !== undefined ? left : canvas.width / 2;
+        const finalTop = top !== undefined ? top : canvas.height / 2;
 
-            let targetL = finalLeft;
-            let targetT = finalTop;
+        let targetL = finalLeft;
+        let targetT = finalTop;
 
-            if (left === undefined) {
-                const vpt = canvas.viewportTransform;
-                targetL = (canvas.getWidth() / 2 - vpt[4]) / vpt[0];
-                targetT = (canvas.getHeight() / 2 - vpt[5]) / vpt[3];
-            }
+        if (left === undefined) {
+            const vpt = canvas.viewportTransform;
+            targetL = (canvas.getWidth() / 2 - vpt[4]) / vpt[0];
+            targetT = (canvas.getHeight() / 2 - vpt[5]) / vpt[3];
+        }
 
-            img.set({
-                left: targetL, top: targetT,
-                originX: 'center', originY: 'center',
-                uid: window.generateUid()
-            });
+        img.set({
+            left: targetL, top: targetT,
+            originX: 'center', originY: 'center',
+            uid: window.generateUid()
+        });
 
-            if (img.width > 500) img.scaleToWidth(500);
-            canvas.add(img);
-            canvas.setActiveObject(img);
-            setMode('select');
-            showToast("Imagem adicionada!", "is-success");
-        }, { crossOrigin: 'anonymous' }); // Critical for cloning/exporting
+        if (img.width > 500) img.scaleToWidth(500);
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        setMode('select');
+        showToast("Imagem adicionada!", "is-success");
     } catch (e) {
         console.error(e);
         showToast("Erro ao subir imagem", "is-danger");

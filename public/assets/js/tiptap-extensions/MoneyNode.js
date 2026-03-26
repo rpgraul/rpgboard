@@ -1,6 +1,6 @@
 import { Node, mergeAttributes, textInputRule } from "@tiptap/core";
 import { getSettings } from "../modules/firebaseService.js";
-import { calculateMathExpression } from "../modules/shortcodeParser.js";
+import { calculateMathExpression, formatNumber } from "../modules/shortcodeParser.js";
 
 export default Node.create({
   name: "moneyNode",
@@ -63,10 +63,7 @@ export default Node.create({
       display.className = "money-display";
 
       const updateUI = (val, curr) => {
-          const formatted = new Intl.NumberFormat("pt-BR", {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-          }).format(val);
+          const formatted = formatNumber(val);
           display.textContent = curr ? `${formatted} ${curr}` : formatted;
       };
 

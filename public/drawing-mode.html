@@ -14,7 +14,20 @@
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Merriweather:wght@300;400;700&family=Kalam:wght@300;400;700&family=Patrick+Hand&family=Cinzel:wght@400;700&family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Oswald:wght@300;400;700&display=swap" rel="stylesheet">
     <!-- Fabric.js Global -->
-    <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
+    <script>
+        (function() {
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/fabric@7.2.0/dist/index.min.js';
+            script.onload = function() {
+                window.fabric = fabric;
+                console.log('Fabric.js 7.2.0 loaded successfully');
+            };
+            script.onerror = function() {
+                console.error('Failed to load Fabric.js 7.2.0');
+            };
+            document.head.appendChild(script);
+        })();
+    </script>
     <script type="importmap">
         {
             "imports": {
@@ -255,7 +268,6 @@
         </div>
         <button id="btn-add-board" class="button is-success is-small"><i class="fas fa-plus"></i></button>
         <button id="btn-del-board" class="button is-danger is-small"><i class="fas fa-trash"></i></button>
-        <button id="btn-save-board" class="button is-info is-small"><i class="fas fa-save"></i></button>
     </div>
 
     <!-- Custom Context Menu -->

@@ -73,3 +73,13 @@ export const shortcodeRegexes = {
     // Matches [xp ...]
     xp: /\[xp\s+([^\]]+)\]/gi,
 };
+
+export function formatNumber(num) {
+    if (typeof num !== 'number' && typeof num !== 'string') return num;
+    return new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(num);
+}
+
+export const genericShortcodeRegex = /\[(.*?)\]/g;

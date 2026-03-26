@@ -77,7 +77,7 @@ async function createNewBoard(name) {
     changeBoard(newId);
 }
 
-function changeBoard(id) {
+async function changeBoard(id) {
     if (currentBoardId === id && unsubscribeCurrentBoard) return;
 
     currentBoardId = id;
@@ -85,7 +85,7 @@ function changeBoard(id) {
 
     if (unsubscribeCurrentBoard) unsubscribeCurrentBoard();
 
-    unsubscribeCurrentBoard = firebaseService.listenToCurrentBoard(id, (docSnapshot) => {
+    unsubscribeCurrentBoard = firebaseService.listenToCurrentBoard(id, async (docSnapshot) => {
         if (!docSnapshot.exists()) return;
         const data = docSnapshot.data();
         const serverJson = data.json;
@@ -93,12 +93,11 @@ function changeBoard(id) {
 
         if (serverJson && serverJson !== currentJson) {
             isReceivingUpdate = true;
-            canvas.loadFromJSON(serverJson, () => {
-                if (!canvas.backgroundColor) canvas.setBackgroundColor('#ffffff');
-                canvas.renderAll();
-                resetHistory(); // Importante: Resetar o histórico após o carregamento inicial do board
-                setTimeout(() => { isReceivingUpdate = false; }, 100);
-            });
+            await canvas.loadFromJSON(serverJson);
+            if (!canvas.backgroundColor) canvas.setBackgroundColor('#ffffff');
+            canvas.renderAll();
+            resetHistory(); // Importante: Resetar o histórico após o carregamento inicial do board
+            setTimeout(() => { isReceivingUpdate = false; }, 100);
         }
     });
 }

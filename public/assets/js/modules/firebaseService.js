@@ -170,7 +170,21 @@ export const updateItemsOrder = async (ids) => {
     await batch.commit();
   })());
 };
-export const getSettings = async () => (await getDoc(doc(db, "config", "mainSettings"))).data() || {};
+const SETTINGS_CACHE_KEY = 'rpgboard_settings_cache';
+const SETTINGS_CACHE_TTL = 5 * 60 * 1000;
+
+export const getSettings = async () => {
+  const cached = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+  if (cached) {
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp < SETTINGS_CACHE_TTL) {
+      return data;
+    }
+  }
+  const data = (await getDoc(doc(db, "config", "mainSettings"))).data() || {};
+  sessionStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+  return data;
+};
 export const saveSettings = (data) => wrapSync(setDoc(doc(db, "config", "mainSettings"), data, { merge: true }));
 
 export const listenToWhiteboardAssets = (cb) => onSnapshot(query(whiteboardAssetsCollectionRef, orderBy("createdAt", "desc")), cb);

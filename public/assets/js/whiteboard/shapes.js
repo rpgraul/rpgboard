@@ -37,7 +37,7 @@ export function initializeShapes() {
 
 function onMouseDown(o) {
     const state = getCurrentState();
-    const pointer = canvas.getPointer(o.e);
+    const pointer = canvas.getScenePoint(o.e);
 
     // Texto
     if (state.mode === 'text') {
@@ -47,6 +47,7 @@ function onMouseDown(o) {
             fontSize: 24,
             fontFamily: state.font || 'Arial',
             backgroundColor: state.textBg ? state.textBgColor : '',
+            originX: 'left', originY: 'top',
             uid: window.generateUid()
         });
         canvas.add(text);
@@ -78,24 +79,27 @@ function onMouseDown(o) {
             activeShape = new fabric.Rect({
                 left: origX, top: origY, width: 0, height: 0,
                 fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
+                originX: 'left', originY: 'top',
                 uid: window.generateUid()
             });
         } else if (currentShapeType === 'circle') {
             activeShape = new fabric.Circle({
                 left: origX, top: origY, radius: 0,
                 fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
-                originX: 'center', originY: 'center',
+                originX: 'left', originY: 'top',
                 uid: window.generateUid()
             });
         } else if (currentShapeType === 'triangle') {
             activeShape = new fabric.Triangle({
                 left: origX, top: origY, width: 0, height: 0,
                 fill: fillVal, stroke: strokeVal, strokeWidth: strokeWidthVal,
+                originX: 'left', originY: 'top',
                 uid: window.generateUid()
             });
         } else if (currentShapeType === 'arrow') {
             activeShape = new fabric.Line([origX, origY, origX, origY], {
-                stroke: color, strokeWidth: width, selectable: false, evented: false
+                stroke: color, strokeWidth: width, selectable: false, evented: false,
+                originX: 'left', originY: 'top'
             });
         }
 
@@ -105,7 +109,7 @@ function onMouseDown(o) {
 
 function onMouseMove(o) {
     if (!isDrawing || !activeShape) return;
-    const pointer = canvas.getPointer(o.e);
+    const pointer = canvas.getScenePoint(o.e);
 
     if (currentShapeType === 'arrow') {
         activeShape.set({ x2: pointer.x, y2: pointer.y });
@@ -148,12 +152,14 @@ function onMouseUp() {
 
             const group = new fabric.Group([arrowLine, arrowHead], {
                 selectable: true,
+                originX: 'left', originY: 'top',
                 uid: window.generateUid()
             });
             canvas.add(group);
             canvas.setActiveObject(group);
         } else if (activeShape) {
             activeShape.setCoords();
+            activeShape.set({ originX: 'left', originY: 'top' });
             canvas.setActiveObject(activeShape);
         }
         activeShape = null;

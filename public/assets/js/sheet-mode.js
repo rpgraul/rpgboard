@@ -13,6 +13,7 @@ import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 import { normalizeString } from './modules/utils.js';
+import { getSuggestionItems } from './modules/suggestionItems.js';
 
 import { listenToItems, updateItem, updateCharacterStat, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
 import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
@@ -397,16 +398,7 @@ async function initializeMainEditor() {
             TextAlign.configure({ types: ["heading", "paragraph"] }),
             CardLink.configure({
                 suggestion: {
-                    items: ({ query }) => {
-                        const cleanQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                        return allItems
-                            .filter(c => {
-                                const cleanTitle = (c.titulo || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                                return cleanTitle.includes(cleanQuery);
-                            })
-                            .map(c => ({ id: c.titulo, title: c.titulo }))
-                            .slice(0, 10);
-                    },
+                    items: ({ query }) => getSuggestionItems(allItems, query),
                 },
             }),
             StatNode,

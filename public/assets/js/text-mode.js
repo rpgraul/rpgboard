@@ -14,6 +14,7 @@ import CountNode from "./tiptap-extensions/CountNode.js";
 import ContainerShortcode from "./tiptap-extensions/containerShortcode.js";
 import FichaShortcode from "./tiptap-extensions/fichaShortcode.js";
 import { normalizeString } from './modules/utils.js';
+import { getSuggestionItems } from './modules/suggestionItems.js';
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
 import * as firebaseService from "./modules/firebaseService.js";
@@ -78,16 +79,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       CardLink.configure({
         suggestion: {
-          items: ({ query }) => {
-            const cleanQuery = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            return allCards
-              .filter(c => {
-                const cleanTitle = (c.titulo || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                return cleanTitle.includes(cleanQuery);
-              })
-              .map(c => ({ id: c.titulo, title: c.titulo }))
-              .slice(0, 10);
-          },
+          items: ({ query }) => getSuggestionItems(allCards, query),
         },
       }),
       StatNode,
