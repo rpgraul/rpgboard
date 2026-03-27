@@ -27,6 +27,7 @@ let lastProcessedCommandTime = 0;
 let syncInterval = null;
 let unsubscribe = null;
 let draggedIndex = null;
+let pendingState = null;
 
 // Estados de controle
 let isShuffle = false;
@@ -90,12 +91,19 @@ function createPlayer() {
         player.setVolume(localVolume);
         syncInterval = setInterval(driftCorrection, 3000);
         updateProgressBarInterval();
+        
+        if (pendingState) {
+          console.log('[onReady] Applying pending state');
+          applyStateToPlayer(pendingState);
+          pendingState = null;
+        }
       },
       onStateChange: (event) => {
         if (!isReady) return;
         
         switch (event.data) {
           case window.YT.PlayerState.CUED:
+            console.log('[onStateChange] CUED - isPlaying:', audioState.isPlaying);
             isLoadingVideo = false;
             if (audioState.isPlaying) {
               player.playVideo();
@@ -259,7 +267,17 @@ function driftCorrection() {
 }
 
 function applyStateToPlayer(state) {
-  if (!isReady || !player || !state.currentVideoId) return;
+  if (!isReady || !player) {
+    console.log('[applyStateToPlayer] Player not ready, saving pending state');
+    pendingState = { ...state };
+    return;
+  }
+  
+  // Apply pending state and clear it
+  if (pendingState) {
+    console.log('[applyStateToPlayer] Applying pending state');
+    pendingState = null;
+  }
   
   isLoadingVideo = true;
   
@@ -267,6 +285,7 @@ function applyStateToPlayer(state) {
   const currentVideoIdLoaded = currentUrl ? extractYouTubeId(currentUrl) : null;
   
   if (currentVideoIdLoaded !== state.currentVideoId) {
+    console.log('[applyStateToPlayer] Loading new video:', state.currentVideoId, 'isPlaying:', state.isPlaying);
     if (state.isPlaying) {
       player.loadVideoById({
         videoId: state.currentVideoId,
@@ -284,6 +303,7 @@ function applyStateToPlayer(state) {
   }
   
   const playerState = player.getPlayerState();
+  console.log('[applyStateToPlayer] Video already loaded, playerState:', playerState, 'isPlaying:', state.isPlaying);
   
   if (state.isPlaying && playerState !== window.YT.PlayerState.PLAYING) {
     player.playVideo();
@@ -542,6 +562,8 @@ export async function skipNext() {
   if (nextIndex === -1) {
     if (isRepeat) {
       await skipTo(0);
+    } else {
+      await issueAudioCommand('stop');
     }
     return;
   }
