@@ -5,6 +5,8 @@ import * as chat from './modules/chat.js';
 import { initializeDice } from './modules/diceLogic.js';
 import { initializeModals } from './modules/modal.js';
 import { initializeCardModal } from './modules/cardModal.js';
+import * as firebaseService from './modules/firebaseService.js';
+import { initializeApp } from './modules/appInitializer.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Layout Base
@@ -20,16 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Carregar settings e garantir título no header
     try {
-        const firebaseService = await import('./modules/firebaseService.js');
-        const appSettings = await firebaseService.getSettings();
-        window.appSettings = appSettings;
-        firebaseService.initFirebaseService();
-        if (appSettings.siteTitle) {
-            document.title = `${appSettings.siteTitle} - GameBoard`;
-        }
-        if (typeof import('./modules/components/header.js').then === 'function') {
-            import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
-        }
+        await initializeApp({ pageTitle: 'Canvas' });
 
         // 5. Inicializar modal de card com onSave -> updateItem
         await initializeCardModal({

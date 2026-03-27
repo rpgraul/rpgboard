@@ -64,27 +64,33 @@
         <div class="field">
           <label class="label">Nome do Macro</label>
           <div class="control">
-            <input id="macro-name" class="input" type="text" placeholder="Ex: Ataque Espada">
+            <input id="macro-name" class="input" type="text" placeholder="Ex: Ataque com Espada">
           </div>
         </div>
         <div class="field">
           <label class="label">Fórmula do Macro</label>
           <div class="control">
-            <textarea id="macro-formula" class="textarea is-small" rows="4" placeholder="Ex:&#10;Ataque: 1d20+for&#10;Dano: 1d10+5"></textarea>
+            <textarea id="macro-formula" class="textarea" rows="4" placeholder="Ex:&#10;1d20+for&#10;1d10+5"></textarea>
           </div>
+          <div id="macro-test-result" class="notification is-hidden is-light mt-2"></div>
           <div class="content is-small mt-2" style="color: #ccc;">
-            <p><strong>Dicas de Uso:</strong></p>
-            <ul>
-              <li><strong>Pool de Dados:</strong> <code>5d10>7</code> (conta sucessos se ≥ 7)</li>
-              <li><strong>Falhas:</strong> <code>5d10>7f1</code> (subtrai sucessos se rolar 1)</li>
-              <li><strong>Explosão:</strong> <code>5d10!</code> (rola extra se tirar valor máximo)</li>
-              <li><strong>Comparação:</strong> <code>1d100 &lt;= Int</code> (mostra SUCESSO/FALHA)</li>
-              <li><strong>Atributos:</strong> Use nomes como <code>For</code>, <code>Int</code>, etc.</li>
+            <p><strong>Como criar macros:</strong></p>
+            <ul style="margin-left: 1rem;">
+              <li><strong>Uma linha:</strong> <code>1d20+5</code> → Rola 1d20 + 5</li>
+              <li><strong>Múltiplas linhas:</strong> Uma por vez, cada linha é uma rolagem separada</li>
+              <li><strong>Atributos:</strong> Use o nome do stat, ex: <code>1d20+for</code> ou <code>1d20+Força</code></li>
+              <li><strong>Comparação:</strong> <code>1d100&lt;=Int</code> → Mostra SUCESSO ou FALHA</li>
+              <li><strong>Pool:</strong> <code>5d6&gt;4</code> → Conta dados ≥ 4</li>
+              <li><strong>Explosão:</strong> <code>4d6!</code> → Rola extras em 6</li>
+              <li><strong>Vantagem:</strong> <code>2d20kh1</code> → Mantém maior de 2d20</li>
+              <li><strong>Repetição:</strong> <code>3d6x2</code> → Rola 3d6 duas vezes</li>
             </ul>
+            <p class="mt-2"><em>Para testar, clique em "Testar Fórmula" antes de salvar.</em></p>
           </div>
         </div>
       </section>
       <footer class="modal-card-foot">
+        <button id="test-macro-btn" class="button is-warning is-light">Testar Fórmula</button>
         <button id="save-macro-btn" class="button is-success">Salvar Macro</button>
         <button class="button modal-cancel">Cancelar</button>
       </footer>

@@ -15,13 +15,12 @@ import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter
 import { normalizeString } from './modules/utils.js';
 import { getSuggestionItems } from './modules/suggestionItems.js';
 
-import { listenToItems, updateItem, updateCharacterStat, listenToDiceRolls, addChatMessage, uploadImageToImgBB, initFirebaseService } from './modules/firebaseService.js';
+import { listenToItems, updateItem, addChatMessage, uploadImageToImgBB } from './modules/firebaseService.js';
+import { initializeApp } from './modules/appInitializer.js';
 import { initializeAuth, getCurrentUserName, isNarrator } from './modules/auth.js';
 import { initializeLayout } from './modules/layout.js';
 import { openModal, closeModal, initializeModals, showDetailModal } from './modules/modal.js';
-import * as shortcodeParser from './modules/shortcodeParser.js';
 import * as chat from './modules/chat.js';
-import { visualizeDiceRoll } from './modules/dice3d.js';
 import { processRoll, initializeDice } from './modules/diceLogic.js';
 import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes, handleToolbarAction } from './modules/editorUtils.js';
 import { showToast } from './modules/ui.js';
@@ -36,9 +35,9 @@ let contentEditorSaveTimeout = null;
 // Referências de elementos que serão preenchidos após o layout carregar
 let imgEl, nameEl, notesEditor;
 let mainEditor, mainEditorSaveTimeout;
-let sideViewEditor;
 let editingNodePos = null;
 let isDataLoading = false;
+let isDataReady = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. INICIALIZAÇÃO DO LAYOUT MODULAR
@@ -46,17 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const layout = await initializeLayout();
     // Carregar configurações globais e atualizar título/header
     try {
-        const firebaseService = await import('./modules/firebaseService.js');
-        const appSettings = await firebaseService.getSettings();
-        window.appSettings = appSettings;
-        initFirebaseService();
-        if (appSettings.siteTitle) {
-            document.title = `${appSettings.siteTitle} - GameBoard`;
-        }
-        // Re-renderizar header para garantir título correto
-        if (typeof import('./modules/components/header.js').then === 'function') {
-            import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
-        }
+        await initializeApp({ pageTitle: 'Sheet' });
     } catch (error) {
         console.error('Falha ao carregar configurações do site:', error);
     }
@@ -115,8 +104,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     setupSheetSpecificListeners();
-    setupInteractiveSheetListeners();
-    loadMacros();
 
 });
 
@@ -137,12 +124,25 @@ function injectSheetLayoutHTML() {
                     <span id="char-category-label" class="tag is-info is-light is-uppercase" style="align-self: flex-start; font-weight: bold; font-size: 10px;">PERSONAGEM</span>
                     <h2 id="char-name" class="title is-4" style="margin: 0;"></h2>
                 </div>
-            </aside>
-            <main class="sheet-main box is-full-height" style="display: flex; flex-direction: column; padding: 0;">
-                <div id="tiptap-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 1rem;">
-                    <!-- Tiptap Toolbar e Editor aqui -->
+                <div class="sheet-macros-section">
+                    <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                        <span class="is-size-7 has-text-weight-bold has-text-grey">MACROS</span>
+                    </div>
+                    <div id="macro-bar" class="sheet-macro-list"></div>
                 </div>
-                <p class="help mx-4 mb-2">Alterações são salvas automaticamente.</p>
+            </aside>
+            <main class="sheet-main box is-full-height" style="display: flex; flex-direction: row; padding: 0; gap: 1rem;">
+                <div id="editor-column" style="flex: 2; display: flex; flex-direction: column; min-height: 0; padding: 1rem;">
+                    <div id="tiptap-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                        <!-- Tiptap Toolbar e Editor aqui -->
+                    </div>
+                    <p class="help">Alterações são salvas automaticamente.</p>
+                </div>
+                <div id="notes-column" style="flex: 1; display: flex; flex-direction: column; padding: 1rem; border-left: 1px solid #333;">
+                    <label class="label is-small has-text-white">Notas do Player</label>
+                    <textarea id="player-notes-editor" class="textarea is-small" style="flex: 1; min-height: 200px;" placeholder="Suas anotações pessoais..."></textarea>
+                    <span id="player-notes-status" class="help is-hidden">Salvando...</span>
+                </div>
             </main>
             <footer class="sheet-footer">
                 <div class="dice-bar">
@@ -153,9 +153,6 @@ function injectSheetLayoutHTML() {
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d12">D12</button>
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d20">D20</button>
                     <button class="button is-small is-dark is-rounded dice-quick-btn" data-dice="d100">D100</button>
-                </div>
-                <div id="macro-bar" class="macro-bar">
-                    <!-- Botões de Macro serão injetados aqui -->
                 </div>
                 <div class="chat-input-wrapper">
                     <input id="sheet-chat-input" class="input is-small" type="text" placeholder="Mensagem ou comando (/r 1d20+5)...">
@@ -223,19 +220,6 @@ function loadCharacter(id) {
         catLabel.className = `tag is-${catValue === 'monstro' ? 'danger' : (catValue === 'item' ? 'warning' : 'info')} is-light is-uppercase`;
     }
 
-    if (visualStatsContainer) {
-        visualStatsContainer.innerHTML = '';
-        if (visualCountsContainer) visualCountsContainer.innerHTML = '';
-
-        const parsed = shortcodeParser.parseAllShortcodes({ conteudo: char.conteudo || "" }, { isPlayerSheet: true });
-
-        visualStatsContainer.innerHTML = parsed.all.filter(s => s.type === 'stat' || s.type === 'money').map(s => s.html).join('');
-        if (visualCountsContainer) visualCountsContainer.innerHTML = parsed.all.filter(s => s.type === 'count').map(s => s.html).join('');
-
-        renderContainers(char);
-        renderMacroButtons();
-    }
-
     if (mainEditor) {
         const parsedContext = preParseShortcodesForEditor(char.conteudo || "");
         mainEditor.commands.setContent(parsedContext, false);
@@ -246,6 +230,8 @@ function loadCharacter(id) {
     if (isNarrator()) {
         document.querySelectorAll(".narrator-only").forEach(el => el.classList.remove("is-hidden"));
     }
+
+    renderMacroButtons();
 
     setTimeout(() => {
         isDataReady = true;
@@ -263,34 +249,11 @@ function htmlToRaw(html) {
 }
 
 function setupSheetSpecificListeners() {
-    const editSheetBtn = document.getElementById('edit-sheet-btn');
-    if (editSheetBtn) {
-        editSheetBtn.addEventListener('click', openSheetEditor);
-    }
-
-    const tabs = document.querySelectorAll('.tabs li');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    });
-
     if (notesEditor) notesEditor.addEventListener('input', (e) => handleAutoSave('playerNotes', e.target.value, false));
 
-    // Listener para upload de imagem do personagem
     const imgUploadInput = document.getElementById('char-image-upload');
     if (imgUploadInput) {
         imgUploadInput.addEventListener('change', handleCharImageUpload);
-    }
-
-    const saveContentBtn = document.getElementById('save-content-btn');
-    if (saveContentBtn) {
-        saveContentBtn.addEventListener('click', saveContainerContent);
-    }
-
-
-    // Listeners para modal de gerador de shortcodes
-    const shortcodeInsertBtn = document.getElementById('shortcode-insert-btn');
-    if (shortcodeInsertBtn) {
-        shortcodeInsertBtn.addEventListener('click', handleShortcodeGeneration);
     }
 
     const quickChatInput = document.getElementById('sheet-chat-input');
@@ -314,32 +277,37 @@ function setupSheetSpecificListeners() {
     const saveMacroBtn = document.getElementById('save-macro-btn');
     if (saveMacroBtn) saveMacroBtn.onclick = saveMacro;
 
-    // Listeners para botões de shortcode generator (pode haver vários em diferentes toolbars)
-    document.querySelectorAll('.shortcode-generator-btn').forEach(btn => {
-        btn.addEventListener('click', openShortcodeGeneratorModal);
-    });
-
-    // Listeners para modal de shortcode generator
-    const shortcodeModal = document.getElementById('shortcode-generator-modal');
-    if (shortcodeModal) {
-        const typeSelect = document.getElementById('shortcode-type');
-        const insertBtn = document.getElementById('shortcode-insert-btn');
-        const closeBtn = shortcodeModal.querySelector('.delete');
-        if (closeBtn) closeBtn.addEventListener('click', () => closeModal(shortcodeModal));
-        const cancelBtn = shortcodeModal.querySelector('.modal-cancel');
-        if (cancelBtn) cancelBtn.addEventListener('click', () => closeModal(shortcodeModal));
-        const bgBtn = shortcodeModal.querySelector('.modal-background');
-        if (bgBtn) bgBtn.addEventListener('click', () => closeModal(shortcodeModal));
-    }
+    const testMacroBtn = document.getElementById('test-macro-btn');
+    if (testMacroBtn) testMacroBtn.onclick = testMacro;
 }
 
 function handleAutoSave(field, value, isRaw) {
     if (!currentCharacterId) return;
+    
+    if (field === 'playerNotes') {
+        const statusEl = document.getElementById('player-notes-status');
+        if (statusEl) {
+            statusEl.textContent = 'Salvando...';
+            statusEl.classList.remove('is-hidden', 'is-success');
+            statusEl.classList.add('is-warning');
+        }
+    }
+    
     if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
-    autoSaveTimeout = setTimeout(() => {
+    autoSaveTimeout = setTimeout(async () => {
         const updateData = {};
         updateData[field] = isRaw ? value.replace(/\n/g, '<br>') : value;
-        updateItem({ id: currentCharacterId }, updateData).catch(console.error);
+        await updateItem({ id: currentCharacterId }, updateData).catch(console.error);
+        
+        if (field === 'playerNotes') {
+            const statusEl = document.getElementById('player-notes-status');
+            if (statusEl) {
+                statusEl.textContent = 'Salvo ✓';
+                statusEl.classList.remove('is-warning', 'is-hidden');
+                statusEl.classList.add('is-success');
+                setTimeout(() => statusEl.classList.add('is-hidden'), 2000);
+            }
+        }
     }, 1000);
 }
 
@@ -481,10 +449,41 @@ function syncToFirebase() {
 }
 
 
+async function testMacro() {
+    const n = document.getElementById('macro-name').value.trim();
+    const f = document.getElementById('macro-formula').value.trim();
+    const resultEl = document.getElementById('macro-test-result');
+    
+    if (!f) {
+        resultEl.className = 'notification is-danger is-light mt-2';
+        resultEl.textContent = 'Digite uma fórmula para testar.';
+        resultEl.classList.remove('is-hidden');
+        return;
+    }
+
+    const testResult = await processRoll(f, currentCharacter || {}, getCurrentUserName() || 'Teste', 'Teste');
+    
+    if (!testResult || !testResult.success) {
+        resultEl.className = 'notification is-danger is-light mt-2';
+        resultEl.textContent = testResult?.error || 'Fórmula inválida. Verifique a sintaxe e tente novamente.';
+        resultEl.classList.remove('is-hidden');
+    } else {
+        resultEl.className = 'notification is-success is-light mt-2';
+        resultEl.textContent = `✓ Fórmula válida! Resultado: ${testResult.summary?.join(', ') || 'OK'}`;
+        resultEl.classList.remove('is-hidden');
+    }
+}
+
 async function saveMacro() {
     const n = document.getElementById('macro-name').value.trim();
     const f = document.getElementById('macro-formula').value.trim();
     if (!n || !f || !currentCharacterId) return;
+
+    const testResult = await processRoll(f, currentCharacter, getCurrentUserName() || 'Teste', 'Teste');
+    if (!testResult || !testResult.success) {
+        showToast(testResult?.error || 'Fórmula inválida. Verifique e tente novamente.', 'is-danger');
+        return;
+    }
 
     if (!currentCharacter.macros) currentCharacter.macros = [];
     currentCharacter.macros.push({ nome: n, formula: f });
@@ -494,6 +493,8 @@ async function saveMacro() {
     closeModal(document.getElementById('macro-modal'));
     document.getElementById('macro-name').value = '';
     document.getElementById('macro-formula').value = '';
+    document.getElementById('macro-test-result').classList.add('is-hidden');
+    showToast(`Macro "${n}" criado!`, 'is-success');
 }
 
 function renderMacroButtons() {
@@ -505,20 +506,19 @@ function renderMacroButtons() {
     macros.forEach((mac, i) => {
         const wrap = document.createElement('div');
         wrap.className = 'macro-btn-wrap';
-        wrap.style.cssText = 'display:inline-flex; align-items:center; margin-right:8px; background:rgba(255,255,255,0.05); border-radius:4px; padding:2px 4px;';
 
         const b = document.createElement('button');
-        b.className = 'button is-small is-rounded is-info has-text-weight-bold';
-        b.textContent = mac.nome;
-        b.style.border = 'none';
+        b.className = 'button is-small is-fullwidth is-rounded is-dark has-text-weight-bold sheet-macro-btn';
+        b.title = `Fórmula: ${mac.formula}`;
+        b.innerHTML = `<span>${mac.nome}</span>`;
         b.onclick = () => {
             const user = getCurrentUserName() || 'Anônimo';
             processRoll(mac.formula, currentCharacter, user, mac.nome);
         };
 
         const del = document.createElement('button');
-        del.className = 'delete is-small macro-delete-btn';
-        del.style.marginLeft = '4px';
+        del.className = 'delete is-small';
+        del.title = 'Remover macro';
         del.onclick = async (e) => {
             e.stopPropagation();
             if (confirm(`Deletar macro "${mac.nome}"?`)) {
@@ -528,7 +528,8 @@ function renderMacroButtons() {
             }
         };
 
-        wrap.append(b, del);
+        wrap.appendChild(b);
+        wrap.appendChild(del);
         container.appendChild(wrap);
     });
 }
@@ -561,263 +562,6 @@ async function handleCharImageUpload(event) {
         alert('Erro ao fazer upload da imagem: ' + error.message);
         event.target.value = '';
     }
-}
-
-/**
- * Renderiza containers como botões interativos na ficha.
- */
-function renderContainers(char) {
-    if (!visualStatsContainer) return;
-
-    // Remove qualquer lista anterior
-    const existingList = visualStatsContainer.querySelector('.sheet-containers-list');
-    if (existingList) existingList.remove();
-
-    const containers = shortcodeParser.extractContainers(char.conteudo);
-    if (containers.length === 0) return;
-
-    const containerList = document.createElement('div');
-    containerList.className = 'sheet-containers-list mt-4 mb-4';
-
-
-    const buttonsWrapper = document.createElement('div');
-    buttonsWrapper.className = 'buttons are-small is-centered';
-
-    containers.forEach((c, index) => {
-        const btn = document.createElement('button');
-        btn.className = `button is-dark type-${c.type}`;
-
-        let emoji = '📦';
-        if (c.type === 'inventory') emoji = '🎒';
-        if (c.type === 'spells') emoji = '📜';
-        if (c.type === 'skills') emoji = '✊';
-
-        btn.innerHTML = `
-            <span class="mr-1">${emoji}</span>
-            <span>${c.label}</span>
-        `;
-
-        btn.onclick = () => openContainerEditor(c, index);
-        buttonsWrapper.appendChild(btn);
-    });
-
-    containerList.appendChild(buttonsWrapper);
-    visualStatsContainer.appendChild(containerList);
-}
-
-/**
- * Abre o modal de edição para um container específico.
- */
-function openContainerEditor(container, index) {
-    const modal = document.getElementById('content-editor-modal');
-    modal.dataset.mode = 'container';
-    modal.dataset.containerIndex = index;
-    modal.querySelector('.modal-card-title').textContent = `Editar: ${container.label}`;
-
-    // Usaremos o terminal visual do editor para facilitar a edição focada
-    // Se quiser usar o mainEditor para isso, precisamos de um mecanismo de swap ou apenas usar o modal como antes mas com o novo sistema.
-    // Como o usuário quer "mesma forma que text-mode", no text-mode editamos direto.
-    // Mas no sheet-mode os botões laterais são úteis.
-
-    // Vou inicializar um segundo editor se necessário (sideViewEditor equivalente do text-mode)
-    if (!sideViewEditor) {
-        initializeSideViewEditor();
-    }
-
-    if (sideViewEditor) {
-        sideViewEditor.commands.setContent(preParseShortcodesForEditor(container.content || ''));
-    }
-
-    openModal(modal);
-}
-
-function initializeSideViewEditor() {
-    sideViewEditor = new Editor({
-        element: document.querySelector("#content-tiptap-wrapper"),
-        extensions: [
-            StarterKit,
-            Highlight,
-            Underline,
-            Link.configure({ openOnClick: false }),
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
-            StatNode,
-            HpNode,
-            MoneyNode,
-            CountNode,
-            ContainerShortcode,
-        ],
-        editorProps: { attributes: { class: "ProseMirror" } }
-    });
-
-    // Injetar toolbar se houver container
-    const toolbarWrap = document.createElement('div');
-    toolbarWrap.className = 'tiptap-toolbar mb-2';
-    // Reutiliza HTML da toolbar principal
-    const mainToolbar = document.querySelector(".column-raw-editor .tiptap-toolbar");
-    if (mainToolbar) {
-        toolbarWrap.innerHTML = mainToolbar.innerHTML;
-        // Limpa shortcode menu se não quiser em containers ou configura novo
-        const scMenu = toolbarWrap.querySelector('#sheet-mode-shortcode-container');
-        if (scMenu) {
-            scMenu.id = 'container-shortcode-container';
-            scMenu.innerHTML = '';
-            setupShortcodeMenu(scMenu, sideViewEditor);
-        }
-
-        toolbarWrap.onclick = (e) => {
-            const btn = e.target.closest("button[data-action]");
-            if (!btn) return;
-            handleToolbarAction(sideViewEditor, btn.dataset.action, btn.dataset.level || btn.dataset.align);
-        };
-    }
-
-    const containerWrapper = document.querySelector("#content-tiptap-wrapper");
-    if (containerWrapper) {
-        containerWrapper.prepend(toolbarWrap);
-    }
-}
-
-function setupInteractiveSheetListeners() {
-    const containers = [visualStatsContainer, visualCountsContainer];
-
-    containers.forEach(container => {
-        if (!container) return;
-
-        container.onclick = (e) => {
-            const interactive = e.target.closest('.is-interactive');
-            if (!interactive) return;
-
-            e.stopPropagation();
-
-            if (interactive.classList.contains('shortcode-hp')) {
-                const display = interactive.querySelector('.hp-display-mode');
-                const edit = interactive.querySelector('.hp-edit-mode');
-                if (display && edit) {
-                    display.classList.add('is-hidden');
-                    edit.classList.remove('is-hidden');
-                    const input = edit.querySelector('input');
-                    input.focus();
-                    input.select();
-                }
-            } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money') || interactive.classList.contains('shortcode-xp')) {
-                const display = interactive.querySelector('.stat-value-display, .money-value-display, .xp-value-display');
-                const input = interactive.querySelector('input');
-                if (display && input) {
-                    display.classList.add('is-hidden');
-                    input.classList.remove('is-hidden');
-                    input.focus();
-                    input.select();
-                }
-            }
-        };
-
-        container.addEventListener('focusout', async (e) => {
-            const input = e.target;
-            if (input.tagName !== 'INPUT') return;
-            const interactive = input.closest('.is-interactive');
-            if (!interactive || !interactive.dataset.shortcode) return;
-
-            const oldShortcode = decodeURIComponent(interactive.dataset.shortcode);
-            const args = shortcodeParser.parseArguments(oldShortcode.slice(1, -1));
-            const params = shortcodeParser.parseKeyValueArgs(args);
-            const inputVal = input.value.trim();
-
-            let newShortcode = "";
-
-            if (interactive.classList.contains('shortcode-hp')) {
-                const max = parseInt(params.max, 10) || 100;
-                const current = parseInt(params.current, 10) || 0;
-                let newValue = Math.round(shortcodeParser.calculateMathExpression(current, inputVal));
-                newValue = Math.max(-10, Math.min(newValue, max));
-                if (current === newValue) {
-                    interactive.querySelector('.hp-display-mode').classList.remove('is-hidden');
-                    interactive.querySelector('.hp-edit-mode').classList.add('is-hidden');
-                    return;
-                }
-                newShortcode = `[hp max="${max}" current="${newValue}"]`;
-                input.value = newValue;
-            } else if (interactive.classList.contains('shortcode-stat')) {
-                const label = args[1] || "";
-                const oldValue = args[2] || "";
-                if (oldValue === inputVal) {
-                    interactive.querySelector('.stat-value-display').classList.remove('is-hidden');
-                    input.classList.add('is-hidden');
-                    return;
-                }
-                newShortcode = `[stat "${label}" "${inputVal}"]`;
-            } else if (interactive.classList.contains('shortcode-money')) {
-                const current = parseFloat(params.current) || 0;
-                const newValue = Math.round(shortcodeParser.calculateMathExpression(current, inputVal) * 100) / 100;
-                if (current === newValue) {
-                    interactive.querySelector('.money-value-display').classList.remove('is-hidden');
-                    input.classList.add('is-hidden');
-                    return;
-                }
-                let currency = params.currency || "";
-                if (!currency) {
-                    currency = args.find(a => !a.includes('=') && a.toLowerCase() !== 'money') || "";
-                }
-                newShortcode = `[money ${currency} current="${newValue}"]`.replace(/\s+\]/, ']');
-                input.value = newValue;
-            } else if (interactive.classList.contains('shortcode-xp')) {
-                const current = parseInt(params.current, 10) || 0;
-                const newValue = Math.round(shortcodeParser.calculateMathExpression(current, inputVal));
-                if (current === newValue) {
-                    interactive.querySelector('.xp-value-display').classList.remove('is-hidden');
-                    input.classList.add('is-hidden');
-                    return;
-                }
-                newShortcode = `[xp current="${newValue}"]`;
-                input.value = newValue;
-            }
-
-            if (newShortcode && newShortcode !== oldShortcode) {
-                const dataField = input.dataset.field;
-                if (dataField) {
-                    await updateCharacterStat(currentCharacterId, dataField, newValue);
-                    // Sincroniza cache local para o stat
-                    const itemIdx = allItems.findIndex(i => i.id === currentCharacterId);
-                    if (itemIdx !== -1) {
-                        const keys = dataField.split('.');
-                        let obj = allItems[itemIdx];
-                        for (let i = 0; i < keys.length - 1; i++) {
-                            if (!obj[keys[i]]) obj[keys[i]] = {};
-                            obj = obj[keys[i]];
-                        }
-                        obj[keys[keys.length - 1]] = newValue;
-                    }
-                }
-                await updateFichaShortcode(oldShortcode, newShortcode);
-
-                interactive.dataset.shortcode = encodeURIComponent(newShortcode);
-
-                if (interactive.classList.contains('shortcode-hp')) {
-                    const txt = interactive.querySelector('.hp-text');
-                    if (txt) txt.textContent = `${newValue} / ${params.max || 10}`;
-                } else if (interactive.classList.contains('shortcode-stat') || interactive.classList.contains('shortcode-money') || interactive.classList.contains('shortcode-xp')) {
-                    const display = interactive.querySelector('.stat-value-display, .money-value-display, .xp-value-display');
-                    if (display) {
-                        const val = interactive.classList.contains('shortcode-xp') ? `${input.value} XP` : input.value;
-                        display.textContent = val;
-                    }
-                }
-            } else {
-                const display = interactive.querySelector('.hp-display-mode, .stat-value-display, .money-value-display, .xp-value-display');
-                const edit = interactive.querySelector('.hp-edit-mode, input');
-                if (display && edit) {
-                    display.classList.remove('is-hidden');
-                    edit.classList.add('is-hidden');
-                }
-            }
-        });
-
-        container.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-                e.preventDefault();
-                e.target.blur();
-            }
-        });
-    });
 }
 
 

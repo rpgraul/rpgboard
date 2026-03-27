@@ -183,6 +183,7 @@ export async function processRoll(command, character, userName, macroName = null
                 } catch (e) {
                     console.error("Erro na rolagem:", e);
                     lineResultHtml = `${lineLabel}${currentLine} (Erro)`;
+                    return { success: false, error: e.message };
                 }
             }
         } else {
@@ -193,16 +194,26 @@ export async function processRoll(command, character, userName, macroName = null
         chatLines.push(`<p class="dice-line">${lineResultHtml}</p>`);
     }
 
+    // Validação: se não teve nenhuma linha com dados, fórmula é inválida
+    const hasDice = notificationSummary.length > 0;
+    if (!hasDice) {
+        return { success: false, error: 'Fórmula sem dados válidos' };
+    }
+
     // DISPARO DO CHAT
     const htmlFinal = `<div class="dice-roll-result">${chatLines.join('')}</div>`;
     addChatMessage(htmlFinal, 'system', 'Sistema');
 
     // DISPARO DA NOTIFICAÇÃO (Etiqueta consolidada via sendDiceRoll)
-    if (notificationSummary.length > 0) {
-        const summary = notificationSummary.join('<br>');
-        // Usamos um tipo fictício 'summary' para a etiqueta e hideDie: true
-        sendDiceRoll(userName, 'summary', 0, summary, false, true);
-    }
+    const summary = notificationSummary.join('<br>');
+    sendDiceRoll(userName, 'summary', 0, summary, false, true);
+
+    // Retorna resultado para validação de macros
+    return {
+        success: true,
+        summary: notificationSummary,
+        html: htmlFinal
+    };
 }
 
 

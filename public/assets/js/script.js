@@ -1,6 +1,7 @@
 import { initializeModals, openModal, closeModal, showDetailModal } from './modules/modal.js';
 import * as auth from './modules/auth.js';
 import * as firebaseService from './modules/firebaseService.js';
+import { initializeApp } from './modules/appInitializer.js';
 import * as narrator from './modules/narrator.js';
 import * as bulkEdit from './modules/bulkEdit.js';
 import * as settings from './modules/settings.js';
@@ -171,10 +172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 6. Settings
     try {
-        appSettings = await firebaseService.getSettings();
-        window.appSettings = appSettings;
-        firebaseService.initFirebaseService();
-        if (appSettings.siteTitle) document.title = `${appSettings.siteTitle} - GameBoard`;
+        appSettings = await initializeApp({ pageTitle: 'GameBoard' });
         cardRenderer.initializeCardRenderer(appSettings);
         generateTagFilters(appSettings.filters, tagFiltersContainer);
     } catch (error) {

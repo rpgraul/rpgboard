@@ -18,6 +18,7 @@ import { getSuggestionItems } from './modules/suggestionItems.js';
 import { setupShortcodeMenu, openConfigModal } from './modules/shortcodeInserter.js';
 
 import * as firebaseService from "./modules/firebaseService.js";
+import { initializeApp } from "./modules/appInitializer.js";
 import * as shortcodeParser from "./modules/shortcodeParser.js";
 import { isNarrator, initializeAuth } from "./modules/auth.js";
 import { showConfirmationPopover, showToast } from "./modules/ui.js";
@@ -46,15 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initializeDice(layout);
 
   try {
-    const appSettings = await firebaseService.getSettings();
-    window.appSettings = appSettings;
-    firebaseService.initFirebaseService({ imgbbApiKey: appSettings.imgbbApiKey });
-    if (appSettings.siteTitle) {
-      document.title = `${appSettings.siteTitle} - GameBoard`;
-    }
-    if (typeof import('./modules/components/header.js').then === 'function') {
-      import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
-    }
+    await initializeApp({ pageTitle: 'Notes' });
   } catch (error) {
     console.error('Falha ao carregar configurações do site:', error);
   }

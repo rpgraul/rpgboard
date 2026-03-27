@@ -1,8 +1,8 @@
 import { initializeLayout } from './modules/layout.js';
-import { getSettings, initFirebaseService } from './modules/firebaseService.js';
 import { initializeAuth } from './modules/auth.js';
 import * as chat from './modules/chat.js';
 import { initializeModals } from './modules/modal.js';
+import { initializeApp } from './modules/appInitializer.js';
 
 export async function initializeConverter() {
     // 1. Inicializar Interface Global (Header, FAB, Modais)
@@ -15,17 +15,7 @@ export async function initializeConverter() {
 
     // 3. Carregar Configurações e Título Original via Firebase
     try {
-        const appSettings = await getSettings();
-        window.appSettings = appSettings;
-        initFirebaseService();
-        if (appSettings.siteTitle) {
-            document.title = `${appSettings.siteTitle} - Conversor | GameBoard`;
-        }
-
-        // Renderizar header atualizado com o Firebase Config carregado
-        if (typeof import('./modules/components/header.js').then === 'function') {
-            import('./modules/components/header.js').then(mod => mod.renderHeader && mod.renderHeader());
-        }
+        await initializeApp({ pageTitle: 'Converter' });
     } catch (error) {
         console.error('Falha ao carregar configurações do site:', error);
     }
