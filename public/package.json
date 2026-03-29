@@ -22,7 +22,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp audio-player.html shell.html dist/ && cp -r assets/dice-box dist/assets/",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
