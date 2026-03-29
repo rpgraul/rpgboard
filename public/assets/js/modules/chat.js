@@ -74,15 +74,27 @@ export async function sendMessage(text, user, characterContext = null, macroName
 
 // --- Inicialização ---
 export function initializeChat() {
-    const btnToggle = document.getElementById('toggle-chat-btn');
-    const btnClose = closeBtn();
+    // Event delegation for chat buttons (works after FAB re-render)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#toggle-chat-btn')) {
+            e.stopPropagation();
+            toggleChat();
+        }
+        if (e.target.closest('#close-chat-btn')) {
+            const s = sidebar();
+            if (s) s.classList.add('is-hidden');
+        }
+    });
 
-    if (btnToggle) btnToggle.onclick = (e) => {
-        e.stopPropagation();
-        toggleChat();
-    };
-
-    if (btnClose) btnClose.onclick = () => sidebar()?.classList.add('is-hidden');
+    // Escape key to close chat
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const s = sidebar();
+            if (s && !s.classList.contains('is-hidden')) {
+                toggleChat();
+            }
+        }
+    });
 
     const form = inputForm();
     if (form) {

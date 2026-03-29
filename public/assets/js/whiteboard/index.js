@@ -7,8 +7,15 @@ import { initializeExport } from './export.js';
 import { initializeHistory } from './history.js';
 import { initializeContextMenu } from './contextMenu.js';
 
-export function initWhiteboard() {
+export async function initWhiteboard() {
     console.log("Inicializando Whiteboard Modular...");
+
+    // Aguardar carregar fabric.js antes de inicializar o canvas
+    if (window.__loadFabric) {
+        console.log("[Whiteboard] Carregando Fabric.js...");
+        await window.__loadFabric();
+        console.log("[Whiteboard] Fabric.js carregado!");
+    }
 
     // A ordem importa: Canvas -> Tools/Shapes -> History -> BoardManager
     initializeCanvas('c', 'wb-scroll-area');

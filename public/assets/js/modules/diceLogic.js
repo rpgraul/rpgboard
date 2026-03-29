@@ -50,6 +50,7 @@ async function processRollWith3D(command, character, userName, macroName = null)
 
     let diceNotation = '';
     let processedFormula = rawFormula;
+    let lineResultHtml = "";
 
     for (let line of lines) {
         let currentLine = line.trim();
@@ -143,7 +144,7 @@ async function processRollWith3D(command, character, userName, macroName = null)
         try {
             rollResult = await rollDice(processedFormula, userName);
         } catch (error) {
-            console.error('3D Dice roll failed, using fallback:', error);
+            console.error('[DiceLogic] Roll failed:', error);
         }
     }
 
@@ -207,6 +208,7 @@ export async function processRoll(command, character, userName, macroName = null
             diceInitialized = true;
         } catch (error) {
             console.error('Failed to initialize 3D dice:', error);
+            return { success: false, error: error.message };
         }
     }
 
@@ -216,11 +218,13 @@ export async function processRoll(command, character, userName, macroName = null
 export async function initializeDice(layoutRefs) {
     if (!layoutRefs) return;
 
-    try {
-        await initDice3D('#dice-container');
-        diceInitialized = true;
-    } catch (error) {
-        console.error('Failed to initialize 3D dice:', error);
+    if (!diceInitialized) {
+        try {
+            await initDice3D('#dice-container');
+            diceInitialized = true;
+        } catch (error) {
+            console.error('Failed to initialize 3D dice:', error);
+        }
     }
 
     const currentUserName = getCurrentUserName();

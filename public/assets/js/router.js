@@ -105,7 +105,11 @@ async function navigateTo(pathname, pushState = true) {
   // 5. Atualizar active no header (re-detectar baseado no pathname)
   updateHeaderActiveLink(pathname);
 
-  // 6. Inicializar módulo JS da nova página
+  // 6. Re-renderizar FAB para atualizar botões do modo atual
+  const { renderFab } = await import('./modules/components/fab.js');
+  renderFab(pathname);
+
+  // 7. Inicializar módulo JS da nova página
   try {
     const mod = await route.module();
     activeModule = mod;

@@ -163,16 +163,15 @@ const FAB_BUTTONS = {
  * Creates or updates the #app-fab container and injects buttons in the order specified.
  * Returns the FAB container element for event listener attachment.
  * 
- * @param {string[]} activeButtons - Array of button keys to render
- *   Example: ['help', 'chat', 'add-card', 'dice']
+ * @param {string} [currentPath] - Optional path to determine mode (for soft navigation)
  * @returns {HTMLElement} The FAB container element (#app-fab)
  * 
  * @example
- * const fabContainer = renderFab(['chat', 'dice', 'add-card']);
+ * const fabContainer = renderFab();
  * // Now attach event listeners to buttons as needed:
  * fabContainer.querySelector('#toggle-chat-btn').addEventListener('click', toggleChat);
  */
-export function renderFab() {
+export function renderFab(currentPath = null) {
   // Sempre renderiza todos os botões, visibilidade será controlada por classes
   let appFab = document.getElementById('app-fab');
   if (!appFab) {
@@ -181,8 +180,8 @@ export function renderFab() {
     document.body.appendChild(appFab);
   }
 
-  // Determina o modo atual
-  const path = window.location.pathname.toLowerCase();
+  // Determina o modo atual - usa currentPath se fornecido (soft navigation), senão window.location
+  const path = (currentPath || window.location.pathname).toLowerCase();
   let mode = 'grid';
   if (path.includes('sheet-mode')) mode = 'sheet';
   else if (path.includes('index')) mode = 'grid';

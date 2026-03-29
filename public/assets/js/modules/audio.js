@@ -696,15 +696,23 @@ export async function initializeAudio() {
 }
 
 function setupEventListeners() {
-  const toggleBtn = document.getElementById('toggle-audio-btn');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', toggleAudio);
-  }
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#toggle-audio-btn')) {
+      toggleAudio();
+    }
+    if (e.target.closest('#close-audio-btn')) {
+      toggleAudio();
+    }
+  });
   
-  const closeBtn = document.getElementById('close-audio-btn');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', toggleAudio);
-  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const sidebar = document.getElementById('audio-sidebar');
+      if (sidebar && !sidebar.classList.contains('is-hidden')) {
+        toggleAudio();
+      }
+    }
+  });
   
   const playBtn = document.getElementById('audio-btn-play');
   if (playBtn) {

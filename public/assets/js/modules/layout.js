@@ -42,8 +42,8 @@ export async function initializeLayout() {
     throw new Error('Layout failed: header not rendered');
   }
 
-  // Step 3: Render FAB
-  const fabElement = renderFab();
+  // Step 3: Render FAB (pass current path for soft navigation support)
+  const fabElement = renderFab(window.location.pathname);
   if (!fabElement) {
     throw new Error('Layout failed: FAB not rendered');
   }

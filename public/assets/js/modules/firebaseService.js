@@ -1,4 +1,4 @@
-import { collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, query, orderBy, writeBatch, getDoc, setDoc, getDocs, arrayUnion, deleteField, } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { collection, addDoc, onSnapshot, doc, deleteDoc, updateDoc, serverTimestamp, query, orderBy, limit, writeBatch, getDoc, setDoc, getDocs, arrayUnion, deleteField, } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js";
 import { updateSyncStatus } from "./ui.js";
 import { db, storage, IMGBB_API_KEY } from "../firebase-config.js";
@@ -139,14 +139,14 @@ export const listenToChat = (cb) => onSnapshot(query(chatCollectionRef, orderBy(
 
 export async function sendDiceRoll(data) {
   const payload = {
-    userName: data.userName || data[0],
-    diceType: data.diceType || data[1],
-    result: data.result || data[2],
-    label: data.label || data.customLabel || data[3] || data.userName,
-    hideLabel: data.hideLabel || data[4] || false,
-    hideDie: data.hideDie || data[5] || false,
+    userName: data.userName,
+    diceType: data.diceType,
+    result: data.total || data.result || 0,
+    label: data.label || data.userName,
+    hideLabel: data.hideLabel || false,
+    hideDie: data.hideDie || false,
     formula: data.formula || null,
-    total: data.total || data.result,
+    total: data.total || 0,
     individualRolls: data.individualRolls || null,
     createdAt: serverTimestamp(),
   };

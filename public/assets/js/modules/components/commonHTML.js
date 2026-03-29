@@ -10,6 +10,10 @@ export function renderOverlays() {
     return d;
   })();
 
+  // Preservar iframe de áudio persistente
+  const existingAudioFrame = document.getElementById('audio-player-frame');
+  const existingDiceContainer = document.getElementById('dice-container');
+
   overlays.innerHTML = `
   <!-- Chat Sidebar -->
   <aside id="chat-sidebar" class="chat-sidebar is-hidden">
@@ -361,6 +365,14 @@ export function renderOverlays() {
     </div>
   </div>
   `;
+
+  // Restaurar elementos persistentes
+  if (existingAudioFrame && !document.getElementById('audio-player-frame')) {
+    document.body.appendChild(existingAudioFrame);
+  }
+  if (existingDiceContainer && !document.getElementById('dice-container')) {
+    document.body.appendChild(existingDiceContainer);
+  }
 
   console.log("Componente CommonHTML: Renderizado com sucesso.");
   return overlays;

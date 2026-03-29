@@ -3,28 +3,34 @@ import DiceBox from '@3d-dice/dice-box';
 let diceBox = null;
 let currentRollResolve = null;
 let currentRollData = null;
+let diceDismissLocked = false;
+let dismissLockTimeout = null;
+let dismissHandler = null;
 
 export async function initDice3D(containerSelector = '#dice-container') {
-  diceBox = new DiceBox(containerSelector, {
-    assetPath: '/assets/dice-box',
+  const containerId = containerSelector.replace('#', '');
+  
+  diceBox = new DiceBox({
+    id: containerId,
+    assetPath: '/assets/dice-box/',
+    origin: window.location.origin,
     scale: 6,
     gravity: 1,
     friction: 0.8,
     restitution: 0,
     settleTimeout: 3000,
     theme: 'default',
-    onBeforeRoll: (notation) => {
-      console.log('[Dice3D] Rolling:', notation);
-    },
-    onDieComplete: (dieResult) => {
-      console.log('[Dice3D] Die complete:', dieResult);
+    onBeforeRoll: () => {
+      diceDismissLocked = true;
     },
     onRollComplete: (rollResult) => {
-      console.log('[Dice3D] Roll complete:', rollResult);
-      if (currentRollResolve && currentRollData) {
+      const firstGroup = Array.isArray(rollResult) ? rollResult[0] : rollResult;
+      
+      if (firstGroup && currentRollResolve && currentRollData) {
+        const rolls = (firstGroup.rolls || []).map(r => r.value || r.result || 0);
         const result = {
-          total: rollResult.value,
-          rolls: rollResult.rolls.map(r => r.value),
+          total: firstGroup.value || 0,
+          rolls: rolls,
           formula: currentRollData.formula,
           userName: currentRollData.userName,
           diceType: extractDiceType(currentRollData.formula)
@@ -33,20 +39,24 @@ export async function initDice3D(containerSelector = '#dice-container') {
         currentRollResolve = null;
         currentRollData = null;
       }
-    },
-    onRemoveComplete: (dieResult) => {
-      console.log('[Dice3D] Die removed:', dieResult);
+      
+      if (dismissLockTimeout) clearTimeout(dismissLockTimeout);
+      diceDismissLocked = true;
+      
+      dismissLockTimeout = setTimeout(() => {
+        diceDismissLocked = false;
+        enableDiceDismiss();
+      }, 3000);
     }
   });
 
   await diceBox.init();
+  enableDiceDismiss();
 }
 
 function extractDiceType(formula) {
   const match = formula.match(/(\d+)d(\d+)/i);
-  if (match) {
-    return `d${match[2]}`;
-  }
+  if (match) return `d${match[2]}`;
   return 'd20';
 }
 
@@ -71,20 +81,33 @@ export function rollDice(formula, userName) {
   });
 }
 
+function enableDiceDismiss() {
+  if (diceDismissLocked) return;
+  if (dismissHandler) return;
+  
+  dismissHandler = (e) => {
+    if (diceDismissLocked) return;
+    if (e.target.closest('.dice-notification')) return;
+    
+    if (diceBox) diceBox.clear();
+    document.querySelectorAll('.dice-notification').forEach(n => n.remove());
+    
+    document.removeEventListener('click', dismissHandler);
+    dismissHandler = null;
+  };
+  
+  document.addEventListener('click', dismissHandler);
+}
+
 export function clearDice() {
-  if (diceBox) {
-    diceBox.clear();
-  }
+  if (diceBox) diceBox.clear();
+  document.querySelectorAll('.dice-notification').forEach(n => n.remove());
 }
 
 export function hideDice() {
-  if (diceBox) {
-    diceBox.hide();
-  }
+  if (diceBox) diceBox.hide();
 }
 
 export function showDice() {
-  if (diceBox) {
-    diceBox.show();
-  }
+  if (diceBox) diceBox.show();
 }
