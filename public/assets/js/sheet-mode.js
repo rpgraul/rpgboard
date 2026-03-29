@@ -24,6 +24,7 @@ import * as chat from './modules/chat.js';
 import { processRoll, initializeDice } from './modules/diceLogic.js';
 import { preParseShortcodesForEditor, convertEditorHtmlToShortcodes, handleToolbarAction } from './modules/editorUtils.js';
 import { showToast } from './modules/ui.js';
+import * as audio from './modules/audio.js';
 
 let allItems = [];
 let currentCharacterId = null;
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeModals();
     chat.initializeChat();
     initializeDice(layout);
+    audio.initializeAudio();
 
     // 3. VINCULAÇÃO DE EVENTOS DOS COMPONENTES INJETADOS
     // Os botões FAB e elementos globais já foram criados pelo layout.js

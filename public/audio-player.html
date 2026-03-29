@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Player</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: transparent; overflow: hidden; }
+    #player { width: 0; height: 0; }
+  </style>
+</head>
+<body>
+  <div id="player"></div>
+
+  <script>
+    (function() {
+      let player = null;
+      let isReady = false;
+      let currentVideoId = null;
+      let currentState = {
+        isPlaying: false,
+        currentTime: 0,
+        videoId: null,
+        duration: 0,
+        volume: 25,
+        isMuted: false
+      };
+      let stateUpdateInterval = null;
+      let pendingCommand = null;
+
+      function loadYouTubeAPI() {
+        return new Promise((resolve) => {
+          if (window.YT && window.YT.Player) {
+            resolve();
+            return;
+          }
+          window.onYouTubeIframeAPIReady = () => resolve();
+          const tag = document.createElement('script');
+          tag.src = 'https://www.youtube.com/iframe_api';
+          const firstScriptTag = document.getElementsByTagName('script')[0];
+          firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        });
+      }
+
+      function createPlayer() {
+        player = new YT.Player('player', {
+          height: '0',
+          width: '0',
+          videoId: '',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            mute: 1,
+            iv_load_policy: 3
+          },
+          events: {
+            onReady: onPlayerReady,
+            onStateChange: onPlayerStateChange,
+            onError: onPlayerError
+          }
+        });
+      }
+
+      function onPlayerReady(event) {
+        isReady = true;
+        console.log('[AudioPlayer] Player ready');
+
+        if (pendingCommand) {
+          executeCommand(pendingCommand);
+          pendingCommand = null;
+        }
+
+        sendStateUpdate();
+      }
+
+      function onPlayerStateChange(event) {
+        const state = event.data;
+
+        if (state === YT.PlayerState.PLAYING) {
+          currentState.isPlaying = true;
+          startStateUpdates();
+        } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.ENDED) {
+          currentState.isPlaying = false;
+          stopStateUpdates();
+        }
+
+        sendStateUpdate();
+      }
+
+      function onPlayerError(event) {
+        console.error('[AudioPlayer] Player error:', event.data);
+      }
+
+      function startStateUpdates() {
+        if (stateUpdateInterval) return;
+        stateUpdateInterval = setInterval(() => {
+          if (player && isReady && currentState.isPlaying) {
+            try {
+              currentState.currentTime = player.getCurrentTime() || 0;
+              sendStateUpdate();
+            } catch (e) {}
+          }
+        }, 1000);
+      }
+
+      function stopStateUpdates() {
+        if (stateUpdateInterval) {
+          clearInterval(stateUpdateInterval);
+          stateUpdateInterval = null;
+        }
+      }
+
+      function sendStateUpdate() {
+        if (!isReady) return;
+        try {
+          currentState.currentTime = player.getCurrentTime() || 0;
+          currentState.duration = player.getDuration() || 0;
+          currentState.volume = player.getVolume() || 25;
+          currentState.isMuted = player.isMuted() || false;
+        } catch (e) {}
+
+        window.parent.postMessage({
+          type: 'AUDIO_STATE_UPDATE',
+          state: { ...currentState }
+        }, '*');
+      }
+
+      function executeCommand(cmd) {
+        if (!isReady) {
+          pendingCommand = cmd;
+          return;
+        }
+
+        switch (cmd.type) {
+          case 'LOAD_VIDEO':
+            const { videoId, startSeconds, isPlaying } = cmd.payload;
+            currentVideoId = videoId;
+            currentState.videoId = videoId;
+            
+            if (isPlaying) {
+              player.loadVideoById({
+                videoId: videoId,
+                startSeconds: startSeconds || 0,
+                suggestedQuality: 'small'
+              });
+            } else {
+              player.cueVideoById({
+                videoId: videoId,
+                startSeconds: startSeconds || 0,
+                suggestedQuality: 'small'
+              });
+            }
+            break;
+
+          case 'PLAY':
+            if (player.getVideoUrl()) {
+              if (player.isMuted()) {
+                player.unMute();
+                player.setVolume(currentState.volume);
+              }
+              player.playVideo();
+            } else if (currentVideoId) {
+              player.loadVideoById({
+                videoId: currentVideoId,
+                startSeconds: currentState.currentTime,
+                suggestedQuality: 'small'
+              });
+            }
+            break;
+
+          case 'PAUSE':
+            player.pauseVideo();
+            break;
+
+          case 'SEEK':
+            const { time } = cmd.payload;
+            player.seekTo(time, true);
+            break;
+
+          case 'SET_VOLUME':
+            const { level } = cmd.payload;
+            currentState.volume = level;
+            player.setVolume(level);
+            if (level > 0 && player.isMuted()) {
+              player.unMute();
+            }
+            sendStateUpdate();
+            break;
+
+          case 'STOP':
+            player.stopVideo();
+            currentState.isPlaying = false;
+            currentState.currentTime = 0;
+            currentState.videoId = null;
+            sendStateUpdate();
+            break;
+
+          case 'GET_STATE':
+            sendStateUpdate();
+            break;
+        }
+      }
+
+      window.addEventListener('message', (event) => {
+        if (!event.data || !event.data.type) return;
+        const { type, payload } = event.data;
+        
+        if (type.startsWith('AUDIO_')) {
+          executeCommand({ type: type.replace('AUDIO_', ''), payload });
+        }
+      });
+
+      loadYouTubeAPI().then(() => {
+        createPlayer();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import { initializeModals } from './modules/modal.js';
 import { initializeCardModal } from './modules/cardModal.js';
 import * as firebaseService from './modules/firebaseService.js';
 import { initializeApp } from './modules/appInitializer.js';
+import * as audio from './modules/audio.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Layout Base
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 3. Chat (Opcional, mas útil)
     chat.initializeChat();
     initializeDice(layout);
+    audio.initializeAudio();
 
     // 4. Carregar settings e garantir título no header
     try {

@@ -8,28 +8,28 @@ import {
 } from './firebaseService.js';
 import { getCurrentUserName } from './auth.js';
 
+const VOLUME_STORAGE_KEY = 'rpg_audio_volume';
+const DEFAULT_VOLUME = 25;
+
 let audioState = {
   currentVideoId: null,
   isPlaying: false,
   seekTime: 0,
   commandTime: 0,
-  volume: 50,
+  volume: DEFAULT_VOLUME,
   playlist: [],
   lastUpdated: null
 };
 
-let localVolume = 50;
+let localVolume = parseInt(localStorage.getItem(VOLUME_STORAGE_KEY)) || DEFAULT_VOLUME;
 let lastVolumeBeforeMute = 50;
-let player = null;
-let isReady = false;
+let iframePlayer = null;
+let iframeReady = false;
 let isLoadingVideo = false;
 let lastProcessedCommandTime = 0;
-let syncInterval = null;
 let unsubscribe = null;
 let draggedIndex = null;
-let pendingState = null;
 
-// Estados de controle
 let isShuffle = false;
 let isRepeat = false;
 let isMuted = false;
@@ -55,118 +55,61 @@ async function fetchVideoTitle(videoId) {
   return `YouTube Video`;
 }
 
-function loadYouTubeAPI() {
-  return new Promise((resolve) => {
-    if (window.YT && window.YT.Player) {
-      resolve();
-      return;
-    }
-    window.onYouTubeIframeAPIReady = () => {
-      resolve();
-    };
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-  });
+function getIframe() {
+  if (!iframePlayer) {
+    iframePlayer = document.getElementById('audio-player-frame');
+  }
+  return iframePlayer;
 }
 
-function createPlayer() {
-  player = new window.YT.Player('audio-yt-player', {
-    height: '0',
-    width: '0',
-    videoId: '',
-    playerVars: {
-      autoplay: 0,
-      controls: 0,
-      disablekb: 1,
-      fs: 0,
-      modestbranding: 1,
-      rel: 0,
-      showinfo: 0
-    },
-    events: {
-      onReady: () => {
-        isReady = true;
-        player.setVolume(localVolume);
-        syncInterval = setInterval(driftCorrection, 3000);
-        updateProgressBarInterval();
-        
-        if (pendingState) {
-          console.log('[onReady] Applying pending state');
-          applyStateToPlayer(pendingState);
-          pendingState = null;
-        }
-      },
-      onStateChange: (event) => {
-        if (!isReady) return;
-        
-        switch (event.data) {
-          case window.YT.PlayerState.CUED:
-            console.log('[onStateChange] CUED - isPlaying:', audioState.isPlaying);
-            isLoadingVideo = false;
-            if (audioState.isPlaying) {
-              player.playVideo();
-            }
-            break;
-            
-          case window.YT.PlayerState.ENDED:
-            handleSongEnded();
-            break;
-            
-          case window.YT.PlayerState.BUFFERING:
-            break;
-        }
-      }
-    }
-  });
-}
-
-function handleSongEnded() {
-  if (isRepeat) {
-    skipTo(0);
-    player.playVideo();
-  } else {
-    skipNext();
+function sendToIframe(type, payload = {}) {
+  const iframe = getIframe();
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({ type: `AUDIO_${type}`, payload }, '*');
   }
 }
 
-function updateProgressBarInterval() {
-  setInterval(updateProgressBar, 500);
+function handleIframeStateUpdate(state) {
+  if (!state) return;
+  
+  audioState.currentVideoId = state.videoId;
+  audioState.isPlaying = state.isPlaying;
+  
+  if (state.currentTime !== undefined) {
+    audioState.seekTime = state.currentTime;
+  }
+  
+  syncToUI();
+  updateProgressBarFromIframe(state);
 }
 
-function updateProgressBar() {
-  if (!player || !isReady || !audioState.isPlaying) {
+function updateProgressBarFromIframe(state) {
+  if (!state || !audioState.isPlaying || !state.videoId) {
     hideProgressBar();
     return;
   }
   
-  try {
-    const currentTime = player.getCurrentTime();
-    const duration = player.getDuration();
-    
-    if (!duration || duration === 0) {
-      hideProgressBar();
-      return;
-    }
-    
-    showProgressBar();
-    
-    const percent = (currentTime / duration) * 100;
-    
-    const fill = document.getElementById('audio-progress-fill');
-    const thumb = document.getElementById('audio-progress-thumb');
-    const currentTimeEl = document.getElementById('audio-current-time');
-    const durationEl = document.getElementById('audio-duration');
-    
-    if (fill) fill.style.width = `${percent}%`;
-    if (thumb) thumb.style.left = `${percent}%`;
-    if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
-    if (durationEl) durationEl.textContent = formatTime(duration);
-    
-  } catch (e) {
+  const currentTime = state.currentTime || 0;
+  const duration = state.duration || 0;
+  
+  if (!duration || duration === 0) {
     hideProgressBar();
+    return;
   }
+  
+  showProgressBar();
+  
+  const percent = (currentTime / duration) * 100;
+  
+  const fill = document.getElementById('audio-progress-fill');
+  const thumb = document.getElementById('audio-progress-thumb');
+  const currentTimeEl = document.getElementById('audio-current-time');
+  const durationEl = document.getElementById('audio-duration');
+  
+  if (fill) fill.style.width = `${percent}%`;
+  if (thumb) thumb.style.left = `${percent}%`;
+  if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
+  if (durationEl) durationEl.textContent = formatTime(duration);
 }
 
 function formatTime(seconds) {
@@ -187,19 +130,11 @@ function hideProgressBar() {
 }
 
 function seekTo(percent) {
-  if (!player || !isReady || !audioState.currentVideoId) return;
+  if (!audioState.currentVideoId || !iframeReady) return;
   
-  try {
-    const duration = player.getDuration();
-    if (!duration || duration === 0) return;
-    
-    const seekTime = (percent / 100) * duration;
-    player.seekTo(seekTime, true);
-    
-    issueAudioCommand('seek', { seekTime });
-  } catch (e) {
-    console.warn('Seek error:', e);
-  }
+  sendToIframe('SEEK', { time: percent });
+  
+  issueAudioCommand('seek', { seekTime: percent });
 }
 
 function generateShuffleOrder() {
@@ -247,68 +182,29 @@ function getPrevIndex() {
   return currentIndex <= 0 ? audioState.playlist.length - 1 : currentIndex - 1;
 }
 
-function driftCorrection() {
-  if (!player || !isReady || !audioState.currentVideoId) return;
-  if (isLoadingVideo) return;
-  
-  try {
-    const currentUrl = player.getVideoUrl();
-    if (!currentUrl.includes(audioState.currentVideoId)) return;
-    
-    const localTime = player.getCurrentTime();
-    const expectedPosition = audioState.seekTime + (Date.now() - audioState.commandTime) / 1000;
-    
-    if (Math.abs(localTime - expectedPosition) > 3) {
-      player.seekTo(expectedPosition, true);
-    }
-  } catch (e) {
-    // Player not ready
-  }
-}
-
 function applyStateToPlayer(state) {
-  if (!isReady || !player) {
-    console.log('[applyStateToPlayer] Player not ready, saving pending state');
-    pendingState = { ...state };
+  if (!iframeReady) {
+    console.log('[applyStateToPlayer] Iframe not ready, waiting...');
+    setTimeout(() => applyStateToPlayer(state), 500);
     return;
   }
-  
-  // Apply pending state and clear it
-  if (pendingState) {
-    console.log('[applyStateToPlayer] Applying pending state');
-    pendingState = null;
+
+  let effectiveSeekTime = state.seekTime;
+  if (state.isPlaying && state.commandTime > 0) {
+    const timeSinceCommand = (Date.now() - state.commandTime) / 1000;
+    effectiveSeekTime = state.seekTime + timeSinceCommand;
   }
-  
-  isLoadingVideo = true;
-  
-  const currentUrl = player.getVideoUrl();
-  const currentVideoIdLoaded = currentUrl ? extractYouTubeId(currentUrl) : null;
-  
-  if (currentVideoIdLoaded !== state.currentVideoId) {
-    console.log('[applyStateToPlayer] Loading new video:', state.currentVideoId, 'isPlaying:', state.isPlaying);
-    if (state.isPlaying) {
-      player.loadVideoById({
-        videoId: state.currentVideoId,
-        startSeconds: state.seekTime,
-        suggestedQuality: 'small'
-      });
-    } else {
-      player.cueVideoById({
-        videoId: state.currentVideoId,
-        startSeconds: state.seekTime,
-        suggestedQuality: 'small'
-      });
-    }
-    return;
-  }
-  
-  const playerState = player.getPlayerState();
-  console.log('[applyStateToPlayer] Video already loaded, playerState:', playerState, 'isPlaying:', state.isPlaying);
-  
-  if (state.isPlaying && playerState !== window.YT.PlayerState.PLAYING) {
-    player.playVideo();
-  } else if (!state.isPlaying && playerState === window.YT.PlayerState.PLAYING) {
-    player.pauseVideo();
+
+  if (state.currentVideoId) {
+    sendToIframe('LOAD_VIDEO', {
+      videoId: state.currentVideoId,
+      startSeconds: effectiveSeekTime,
+      isPlaying: state.isPlaying
+    });
+  } else if (state.isPlaying) {
+    sendToIframe('PLAY');
+  } else {
+    sendToIframe('PAUSE');
   }
 }
 
@@ -327,7 +223,6 @@ function syncToUI() {
   const volumeSlider = document.getElementById('audio-volume');
   const playlistCount = document.getElementById('audio-playlist-count');
   
-  // Now playing
   if (audioState.currentVideoId) {
     const currentItem = audioState.playlist.find(p => p.videoId === audioState.currentVideoId);
     if (nowPlayingTitle) {
@@ -341,7 +236,6 @@ function syncToUI() {
     }
   }
   
-  // Playlist
   if (playlistEl) {
     playlistEl.innerHTML = audioState.playlist.map((item, index) => {
       const isActive = item.videoId === audioState.currentVideoId;
@@ -404,7 +298,6 @@ function syncToUI() {
     });
   }
   
-  // Controls
   if (playBtn) {
     playBtn.innerHTML = audioState.isPlaying 
       ? '<i class="fas fa-pause"></i>' 
@@ -414,11 +307,9 @@ function syncToUI() {
   if (prevBtn) prevBtn.disabled = !audioState.currentVideoId || audioState.playlist.length === 0;
   if (nextBtn) nextBtn.disabled = audioState.playlist.length === 0;
   
-  // Shuffle & Repeat
   if (shuffleBtn) shuffleBtn.classList.toggle('is-active', isShuffle);
   if (repeatBtn) repeatBtn.classList.toggle('is-active', isRepeat);
   
-  // Mute
   if (muteBtn) {
     muteBtn.innerHTML = isMuted || localVolume === 0 
       ? '<i class="fas fa-volume-mute"></i>' 
@@ -430,7 +321,6 @@ function syncToUI() {
   
   if (playlistCount) playlistCount.textContent = audioState.playlist.length;
   
-  // Show/hide progress bar
   if (audioState.isPlaying && audioState.currentVideoId) {
     showProgressBar();
   } else {
@@ -477,7 +367,6 @@ export async function removeFromPlaylist(id) {
   
   const wasCurrentVideo = item.videoId === audioState.currentVideoId;
   
-  // 1. Encontrar próxima música ANTES de remover
   let nextItem = null;
   if (wasCurrentVideo && audioState.playlist.length > 1) {
     const currentIndex = audioState.playlist.findIndex(p => p.id === id);
@@ -488,11 +377,8 @@ export async function removeFromPlaylist(id) {
     }
   }
   
-  // 2. Limpar tudo localmente primeiro
   if (wasCurrentVideo) {
-    if (player && isReady) {
-      player.stopVideo();
-    }
+    sendToIframe('STOP');
     audioState.currentVideoId = null;
     audioState.isPlaying = false;
     audioState.playlist = audioState.playlist.filter(p => p.id !== id);
@@ -500,10 +386,8 @@ export async function removeFromPlaylist(id) {
     syncToUI();
   }
   
-  // 3. Remover do Firebase
   await removeFromAudioPlaylistCommand(id);
   
-  // 4. Se tinha próxima, tocar ela
   if (nextItem) {
     await issueAudioCommand('skip', {
       currentVideoId: nextItem.videoId,
@@ -590,19 +474,18 @@ export async function togglePlayPause() {
   if (!audioState.currentVideoId) return;
   
   const newState = !audioState.isPlaying;
-  const currentSeekTime = player ? player.getCurrentTime() : 0;
   
-  if (player && isReady) {
+  if (iframeReady) {
     if (newState) {
-      player.playVideo();
+      sendToIframe('PLAY');
     } else {
-      player.pauseVideo();
+      sendToIframe('PAUSE');
     }
   }
   
   await issueAudioCommand('playPause', {
     isPlaying: newState,
-    seekTime: currentSeekTime
+    seekTime: audioState.seekTime
   });
 }
 
@@ -616,9 +499,11 @@ export function toggleMute() {
     localVolume = lastVolumeBeforeMute;
   }
   
-  if (player && isReady) {
-    player.setVolume(localVolume);
+  if (iframeReady) {
+    sendToIframe('SET_VOLUME', { level: localVolume });
   }
+  
+  localStorage.setItem(VOLUME_STORAGE_KEY, localVolume);
   
   const muteBtn = document.getElementById('audio-btn-mute');
   const volumeSlider = document.getElementById('audio-volume');
@@ -664,8 +549,10 @@ export function setVolume(level) {
     isMuted = false;
   }
   
-  if (player && isReady) {
-    player.setVolume(localVolume);
+  localStorage.setItem(VOLUME_STORAGE_KEY, localVolume);
+  
+  if (iframeReady) {
+    sendToIframe('SET_VOLUME', { level: localVolume });
   }
   
   const muteBtn = document.getElementById('audio-btn-mute');
@@ -689,8 +576,32 @@ export function getVolume() {
 
 export async function initializeAudio() {
   await initAudioPlayer();
-  await loadYouTubeAPI();
-  createPlayer();
+  
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'AUDIO_STATE_UPDATE') {
+      iframeReady = true;
+      handleIframeStateUpdate(event.data.state);
+      
+      sendToIframe('SET_VOLUME', { level: localVolume });
+    }
+  });
+  
+  const iframe = getIframe();
+  if (iframe) {
+    iframe.addEventListener('load', () => {
+      console.log('[Audio] Iframe loaded');
+      setTimeout(() => {
+        sendToIframe('SET_VOLUME', { level: localVolume });
+      }, 500);
+    });
+  }
+  
+  setTimeout(() => {
+    if (!iframeReady) {
+      console.log('[Audio] Iframe not ready, requesting state...');
+      sendToIframe('GET_STATE', {});
+    }
+  }, 2000);
   
   unsubscribe = listenToAudioPlayer((data) => {
     if (!data) return;
@@ -704,7 +615,7 @@ export async function initializeAudio() {
       isPlaying: data.isPlaying,
       seekTime: data.seekTime || 0,
       commandTime: data.commandTime,
-      volume: data.volume || 50,
+      volume: data.volume || DEFAULT_VOLUME,
       playlist: data.playlist || [],
       lastUpdated: data.lastUpdated
     };
@@ -717,7 +628,6 @@ export async function initializeAudio() {
 }
 
 function setupEventListeners() {
-  // Toggle audio
   const toggleBtn = document.getElementById('toggle-audio-btn');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleAudio);
@@ -728,7 +638,6 @@ function setupEventListeners() {
     closeBtn.addEventListener('click', toggleAudio);
   }
   
-  // Play controls
   const playBtn = document.getElementById('audio-btn-play');
   if (playBtn) {
     playBtn.addEventListener('click', togglePlayPause);
@@ -744,7 +653,6 @@ function setupEventListeners() {
     nextBtn.addEventListener('click', skipNext);
   }
   
-  // Shuffle & Repeat
   const shuffleBtn = document.getElementById('audio-btn-shuffle');
   if (shuffleBtn) {
     shuffleBtn.addEventListener('click', toggleShuffle);
@@ -755,13 +663,11 @@ function setupEventListeners() {
     repeatBtn.addEventListener('click', toggleRepeat);
   }
   
-  // Mute
   const muteBtn = document.getElementById('audio-btn-mute');
   if (muteBtn) {
     muteBtn.addEventListener('click', toggleMute);
   }
   
-  // Volume
   const volumeSlider = document.getElementById('audio-volume');
   if (volumeSlider) {
     volumeSlider.addEventListener('input', (e) => {
@@ -769,7 +675,6 @@ function setupEventListeners() {
     });
   }
   
-  // Progress bar click
   const progressBar = document.getElementById('audio-progress-bar');
   if (progressBar) {
     progressBar.addEventListener('click', (e) => {
@@ -779,7 +684,6 @@ function setupEventListeners() {
     });
   }
   
-  // Add music
   const addBtn = document.getElementById('audio-add-btn');
   const urlInput = document.getElementById('audio-url-input');
   

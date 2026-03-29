@@ -75,7 +75,7 @@ export function renderOverlays() {
         <button id="audio-btn-mute" class="audio-volume-btn" title="Mute">
           <i class="fas fa-volume-up"></i>
         </button>
-        <input type="range" id="audio-volume" class="audio-volume-slider" min="0" max="100" value="50">
+        <input type="range" id="audio-volume" class="audio-volume-slider" min="0" max="100" value="25">
       </div>
       
       <!-- Playlist Header -->
@@ -95,8 +95,13 @@ export function renderOverlays() {
     </div>
   </aside>
 
-  <!-- YouTube Player (hidden) -->
-  <div id="audio-yt-player"></div>
+  <!-- Audio Player Iframe (persistent) -->
+  <iframe id="audio-player-frame" 
+    src="audio-player.html" 
+    style="position:fixed;bottom:-1000px;left:-1000px;width:1px;height:1px;border:none;pointer-events:none;"
+    allow="autoplay; fullscreen"
+    loading="eager">
+  </iframe>
 
   <!-- Container de Dados 3D -->
   <div id="dice-container"></div>

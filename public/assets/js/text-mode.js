@@ -27,7 +27,7 @@ import * as chat from "./modules/chat.js";
 import { initializeDice } from "./modules/diceLogic.js";
 import { showDetailModal } from './modules/modal.js';
 import { openModal, closeModal, initializeModals } from "./modules/modal.js";
-
+import * as audio from "./modules/audio.js";
 
 let allCards = [];
 let selectedIds = [];
@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initializeModals();
   chat.initializeChat();
   initializeDice(layout);
+  audio.initializeAudio();
 
   try {
     await initializeApp({ pageTitle: 'Notes' });
