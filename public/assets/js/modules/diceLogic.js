@@ -144,7 +144,25 @@ async function processRollWith3D(command, character, userName, macroName = null)
         try {
             rollResult = await rollDice(processedFormula, userName);
         } catch (error) {
-            console.error('[DiceLogic] Roll failed:', error);
+            console.error('[DiceLogic] 3D roll failed, using fallback:', error);
+            
+            const diceMatch = diceNotation.match(/(\d+)d(\d+)/i);
+            if (diceMatch) {
+                const qty = parseInt(diceMatch[1]);
+                const sides = parseInt(diceMatch[2]);
+                const rolls = [];
+                for (let i = 0; i < qty; i++) {
+                    rolls.push(Math.floor(Math.random() * sides) + 1);
+                }
+                const totalFallback = rolls.reduce((a, b) => a + b, 0);
+                rollResult = {
+                    total: totalFallback,
+                    rolls: rolls,
+                    formula: processedFormula,
+                    userName: userName,
+                    diceType: `d${sides}`
+                };
+            }
         }
     }
 
