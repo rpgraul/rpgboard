@@ -9,6 +9,7 @@ import {
 import { getCurrentUserName } from './auth.js';
 
 const VOLUME_STORAGE_KEY = 'rpg_audio_volume';
+const PLAYER_STATE_KEY = 'rpg_audio_player_state';
 const DEFAULT_VOLUME = 25;
 
 let audioState = {
@@ -34,6 +35,7 @@ let isShuffle = false;
 let isRepeat = false;
 let isMuted = false;
 let shuffleOrder = [];
+let pendingRestoredState = null;
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -574,18 +576,69 @@ export function getVolume() {
   return localVolume;
 }
 
+function savePlayerState() {
+  const state = {
+    videoId: audioState.currentVideoId,
+    isPlaying: audioState.isPlaying,
+    seekTime: audioState.seekTime,
+    volume: localVolume,
+    savedAt: Date.now()
+  };
+  localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify(state));
+}
+
+function restorePlayerState() {
+  try {
+    const raw = localStorage.getItem(PLAYER_STATE_KEY);
+    if (!raw) return null;
+    const state = JSON.parse(raw);
+    // Descartar estados muito antigos (> 2h)
+    if (!state.savedAt || Date.now() - state.savedAt > 2 * 60 * 60 * 1000) {
+      localStorage.removeItem(PLAYER_STATE_KEY);
+      return null;
+    }
+    return state;
+  } catch (e) {
+    return null;
+  }
+}
+
+let _audioInitialized = false;
+
 export async function initializeAudio() {
+  if (_audioInitialized) {
+    console.log('[Audio] Already initialized. Skipping.');
+    return;
+  }
+  _audioInitialized = true;
+
   await initAudioPlayer();
-  
+
+  // Restaurar volume salvo no slider antes de qualquer interação
+  const volumeSlider = document.getElementById('audio-volume');
+  if (volumeSlider) volumeSlider.value = localVolume;
+
+  // Salvar estado antes de navegar para outra página
+  window.addEventListener('beforeunload', savePlayerState);
+
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'AUDIO_STATE_UPDATE') {
+      const wasReady = iframeReady;
       iframeReady = true;
-      handleIframeStateUpdate(event.data.state);
-      
+
+      // Aplicar volume imediatamente sempre que o iframe reportar estado
       sendToIframe('SET_VOLUME', { level: localVolume });
+
+      // Na primeira vez que o iframe está pronto, guardar estado salvo para
+      // consumir quando o Firebase entregar o estado remoto correspondente
+      if (!wasReady) {
+        pendingRestoredState = restorePlayerState();
+      }
+
+      handleIframeStateUpdate(event.data.state);
     }
   });
-  
+
   const iframe = getIframe();
   if (iframe) {
     iframe.addEventListener('load', () => {
@@ -595,21 +648,21 @@ export async function initializeAudio() {
       }, 500);
     });
   }
-  
+
   setTimeout(() => {
     if (!iframeReady) {
       console.log('[Audio] Iframe not ready, requesting state...');
       sendToIframe('GET_STATE', {});
     }
   }, 2000);
-  
+
   unsubscribe = listenToAudioPlayer((data) => {
     if (!data) return;
-    
+
     const remoteCommandTime = data.commandTime || 0;
     if (remoteCommandTime <= lastProcessedCommandTime) return;
     lastProcessedCommandTime = remoteCommandTime;
-    
+
     audioState = {
       currentVideoId: data.currentVideoId,
       isPlaying: data.isPlaying,
@@ -619,11 +672,26 @@ export async function initializeAudio() {
       playlist: data.playlist || [],
       lastUpdated: data.lastUpdated
     };
-    
+
+    // Aplicar estado salvo (posição da música) se o vídeo remoto bater com o salvo
+    if (pendingRestoredState?.videoId && pendingRestoredState.videoId === data.currentVideoId) {
+      const saved = pendingRestoredState;
+      pendingRestoredState = null; // consumir uma única vez
+      if (saved.isPlaying && data.isPlaying && iframeReady) {
+        const elapsed = (Date.now() - saved.savedAt) / 1000;
+        const resumeAt = (saved.seekTime || 0) + elapsed;
+        sendToIframe('LOAD_VIDEO', {
+          videoId: saved.videoId,
+          startSeconds: resumeAt,
+          isPlaying: true
+        });
+      }
+    }
+
     syncToUI();
     applyStateToPlayer(audioState);
   });
-  
+
   setupEventListeners();
 }
 

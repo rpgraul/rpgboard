@@ -3,210 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Mode - Editor</title>
+    <title>GameBoard - Notes</title>
     <link rel="stylesheet" href="https://jenil.github.io/bulmaswatch/cyborg/bulmaswatch.min.css">
     <link rel="stylesheet" href="assets/css/variables.css">
     <link rel="stylesheet" href="assets/css/global.css">
     <link rel="stylesheet" href="assets/css/components.css">
     <link rel="stylesheet" href="assets/css/cards.css">
     <link rel="stylesheet" href="assets/css/editor.css">
-    <link rel="stylesheet" href="assets/css/text-mode.css">
+    <link rel="stylesheet" href="assets/css/text-mode.css" id="page-css">
     <link rel="stylesheet" href="assets/css/shortcodes.css">
     <link rel="stylesheet" href="assets/css/audio.css">
+
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
+
     <script type="importmap">
     {
       "imports": {
-        "@tiptap/core": "https://esm.sh/@tiptap/core@2.2.4",
-        "@tiptap/starter-kit": "https://esm.sh/@tiptap/starter-kit@2.2.4",
-        "@tiptap/extension-link": "https://esm.sh/@tiptap/extension-link@2.2.4",
-        "@tiptap/extension-highlight": "https://esm.sh/@tiptap/extension-highlight@2.2.4",
-        "@tiptap/extension-underline": "https://esm.sh/@tiptap/extension-underline@2.2.4",
-        "@tiptap/extension-text-align": "https://esm.sh/@tiptap/extension-text-align@2.2.4",
-        "@tiptap/suggestion": "https://esm.sh/@tiptap/suggestion@2.2.4"
+        "firebase/app":                    "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js",
+        "firebase/firestore":              "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js",
+        "firebase/storage":                "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js",
+        "@tiptap/core":                    "https://esm.sh/@tiptap/core@2.2.4",
+        "@tiptap/starter-kit":             "https://esm.sh/@tiptap/starter-kit@2.2.4",
+        "@tiptap/extension-link":          "https://esm.sh/@tiptap/extension-link@2.2.4",
+        "@tiptap/extension-highlight":     "https://esm.sh/@tiptap/extension-highlight@2.2.4",
+        "@tiptap/extension-underline":     "https://esm.sh/@tiptap/extension-underline@2.2.4",
+        "@tiptap/extension-text-align":    "https://esm.sh/@tiptap/extension-text-align@2.2.4",
+        "@tiptap/suggestion":              "https://esm.sh/@tiptap/suggestion@2.2.4",
+        "@3d-dice/dice-box":               "./node_modules/@3d-dice/dice-box/dist/dice-box.es.js"
       }
     }
     </script>
 </head>
 <body>
+    <div id="app-header"></div>
+    <div id="app-overlays"></div>
+    <div id="app-fab"></div>
 
-<div id="app-header"></div>
-<div id="app-overlays"></div>
-<div id="app-fab"></div>
-
-    <div id="app-wrapper" class="editor-layout">
-        <div class="editor-column is-left">
-            <div class="panel">
-                <div class="panel-heading">
-                    <span>Cards</span>
-                    <button id="add-card-btn" class="button is-text is-small" data-tooltip="Adicionar Novo Card">
-                        <span class="icon"><i class="fas fa-plus"></i></span>
-                    </button>
-                </div>
-                <div class="panel-block search-container">
-                    <p class="control has-icons-left">
-                        <input class="input is-small" type="text" id="search-input" placeholder="Buscar...">
-                        <span class="icon is-small is-left"><i class="fas fa-search"></i></span>
-                    </p>
-                    <div id="search-suggestions" class="search-suggestions-container is-hidden"></div>
-                </div>
-                <div id="card-list-container">
-                    <aside class="menu">
-                        <ul class="menu-list" id="card-list"></ul>
-                    </aside>
-                </div>
-                <div id="bulk-actions-container" class="panel-block is-hidden">
-                    <div class="field is-grouped is-grouped-multiline">
-                        <div class="control">
-                            <button id="bulk-delete-btn" class="button is-danger is-small">
-                                <span class="icon is-small"><i class="fas fa-trash"></i></span>
-                                <span>Deletar</span>
-                            </button>
-                        </div>
-                         <div class="control">
-                            <button id="bulk-add-tags-btn" class="button is-info is-small">
-                                <span class="icon is-small"><i class="fas fa-tags"></i></span>
-                                <span>Add Tags</span>
-                            </button>
-                        </div>
-                         <div class="control">
-                            <button id="bulk-visibility-btn" class="button is-light is-small">
-                                <span class="icon is-small"><i class="fas fa-eye"></i></span>
-                                <span>Visibilidade</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="editor-column is-center">
-            <div id="text-editor-container" style="display: none;">
-                <div class="editor-header">
-                    <div class="title-container">
-                        <div id="card-avatar" class="card-avatar" data-tooltip="Ver Imagem">
-                            <i class="fas fa-image placeholder-icon"></i>
-                        </div>
-                        <h2 id="card-title" contenteditable="true" class="title is-2" data-placeholder="Título do Card"></h2>
-                        <button id="delete-card-btn" class="tiptap-button delete-card-icon" data-tooltip="Deletar Card">
-                            <i class="fas fa-trash-alt"></i>
+    <div id="page-content">
+        <div id="app-wrapper" class="editor-layout">
+            <div class="editor-column is-left">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <span>Cards</span>
+                        <button id="add-card-btn" class="button is-text is-small" title="Adicionar Novo Card">
+                            <span class="icon"><i class="fas fa-plus"></i></span>
                         </button>
                     </div>
-                    <div id="card-tags" contenteditable="true" class="editable-field" data-placeholder="Capitão, PJ, Piratas..." spellcheck="false"></div>
-                    <div id="card-visibility-editor-container" class="field narrator-only is-hidden">
-                        <label class="checkbox narrator-control">
-                            <input type="checkbox" id="card-visibility-editor">
-                            <span class="switch-track"></span>
-                            <span class="switch-label-text">Visível para Jogadores</span>
-                        </label>
+                    <div class="panel-block search-container">
+                        <p class="control has-icons-left">
+                            <input class="input is-small" type="text" id="search-input" placeholder="Buscar...">
+                            <span class="icon is-small is-left"><i class="fas fa-search"></i></span>
+                        </p>
+                    </div>
+                    <div id="card-list-container">
+                        <aside class="menu">
+                            <ul class="menu-list" id="card-list"></ul>
+                        </aside>
                     </div>
                 </div>
-
-                <div id="tiptap-container">
-                     <div role="toolbar" aria-label="toolbar" class="tiptap-toolbar">
-                        <div role="group" class="tiptap-toolbar-group">
-                            <button class="tiptap-button" data-action="undo" data-tooltip="Desfazer"><i class="fas fa-undo"></i></button>
-                            <button class="tiptap-button" data-action="redo" data-tooltip="Refazer"><i class="fas fa-redo"></i></button>
+            </div>
+            <div class="editor-column is-center">
+                <div id="text-editor-container" style="display: none;">
+                    <div class="editor-header">
+                        <div class="title-container">
+                             <div id="card-avatar" class="card-avatar">
+                                <i class="fas fa-image placeholder-icon"></i>
+                            </div>
+                            <h2 id="card-title" contenteditable="true" class="title is-2"></h2>
+                            <button id="delete-card-btn" class="tiptap-button delete-card-icon"><i class="fas fa-trash-alt"></i></button>
                         </div>
-                        <div class="tiptap-separator"></div>
-                         <div role="group" class="tiptap-toolbar-group">
-                            <button class="tiptap-button" data-action="toggleHeading" data-level="1" data-tooltip="Título 1">H1</button>
-                            <button class="tiptap-button" data-action="toggleHeading" data-level="2" data-tooltip="Título 2">H2</button>
-                            <button class="tiptap-button" data-action="toggleHeading" data-level="3" data-tooltip="Título 3">H3</button>
-                            <button class="tiptap-button" data-action="toggleBulletList" data-tooltip="Lista"><i class="fas fa-list-ul"></i></button>
-                            <button class="tiptap-button" data-action="toggleOrderedList" data-tooltip="Lista Numerada"><i class="fas fa-list-ol"></i></button>
-                        </div>
-                         <div class="tiptap-separator"></div>
-                        <div role="group" class="tiptap-toolbar-group">
-                            <button class="tiptap-button" data-action="toggleBold" data-tooltip="Negrito"><i class="fas fa-bold"></i></button>
-                            <button class="tiptap-button" data-action="toggleItalic" data-tooltip="Itálico"><i class="fas fa-italic"></i></button>
-                             <button class="tiptap-button" data-action="toggleStrike" data-tooltip="Riscado"><i class="fas fa-strikethrough"></i></button>
-                            <button class="tiptap-button" data-action="toggleHighlight" data-tooltip="Destacar"><i class="fas fa-highlighter"></i></button>
-                        </div>
-                        <div class="tiptap-separator"></div>
-                        <div role="group" class="tiptap-toolbar-group">
-                            <button class="tiptap-button" data-action="setTextAlign" data-align="left" data-tooltip="Alinhar à Esquerda"><i class="fas fa-align-left"></i></button>
-                            <button class="tiptap-button" data-action="setTextAlign" data-align="center" data-tooltip="Centralizar"><i class="fas fa-align-center"></i></button>
-                            <button class="tiptap-button" data-action="setTextAlign" data-align="right" data-tooltip="Alinhar à Direita"><i class="fas fa-align-right"></i></button>
-                        </div>
-                         <div class="tiptap-separator"></div>
-                         <div role="group" class="tiptap-toolbar-group">
-                            <button class="tiptap-button" data-action="setLink" data-tooltip="Adicionar Link"><i class="fas fa-link"></i></button>
-                        </div>
-                         <div class="tiptap-separator"></div>
-                        <div role="group" class="tiptap-toolbar-group" id="text-mode-shortcode-container"></div>
+                        <div id="card-tags" contenteditable="true" class="editable-field" data-placeholder="Tags..." spellcheck="false"></div>
                     </div>
-                    <div id="editor"></div>
+                    <div id="tiptap-container">
+                        <div id="editor"></div>
+                    </div>
                 </div>
-            </div>
-            <div id="empty-state" class="has-text-centered">
-                <p class="is-size-4 has-text-grey-light">Selecione um card ou crie um novo.</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="image-modal" class="modal">
-        <div class="modal-background"></div>
-        <div class="modal-content">
-            <div class="image-modal-container">
-                <img id="image-modal-img" src="" alt="Imagem do Card">
-                <div class="image-modal-actions">
-                     <label class="button is-light">
-                        <span class="icon"><i class="fas fa-upload"></i></span>
-                        <span>Trocar Imagem</span>
-                        <input type="file" id="image-upload-input" class="is-hidden" accept="image/*">
-                    </label>
-                    <button id="remove-image-btn" class="button is-danger">
-                        <span class="icon"><i class="fas fa-trash"></i></span>
-                        <span>Remover</span>
-                    </button>
+                <div id="empty-state" class="has-text-centered">
+                    <p class="is-size-4 has-text-grey-light">Selecione um card ou crie um novo.</p>
                 </div>
             </div>
         </div>
-        <button class="modal-close is-large" aria-label="close"></button>
-    </div>
 
-    <!-- Modal de Detalhes do Card (para navegação via @mention) -->
-    <div id="detail-modal" class="modal">
-        <div class="modal-background"></div>
-        <div class="modal-card" style="width: 90%; max-width: 800px;">
-            <header class="modal-card-head">
-                <p id="detail-title" class="modal-card-title"></p>
-                <button class="delete modal-cancel" aria-label="close"></button>
-            </header>
-            <section id="detail-body" class="modal-card-body">
-                <!-- Conteúdo preenchido via JS -->
-            </section>
-            <footer class="modal-card-foot">
-                <button class="button modal-cancel">Fechar</button>
-            </footer>
+        <div id="image-modal" class="modal">
+            <div class="modal-background"></div>
+            <div class="modal-content">
+                <div class="box">
+                    <img id="image-modal-img" src="">
+                    <input type="file" id="image-upload-input" class="is-hidden" accept="image/*">
+                </div>
+            </div>
+            <button class="modal-close is-large" aria-label="close"></button>
         </div>
     </div>
 
     <script type="module" src="./assets/js/firebase-config.js"></script>
-    <script type="module" src="./assets/js/text-mode.js"></script>
-    <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://unpkg.com/tippy.js@6"></script>
-
-     <div id="bulk-visibility-modal" class="modal">
-        <div class="modal-background"></div>
-        <div class="modal-content">
-            <div class="box">
-                <p class="title is-5">Alterar Visibilidade dos Cards</p>
-                <div class="buttons is-centered">
-                    <button id="show-to-players-btn" class="button is-success">
-                        <span class="icon"><i class="fas fa-eye"></i></span>
-                        <span>Mostrar para Jogadores</span>
-                    </button>
-                    <button id="hide-from-players-btn" class="button is-danger">
-                        <span class="icon"><i class="fas fa-eye-slash"></i></span>
-                        <span>Ocultar dos Jogadores</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <button class="modal-close is-large" aria-label="close"></button>
-    </div>
-
-
+    <script type="module" src="./assets/js/shell.js"></script>
 </body>
 </html>

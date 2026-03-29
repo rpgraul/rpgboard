@@ -12,285 +12,110 @@
     <link rel="stylesheet" href="assets/css/editor.css">
     <link rel="stylesheet" href="assets/css/shortcodes.css">
     <link rel="stylesheet" href="assets/css/audio.css">
+
+    <link id="page-css" rel="stylesheet" href="">
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
+
     <script type="importmap">
     {
-        "imports": {
-            "firebase/app": "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js",
-            "firebase/firestore": "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js",
-            "firebase/storage": "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js"
-        }
+      "imports": {
+        "firebase/app":                    "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js",
+        "firebase/firestore":              "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js",
+        "firebase/storage":                "https://www.gstatic.com/firebasejs/9.15.0/firebase-storage.js",
+        "@tiptap/core":                    "https://esm.sh/@tiptap/core@2.2.4",
+        "@tiptap/starter-kit":             "https://esm.sh/@tiptap/starter-kit@2.2.4",
+        "@tiptap/extension-link":          "https://esm.sh/@tiptap/extension-link@2.2.4",
+        "@tiptap/extension-highlight":     "https://esm.sh/@tiptap/extension-highlight@2.2.4",
+        "@tiptap/extension-underline":     "https://esm.sh/@tiptap/extension-underline@2.2.4",
+        "@tiptap/extension-text-align":    "https://esm.sh/@tiptap/extension-text-align@2.2.4",
+        "@tiptap/suggestion":              "https://esm.sh/@tiptap/suggestion@2.2.4",
+        "@3d-dice/dice-box":               "./node_modules/@3d-dice/dice-box/dist/dice-box.es.js"
+      }
     }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/web-animations-js@2.3.2/web-animations.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/muuri@0.9.5/dist/muuri.min.js"></script>
 </head>
 <body>
-<div id="app-header"></div>
-<div id="app-overlays"></div>
-<div id="app-fab"></div>
+    <div id="app-header"></div>
+    <div id="app-overlays"></div>
+    <div id="app-fab"></div>
 
-    <div id="app-wrapper">
-        <section id="main-content" class="section">
-            <div class="container">
-                <div id="view-wrapper">
-                    <div id="grid-view-wrapper">
-                        <div class="field is-grouped mb-4">
-                            <p class="control has-icons-left is-expanded">
-                                <input class="input is-medium" type="text" id="search-input" placeholder="Buscar por título, conteúdo ou tag...">
-                                <span class="icon is-small is-left"><i class="fas fa-search"></i></span>
-                            </p>
-                            <p class="control">
-                                <button id="clear-filters-btn" class="button is-light is-hidden" title="Limpar busca e filtros"><span class="icon"><i class="fas fa-times"></i></span></button>
-                            </p>
-                        </div>
-                        
-                        <div id="category-filters" class="field is-grouped is-grouped-multiline mb-4">
-                            <div class="control">
-                                <button class="button is-small is-rounded is-dark active" data-category="all">Todos</button>
+    <div id="page-content">
+        <div id="app-wrapper">
+            <section id="main-content" class="section">
+                <div class="container">
+                    <div id="view-wrapper">
+                        <div id="grid-view-wrapper">
+                            <div class="field is-grouped mb-4">
+                                <p class="control has-icons-left is-expanded">
+                                    <input class="input is-medium" type="text" id="search-input" placeholder="Buscar por título, conteúdo ou tag...">
+                                    <span class="icon is-small is-left"><i class="fas fa-search"></i></span>
+                                </p>
+                                <p class="control">
+                                    <button id="clear-filters-btn" class="button is-light is-hidden" title="Limpar busca e filtros"><span class="icon"><i class="fas fa-times"></i></span></button>
+                                </p>
                             </div>
-                            <div class="control">
-                                <button class="button is-small is-rounded is-dark" data-category="pj">Personagem</button>
+                            
+                            <div id="category-filters" class="field is-grouped is-grouped-multiline mb-4">
+                                <div class="control">
+                                    <button class="button is-small is-rounded is-dark active" data-category="all">Todos</button>
+                                </div>
+                                <!-- ... categorias ... -->
+                                <div class="control">
+                                    <button class="button is-small is-rounded is-dark" data-category="pj">Personagem</button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-small is-rounded is-dark" data-category="monstro">Monstro</button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-small is-rounded is-dark" data-category="npc">NPC</button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-small is-rounded is-dark" data-category="item">Item</button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-small is-rounded is-dark" data-category="anotacao">Anotação</button>
+                                </div>
                             </div>
-                            <div class="control">
-                                <button class="button is-small is-rounded is-dark" data-category="monstro">Monstro</button>
-                            </div>
-                            <div class="control">
-                                <button class="button is-small is-rounded is-dark" data-category="npc">NPC</button>
-                            </div>
-                            <div class="control">
-                                <button class="button is-small is-rounded is-dark" data-category="item">Item</button>
-                            </div>
-                            <div class="control">
-                                <button class="button is-small is-rounded is-dark" data-category="anotacao">Anotação</button>
-                            </div>
-                        </div>
 
-                        <div id="tag-filters" class="field is-grouped is-grouped-multiline mb-4">
-                            <div class="control narrator-only is-hidden">
-                                <label class="checkbox"><input type="checkbox" value="visible"> <span>Visível</span></label>
+                            <div id="tag-filters" class="field is-grouped is-grouped-multiline mb-4">
+                                <div class="control narrator-only is-hidden">
+                                    <label class="checkbox"><input type="checkbox" value="visible"> <span>Visível</span></label>
+                                </div>
+                                <div class="control narrator-only is-hidden">
+                                    <label class="checkbox"><input type="checkbox" value="hidden"> <span>Oculto</span></label>
+                                </div>
                             </div>
-                            <div class="control narrator-only is-hidden">
-                                <label class="checkbox"><input type="checkbox" value="hidden"> <span>Oculto</span></label>
-                            </div>
-                        </div>
 
-                        <div id="active-filters-container" class="mb-4"></div>
+                            <div id="active-filters-container" class="mb-4"></div>
 
-                        <div id="grid-view-container">
-                            <div id="loading-indicator" class="column is-full has-text-centered">
-                                <p class="is-size-4 has-text-grey-light">Carregando itens...</p>
+                            <div id="grid-view-container">
+                                <div id="loading-indicator" class="column is-full has-text-centered">
+                                    <p class="is-size-4 has-text-grey-light">Carregando itens...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
-    </div>
-
-    <!-- Modal de Detalhes -->
-    <div id="detail-modal" class="modal">
-        <div class="modal-background"></div>
-        <div class="modal-content"></div>
-        <button class="modal-close is-large" aria-label="close"></button>
-    </div>
-
-    <!-- =====================================================================
-         Modal de Criação / Edição de Card
-         Standalone: funciona em qualquer página junto com card-modal.css
-         e cardModal.js
-         ===================================================================== -->
-    <div id="add-card-modal" class="modal">
-        <div class="modal-background"></div>
-        <div class="modal-card">
-
-            <!-- Cabeçalho -->
-            <header class="modal-card-head">
-                <p class="modal-card-title">Adicionar Novo Card</p>
-                <button class="delete" aria-label="close"></button>
-            </header>
-
-            <!-- Corpo -->
-            <section class="modal-card-body">
-                <form id="form-add-card" autocomplete="off">
-                    <div class="card-modal-layout">
-
-                        <!-- ── Sidebar: Imagem + Metadados ──────────────── -->
-                        <aside class="card-modal-sidebar">
-
-                            <!-- Preview de imagem -->
-                            <div id="card-modal-image-preview" class="card-modal-image-preview">
-                                <img id="card-modal-image-el" src="" alt="Preview" class="is-empty">
-                                <div class="card-modal-image-placeholder">
-                                    <i class="fas fa-image"></i>
-                                    <span>Clique para adicionar imagem</span>
-                                </div>
-                                <div class="card-modal-image-overlay">
-                                    <i class="fas fa-camera" style="font-size:1.5rem"></i>
-                                    <span>Trocar imagem</span>
-                                </div>
-                                <button type="button" id="card-modal-image-remove" class="card-modal-image-remove" title="Remover imagem">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                                <input type="file" id="card-modal-file-input" accept="image/*">
-                            </div>
-
-                            <!-- Metadados -->
-                            <div class="card-modal-meta">
-                                <!-- Categoria -->
-                                <div class="field">
-                                    <label class="label" for="card-category">Categoria</label>
-                                    <div class="control">
-                                        <div class="select is-small is-fullwidth">
-                                            <select id="card-category">
-                                                <option value="pj">Personagem</option>
-                                                <option value="monstro">Monstro</option>
-                                                <option value="npc">NPC</option>
-                                                <option value="item">Item</option>
-                                                <option value="anotacao">Anotação</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Tags -->
-                                <div class="field">
-                                    <label class="label" for="card-tags">Tags</label>
-                                    <div class="control">
-                                        <input class="input is-small" id="card-tags" placeholder="rpg, personagem, item…" autocomplete="off">
-                                    </div>
-                                </div>
-
-                                <!-- Visibilidade (só narrador) -->
-                                <div class="card-modal-visibility narrator-only is-hidden">
-                                    <label class="checkbox narrator-control">
-                                        <input type="checkbox" id="card-visibility" checked>
-                                        <span class="switch-track"></span>
-                                        <span class="switch-label-text">Visível para jogadores</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </aside>
-
-                        <!-- ── Main: Título + Editor ─────────────────────── -->
-                        <div class="card-modal-main">
-
-                            <!-- Título -->
-                            <div class="field card-modal-title-field">
-                                <label class="label" for="card-titulo">Título</label>
-                                <div class="control">
-                                    <input class="input" id="card-titulo" placeholder="Nome do card" required autocomplete="off">
-                                </div>
-                            </div>
-
-                            <!-- Editor Tiptap -->
-                            <div class="field" style="flex:1; display:flex; flex-direction:column; min-height:0;">
-                                <label class="label">Conteúdo</label>
-                                <div class="card-modal-editor-wrap">
-
-                                    <!-- Toolbar -->
-                                    <div id="card-modal-toolbar" class="tiptap-toolbar">
-
-                                        <!-- Histórico -->
-                                        <div class="tiptap-toolbar-group">
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="undo" title="Desfazer (Ctrl+Z)">
-                                                <i class="fas fa-undo"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="redo" title="Refazer (Ctrl+Y)">
-                                                <i class="fas fa-redo"></i>
-                                            </button>
-                                        </div>
-
-                                        <div class="tiptap-toolbar-divider"></div>
-
-                                        <!-- Títulos -->
-                                        <div class="tiptap-toolbar-group">
-                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="1" title="Título 1">H1</button>
-                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="2" title="Título 2">H2</button>
-                                            <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="3" title="Título 3">H3</button>
-                                        </div>
-
-                                        <div class="tiptap-toolbar-divider"></div>
-
-                                        <!-- Formatação inline -->
-                                        <div class="tiptap-toolbar-group">
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="bold" title="Negrito (Ctrl+B)">
-                                                <i class="fas fa-bold"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="italic" title="Itálico (Ctrl+I)">
-                                                <i class="fas fa-italic"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="strike" title="Tachado">
-                                                <i class="fas fa-strikethrough"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="code" title="Código inline">
-                                                <i class="fas fa-code"></i>
-                                            </button>
-                                        </div>
-
-                                        <div class="tiptap-toolbar-divider"></div>
-
-                                        <!-- Blocos -->
-                                        <div class="tiptap-toolbar-group">
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="bulletList" title="Lista com marcadores">
-                                                <i class="fas fa-list-ul"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="orderedList" title="Lista numerada">
-                                                <i class="fas fa-list-ol"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="blockquote" title="Citação">
-                                                <i class="fas fa-quote-right"></i>
-                                            </button>
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="hr" title="Linha divisória">
-                                                <i class="fas fa-minus"></i>
-                                            </button>
-                                        </div>
-
-                                        <div class="tiptap-toolbar-divider"></div>
-
-                                        <!-- Shortcodes RPG -->
-                                        <div id="card-modal-shortcode-container"></div>
-
-                                        <!-- Limpar formatação -->
-                                        <div class="tiptap-toolbar-group" style="margin-left:auto">
-                                            <button type="button" class="tiptap-btn" data-tiptap-action="clearFormat" title="Limpar formatação">
-                                                <i class="fas fa-remove-format"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Área editável do Tiptap -->
-                                    <div id="card-modal-editor" class="tiptap-editor-area"></div>
-                                </div>
-                            </div>
-
-                        </div><!-- /.card-modal-main -->
-                    </div><!-- /.card-modal-layout -->
-                </form>
             </section>
+        </div>
 
-            <!-- Rodapé -->
-            <footer class="modal-card-foot">
-                <button class="button modal-cancel">Cancelar</button>
-                <button class="button is-link" form="form-add-card" type="submit">Adicionar Card</button>
-            </footer>
-
-        </div><!-- /.modal-card -->
-    </div><!-- /#add-card-modal -->
-
-    <!-- Toolbar de Edição em Massa -->
-    <div id="bulk-edit-toolbar" class="bulk-edit-bar">
-        <div class="container">
-            <div class="bulk-edit-actions">
-                <button id="bulk-action-visible" class="button is-success">Tornar Visível</button>
-                <button id="bulk-action-hidden" class="button is-danger">Ocultar</button>
-                <button id="bulk-action-delete" class="button is-danger">Deletar</button>
+        <!-- Toolbar de Edição em Massa -->
+        <div id="bulk-edit-toolbar" class="bulk-edit-bar">
+            <div class="container">
+                <div class="bulk-edit-actions">
+                    <button id="bulk-action-visible" class="button is-success">Tornar Visível</button>
+                    <button id="bulk-action-hidden" class="button is-danger">Ocultar</button>
+                    <button id="bulk-action-delete" class="button is-danger">Deletar</button>
+                </div>
+                <div class="bulk-edit-info"><span id="bulk-edit-count">0 cards selecionados</span></div>
+                <div class="bulk-edit-cancel"><button id="bulk-action-cancel" class="button">Cancelar</button></div>
             </div>
-            <div class="bulk-edit-info"><span id="bulk-edit-count">0 cards selecionados</span></div>
-            <div class="bulk-edit-cancel"><button id="bulk-action-cancel" class="button">Cancelar</button></div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/web-animations-js@2.3.2/web-animations.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/muuri@0.9.5/dist/muuri.min.js"></script>
     <script type="module" src="./assets/js/firebase-config.js"></script>
-    <script type="module" src="./assets/js/script.js"></script>
+    <script type="module" src="./assets/js/shell.js"></script>
 </body>
 </html>

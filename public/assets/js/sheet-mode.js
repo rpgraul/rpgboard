@@ -32,6 +32,7 @@ let currentCharacter = null;
 let autoSaveTimeout = null;
 let contentEditor = null;
 let contentEditorSaveTimeout = null;
+let unsubscribeItems = null;
 
 // Referências de elementos que serão preenchidos após o layout carregar
 let imgEl, nameEl, notesEditor;
@@ -40,23 +41,28 @@ let editingNodePos = null;
 let isDataLoading = false;
 let isDataReady = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
+export function destroy() {
+  if (unsubscribeItems) { unsubscribeItems(); unsubscribeItems = null; }
+  if (mainEditor) { try { mainEditor.destroy(); } catch(e) {} mainEditor = null; }
+  allItems = [];
+  currentCharacterId = null;
+  currentCharacter = null;
+  isDataReady = false;
+}
+
+export async function init() {
     // 1. INICIALIZAÇÃO DO LAYOUT MODULAR
     // Aqui definimos o título da página e quais botões queremos no FAB desta tela
     const layout = await initializeLayout();
-    // Carregar configurações globais e atualizar título/header
     try {
         await initializeApp({ pageTitle: 'Sheet' });
     } catch (error) {
         console.error('Falha ao carregar configurações do site:', error);
     }
-
-    // 2. INICIALIZAÇÃO DE MÓDULOS BÁSICOS
     initializeAuth();
     initializeModals();
     chat.initializeChat();
     initializeDice(layout);
-    audio.initializeAudio();
 
     // 3. VINCULAÇÃO DE EVENTOS DOS COMPONENTES INJETADOS
     // Os botões FAB e elementos globais já foram criados pelo layout.js
@@ -100,14 +106,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     // 6. CARREGAMENTO DE DADOS (FIREBASE)
-    listenToItems((snapshot) => {
+    unsubscribeItems = listenToItems((snapshot) => {
         allItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         checkUrlAndLoad();
     });
-
     setupSheetSpecificListeners();
+}
 
-});
 
 // Função para injetar o HTML da ficha na .sheet-layout
 function injectSheetLayoutHTML() {

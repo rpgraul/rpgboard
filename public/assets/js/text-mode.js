@@ -38,14 +38,23 @@ let editingNodePos = null;
 let mainEditorSaveTimeout = null;
 let sideViewSaveTimeout = null;
 let isProcessingUpdate = false;
+let unsubscribeCards = null;
+let mainEditor = null;
 
-document.addEventListener("DOMContentLoaded", async () => {
+export function destroy() {
+  if (unsubscribeCards) { unsubscribeCards(); unsubscribeCards = null; }
+  if (mainEditor) { try { mainEditor.destroy(); } catch(e) {} mainEditor = null; }
+  allCards = [];
+  selectedIds = [];
+  currentEditorCardId = null;
+}
+
+export async function init() {
   const layout = await initializeLayout();
   initializeAuth();
   initializeModals();
   chat.initializeChat();
   initializeDice(layout);
-  audio.initializeAudio();
 
   try {
     await initializeApp({ pageTitle: 'Notes' });
@@ -63,7 +72,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const deleteBtn = document.getElementById("delete-card-btn");
   const bulkActions = document.getElementById("bulk-actions-container");
 
-  const mainEditor = new Editor({
+  const mainEditorEl = document.querySelector("#editor");
+  if (!mainEditorEl) return;
+
+  mainEditor = new Editor({
     element: document.querySelector("#editor"),
     extensions: [
       StarterKit,
@@ -186,7 +198,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     history.pushState({ cardId: id }, "", `#${id}`);
   }
 
-  firebaseService.listenToItems((snapshot) => {
+  unsubscribeCards = firebaseService.listenToItems((snapshot) => {
     allCards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (a.titulo || "").localeCompare(b.titulo || ""));
     renderCardList();
     const hashId = window.location.hash.substring(1);
@@ -258,5 +270,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!cardName) return;
     const found = allCards.find(it => normalizeString(it.titulo) === normalizeString(cardName));
     if (found) showDetailModal(found);
-  }, true);
-});
+  });
+}
+

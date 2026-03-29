@@ -1,59 +1,42 @@
 export function visualizeDiceRoll(diceType, result, userName, infoLabel = '', hideLabel = false, hideDie = false) {
+    showDiceNotification(userName, result, infoLabel, null, hideLabel);
+}
+
+export function showDiceNotification(userName, total, formula = '', individualRolls = null, showDetails = true) {
     const container = document.getElementById('dice-container');
     if (!container) return;
 
-    const cleanDiceType = (diceType || '').toString().toLowerCase().trim();
-    const validTypes = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
-    const visualType = validTypes.includes(cleanDiceType) ? cleanDiceType : 'd20';
-
     if (container.children.length > 8) {
-        if (container.firstElementChild) container.removeChild(container.firstElementChild);
+        const oldNotifications = container.querySelectorAll('.dice-notification');
+        if (oldNotifications.length > 0) {
+            oldNotifications[0].remove();
+        }
     }
 
     const uid = `dice-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const rollWrapper = document.createElement('div');
-    rollWrapper.className = 'dice-roll-wrapper';
-    if (hideDie) rollWrapper.classList.add('hide-die'); // CSS opcional para ajustes de margem
-    rollWrapper.id = uid;
+    const notification = document.createElement('div');
+    notification.className = 'dice-notification';
+    notification.id = uid;
 
-    // Dado (Opcional)
-    if (!hideDie) {
-        const die = document.createElement('div');
-        die.classList.add('rpg-die', visualType);
-        const num = document.createElement('span');
-        num.innerText = String(result);
-        die.appendChild(num);
-        rollWrapper.appendChild(die);
-    }
+    const rollsHtml = individualRolls && individualRolls.length > 0
+        ? `<div class="dice-notification-rolls">[${individualRolls.join(' + ')}]</div>`
+        : '';
 
-    // Rótulo (Consolidado)
-    if (!hideLabel) {
-        const labelDiv = document.createElement('div');
-        labelDiv.className = 'dice-label';
+    notification.innerHTML = `
+        <div class="dice-notification-header">
+            <span class="dice-user-name">${userName || 'Anônimo'} rolou</span>
+        </div>
+        <div class="dice-notification-result">${total}</div>
+        ${formula ? `<div class="dice-notification-formula">${formula}</div>` : ''}
+        ${rollsHtml}
+    `;
 
-        const userSpan = document.createElement('div');
-        userSpan.className = 'dice-user-name';
-        userSpan.textContent = userName || 'Anônimo';
-        labelDiv.appendChild(userSpan);
-
-        if (infoLabel && infoLabel !== userName) {
-            const infoSpan = document.createElement('div');
-            infoSpan.className = 'dice-info-text';
-            // Permite HTML simples para multi-line (<br>)
-            infoSpan.innerHTML = infoLabel;
-            labelDiv.appendChild(infoSpan);
-        }
-        rollWrapper.appendChild(labelDiv);
-    }
-
-    rollWrapper.classList.add('die-enter');
-    container.appendChild(rollWrapper);
+    container.appendChild(notification);
 
     setTimeout(() => {
         const el = document.getElementById(uid);
         if (el) {
-            el.classList.remove('die-enter');
-            el.classList.add('die-exit');
+            el.classList.add('dice-exit');
             setTimeout(() => el.remove(), 500);
         }
     }, 4000);

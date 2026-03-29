@@ -482,3 +482,102 @@ body.is-bulk-editing .bulk-edit-bar { transform: translateY(0); }
     padding: 0 6px;
     width: auto;
 }
+
+/* ========== DICE 3D NOTIFICATION ========== */
+.dice-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+    border: 3px solid #e94560;
+    border-radius: 20px;
+    padding: 30px 50px;
+    text-align: center;
+    box-shadow: 
+        0 0 60px rgba(233, 69, 96, 0.4),
+        0 20px 40px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    opacity: 0;
+    animation: diceNotifyIn 0.4s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes diceNotifyIn {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+    70% {
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.dice-notification.dice-exit {
+    animation: diceNotifyOut 0.4s ease-in forwards;
+}
+
+@keyframes diceNotifyOut {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5);
+    }
+}
+
+.dice-notification-header {
+    margin-bottom: 10px;
+}
+
+.dice-user-name {
+    color: #888;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.dice-notification-result {
+    font-size: 80px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 
+        0 0 30px rgba(233, 69, 96, 0.8),
+        0 0 60px rgba(233, 69, 96, 0.4);
+    line-height: 1;
+    margin: 15px 0;
+}
+
+.dice-notification-formula {
+    color: #aaa;
+    font-size: 18px;
+    font-family: monospace;
+}
+
+.dice-notification-rolls {
+    color: #666;
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+    .dice-notification {
+        padding: 20px 30px;
+        width: 90%;
+        max-width: 320px;
+    }
+    
+    .dice-notification-result {
+        font-size: 48px;
+    }
+    
+    .dice-notification-formula {
+        font-size: 14px;
+    }
+}

@@ -17,7 +17,17 @@ import { openModal } from './modal.js';
  * @param {string[]} [config.fabActions=[]] - FAB button keys to render
  * @returns {Promise<Object>} Object containing references to all major UI elements.
  */
+let _layoutInitialized = false;
+let _layoutReferences = null;
+
 export async function initializeLayout() {
+  // Guard: se o shell já inicializou o layout, retorna as referências sem re-renderizar.
+  // Isso garante que o iframe do YouTube nunca seja destruído durante a navegação.
+  if (_layoutInitialized && _layoutReferences) {
+    console.log('[Layout] Already initialized (shell context). Returning cached references.');
+    return _layoutReferences;
+  }
+
   console.log('[Layout] Initializing layout rendering...');
 
   // Step 1: Render overlays (Chat, Modals, Dice Container)
@@ -90,6 +100,10 @@ export async function initializeLayout() {
   }
 
   console.log('[Layout] Available references:', Object.keys(layoutReferences));
+
+  _layoutInitialized = true;
+  _layoutReferences = layoutReferences;
+
   return layoutReferences;
 }
 

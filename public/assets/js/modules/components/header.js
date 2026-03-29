@@ -25,10 +25,10 @@ export function renderHeader() {
 
   const menu = [
     { id: 'nav-login', label: narrator ? 'Mestre' : (storedName !== 'Visitante' ? storedName : 'Entrar'), icon: narrator ? 'fas fa-user-shield' : (storedName !== 'Visitante' ? 'fas fa-user-edit' : 'fas fa-sign-in-alt'), action: 'login' },
-    { id: 'nav-sheet', label: 'Ficha', icon: 'fas fa-file-invoice', href: (currentPage === 'grid' || currentPage === 'notas') ? 'sheet-mode.html?tab=narrativa' : 'sheet-mode.html', page: 'sheet' },
-    { id: 'nav-grid', label: 'Grid', icon: 'fas fa-th', href: 'index.html', page: 'grid' },
-    { id: 'nav-notas', label: 'Notas', icon: 'fas fa-edit', href: 'text-mode.html', page: 'notas' },
-    { id: 'nav-whiteboard', label: 'Whiteboard', icon: 'fas fa-pencil-ruler', href: 'drawing-mode.html', page: 'whiteboard' }
+    { id: 'nav-sheet',      label: 'Ficha',      icon: 'fas fa-file-invoice',   href: '/sheet-mode.html',   route: '/sheet-mode.html',    page: 'sheet' },
+    { id: 'nav-grid',       label: 'Grid',       icon: 'fas fa-th',             href: '/',                  route: '/',                   page: 'grid' },
+    { id: 'nav-notas',      label: 'Notas',      icon: 'fas fa-edit',           href: '/text-mode.html',    route: '/text-mode.html',     page: 'notas' },
+    { id: 'nav-whiteboard', label: 'Whiteboard', icon: 'fas fa-pencil-ruler',   href: '/drawing-mode.html', route: '/drawing-mode.html',  page: 'whiteboard' }
   ];
 
   container.innerHTML = `
@@ -43,7 +43,7 @@ export function renderHeader() {
                 <span id="user-name-label">${item.label}</span>
               </button>`
       :
-      `<a id="${item.id}" href="${item.href}" class="button is-small${currentPage === item.page ? ' is-link is-light' : ' is-link'}" style="display:flex;align-items:center;gap:0.3em;">
+      `<a id="${item.id}" href="${item.route}" data-route="${item.route}" class="button is-small${currentPage === item.page ? ' is-light' : ''} is-link" style="display:flex;align-items:center;gap:0.3em;">
                 <span class="icon"><i class="${item.icon}"></i></span>
                 <span>${item.label}</span>
               </a>`

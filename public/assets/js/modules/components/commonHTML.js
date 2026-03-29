@@ -104,7 +104,7 @@ export function renderOverlays() {
   </iframe>
 
   <!-- Container de Dados 3D -->
-  <div id="dice-container"></div>
+  <div id="dice-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9998;"></div>
 
   <!-- Modal de Guia de Ajuda -->
   <div id="help-modal" class="modal">
@@ -240,6 +240,123 @@ export function renderOverlays() {
       <footer class="modal-card-foot">
         <button class="button is-link" form="form-narrator-login" type="submit">Entrar</button>
         <button class="button modal-cancel" type="button">Cancelar</button>
+      </footer>
+    </div>
+  </div>
+  
+  <!-- Modal de Detalhes do Card (Global) -->
+  <div id="detail-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card" style="width: 90%; max-width: 800px;">
+      <header class="modal-card-head">
+        <p id="detail-title" class="modal-card-title"></p>
+        <button class="delete modal-cancel" aria-label="close"></button>
+      </header>
+      <section id="detail-body" class="modal-card-body">
+        <!-- Conteúdo preenchido via JS -->
+      </section>
+      <footer class="modal-card-foot">
+        <button class="button modal-cancel">Fechar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal de Criação / Edição de Card (Global) -->
+  <div id="add-card-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Card</p>
+        <button class="delete" aria-label="close"></button>
+      </header>
+      <section class="modal-card-body">
+        <form id="form-add-card" autocomplete="off">
+          <div class="card-modal-layout">
+            <aside class="card-modal-sidebar">
+              <div id="card-modal-image-preview" class="card-modal-image-preview">
+                <img id="card-modal-image-el" src="" alt="Preview" class="is-empty">
+                <div class="card-modal-image-placeholder">
+                  <i class="fas fa-image"></i>
+                  <span>Clique para adicionar imagem</span>
+                </div>
+                <div class="card-modal-image-overlay">
+                  <i class="fas fa-camera" style="font-size:1.5rem"></i>
+                  <span>Trocar imagem</span>
+                </div>
+                <button type="button" id="card-modal-image-remove" class="card-modal-image-remove" title="Remover imagem">
+                  <i class="fas fa-times"></i>
+                </button>
+                <input type="file" id="card-modal-file-input" class="is-hidden" accept="image/*">
+              </div>
+              <div class="card-modal-meta">
+                <div class="field">
+                  <label class="label">Categoria</label>
+                  <div class="control">
+                    <div class="select is-small is-fullwidth">
+                      <select id="card-category">
+                        <option value="pj">Personagem</option>
+                        <option value="monstro">Monstro</option>
+                        <option value="npc">NPC</option>
+                        <option value="item">Item</option>
+                        <option value="anotacao">Anotação</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label">Tags</label>
+                  <div class="control">
+                    <input class="input is-small" id="card-tags" placeholder="rpg, personagem, item…" autocomplete="off">
+                  </div>
+                </div>
+                <div class="card-modal-visibility narrator-only is-hidden">
+                  <label class="checkbox narrator-control">
+                    <input type="checkbox" id="card-visibility" checked>
+                    <span class="switch-track"></span>
+                    <span class="switch-label-text">Visível para jogadores</span>
+                  </label>
+                </div>
+              </div>
+            </aside>
+            <div class="card-modal-main">
+              <div class="field card-modal-title-field">
+                <label class="label">Título</label>
+                <div class="control">
+                  <input class="input" id="card-titulo" placeholder="Nome do card" required autocomplete="off">
+                </div>
+              </div>
+              <div class="field" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+                <label class="label">Conteúdo</label>
+                <div class="card-modal-editor-wrap">
+                  <div id="card-modal-toolbar" class="tiptap-toolbar">
+                    <div class="tiptap-toolbar-group">
+                      <button type="button" class="tiptap-btn" data-tiptap-action="undo" title="Desfazer"><i class="fas fa-undo"></i></button>
+                      <button type="button" class="tiptap-btn" data-tiptap-action="redo" title="Refazer"><i class="fas fa-redo"></i></button>
+                    </div>
+                    <div class="tiptap-toolbar-divider"></div>
+                    <div class="tiptap-toolbar-group">
+                      <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="1">H1</button>
+                      <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="2">H2</button>
+                      <button type="button" class="tiptap-btn tiptap-btn-text" data-tiptap-action="heading" data-tiptap-arg="3">H3</button>
+                    </div>
+                    <div class="tiptap-toolbar-divider"></div>
+                    <div class="tiptap-toolbar-group">
+                      <button type="button" class="tiptap-btn" data-tiptap-action="bold"><i class="fas fa-bold"></i></button>
+                      <button type="button" class="tiptap-btn" data-tiptap-action="italic"><i class="fas fa-italic"></i></button>
+                    </div>
+                    <div class="tiptap-toolbar-divider"></div>
+                    <div class="tiptap-toolbar-group" id="card-modal-shortcode-container"></div>
+                  </div>
+                  <div id="card-modal-editor" class="tiptap-editor-area"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </section>
+      <footer class="modal-card-foot">
+        <button class="button modal-cancel">Cancelar</button>
+        <button class="button is-link" form="form-add-card" type="submit">Salvar</button>
       </footer>
     </div>
   </div>

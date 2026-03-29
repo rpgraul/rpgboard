@@ -137,27 +137,36 @@ export const addChatMessage = (text, type = 'user', sender = 'Anônimo') =>
 
 export const listenToChat = (cb) => onSnapshot(query(chatCollectionRef, orderBy('createdAt', 'asc')), cb);
 
-export async function sendDiceRoll(userName, diceType, result, customLabel = null, hideLabel = false, hideDie = false) {
-  await addDoc(rollsCollectionRef, {
-    userName,
-    diceType,
-    result,
-    label: customLabel || userName,
-    hideLabel,
-    hideDie,
+export async function sendDiceRoll(data) {
+  const payload = {
+    userName: data.userName || data[0],
+    diceType: data.diceType || data[1],
+    result: data.result || data[2],
+    label: data.label || data.customLabel || data[3] || data.userName,
+    hideLabel: data.hideLabel || data[4] || false,
+    hideDie: data.hideDie || data[5] || false,
+    formula: data.formula || null,
+    total: data.total || data.result,
+    individualRolls: data.individualRolls || null,
     createdAt: serverTimestamp(),
-  });
+  };
+  await addDoc(rollsCollectionRef, payload);
 }
 
 export function listenToDiceRolls(callback) {
-  const q = query(rollsCollectionRef, orderBy('createdAt', 'desc'));
+  const q = query(rollsCollectionRef, orderBy('createdAt', 'desc'), limit(10));
   return onSnapshot(q, (snapshot) => {
     snapshot.docChanges().forEach(change => {
       if (change.type === "added") {
         const data = change.doc.data();
-        if (!data.createdAt) { callback(change); return; }
+        if (!data.createdAt) { 
+          callback({ doc: { data: () => data } }); 
+          return; 
+        }
         const diff = (new Date().getTime() - data.createdAt.toDate().getTime()) / 1000;
-        if (diff < 10) callback(change);
+        if (diff < 10) {
+          callback({ doc: { data: () => data } });
+        }
       }
     });
   });

@@ -8,20 +8,18 @@ import * as settings from './modules/settings.js';
 import * as grid from './modules/grid.js';
 import * as cardRenderer from './modules/cardRenderer.js';
 import * as shortcodeParser from './modules/shortcodeParser.js';
-import * as chat from './modules/chat.js';
 import * as cardManager from './modules/cardManager.js';
-import { initializeLayout } from './modules/layout.js';
+import * as chat from './modules/chat.js';
 import { normalizeString } from './modules/utils.js';
 import { initializeCardModal, openCardModal } from './modules/cardModal.js';
-import { initializeDice } from './modules/diceLogic.js';
 import { getSuggestionItems } from './modules/suggestionItems.js';
-import * as audio from './modules/audio.js';
 
 let allItems = [];
 let isInitialGridLoaded = false;
 let appSettings = {};
 let tagSuggestionsContainer = null;
 let currentCategoryFilter = 'all';
+let unsubscribeItems = null;
 
 // Expose card suggestion logic for Tiptap (cardModal)
 window.getSuggestionItems = (query) => getSuggestionItems(allItems, query);
@@ -118,527 +116,490 @@ async function handleReorder(orderedIds) {
     }
 }
 
-// INICIALIZAÇÃO PRINCIPAL
-document.addEventListener('DOMContentLoaded', async () => {
+export async function destroy() {
+  if (unsubscribeItems) { unsubscribeItems(); unsubscribeItems = null; }
+  isInitialGridLoaded = false;
+  allItems = [];
+  currentCategoryFilter = 'all';
+  tagSuggestionsContainer = null;
+}
 
-    // 1. Layout
-    const layout = await initializeLayout();
+export async function init() {
 
-    // 2. Chat & Dice
-    chat.initializeChat();
-    initializeDice(layout);
-    audio.initializeAudio();
+  // 1. Settings + card renderer
+  // DOM refs
+  const addCardButton = document.getElementById('fab-add-card');
+  const searchInput = document.getElementById('search-input');
+  const activeFiltersContainer = document.getElementById('active-filters-container');
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+  const tagFiltersContainer = document.getElementById('tag-filters');
+  const categoryFiltersContainer = document.getElementById('category-filters');
+  const viewWrapper = document.getElementById('view-wrapper');
+  const detailModal = document.getElementById('detail-modal');
+  const userLoginBtn = document.getElementById('user-login-btn');
+  const userLoginModal = document.getElementById('user-login-modal');
+  const formUserLogin = document.getElementById('form-user-login');
+  const userNameInput = document.getElementById('user-name-input');
 
-    // 3. Referências
-    const addCardButton = document.getElementById('fab-add-card');
-    const searchInput = document.getElementById('search-input');
-    const activeFiltersContainer = document.getElementById('active-filters-container');
-    const clearFiltersBtn = document.getElementById('clear-filters-btn');
-    const tagFiltersContainer = document.getElementById('tag-filters');
-    const categoryFiltersContainer = document.getElementById('category-filters');
-    const viewWrapper = document.getElementById('view-wrapper');
-    const detailModal = document.getElementById('detail-modal');
-    const userLoginBtn = document.getElementById('user-login-btn');
-    const userLoginModal = document.getElementById('user-login-modal');
-    const formUserLogin = document.getElementById('form-user-login');
-    const userNameInput = document.getElementById('user-name-input');
+  // Auth + módulos
+  await auth.initializeAuth();
+  bulkEdit.initializeBulkEdit();
+  settings.initializeSettings();
+  initializeModals();
 
-    // 4. Auth + módulos
-    await auth.initializeAuth();
-    bulkEdit.initializeBulkEdit();
-    settings.initializeSettings();
-    initializeModals();
+  // Usuário
+  let savedUserName = auth.getCurrentUserName();
+  if (!savedUserName) {
+    savedUserName = await fetchRandomFantasyName();
+    localStorage.setItem('rpgboard_user_name', savedUserName);
+  }
+  updateUserState(savedUserName);
 
-    // 5. Usuário
-    let savedUserName = auth.getCurrentUserName();
-    if (!savedUserName) {
-        savedUserName = await fetchRandomFantasyName();
-        localStorage.setItem('rpgboard_user_name', savedUserName);
+  if (userLoginBtn) userLoginBtn.addEventListener('click', () => openModal(userLoginModal));
+  if (formUserLogin) formUserLogin.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const userName = userNameInput.value.trim();
+    if (userName) {
+      updateUserState(userName);
+      closeModal(userLoginModal);
+      userNameInput.value = '';
     }
-    updateUserState(savedUserName);
+  });
 
-    if (userLoginBtn) userLoginBtn.addEventListener('click', () => openModal(userLoginModal));
-    if (formUserLogin) formUserLogin.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const userName = userNameInput.value.trim();
-        if (userName) {
-            updateUserState(userName);
-            closeModal(userLoginModal);
-            userNameInput.value = '';
+  injectDragDropStyles();
+
+  // Settings
+  try {
+    appSettings = await initializeApp({ pageTitle: 'GameBoard' });
+    cardRenderer.initializeCardRenderer(appSettings);
+    generateTagFilters(appSettings.filters, tagFiltersContainer);
+  } catch (error) {
+    console.error("Falha ao carregar as configurações do site:", error);
+  }
+
+  // Card Modal (Tiptap)
+  await initializeCardModal({
+    onSave: async (data, newImageFile, editingItem) => {
+      const userName = auth.getCurrentUserName();
+      if (editingItem) {
+        await firebaseService.updateItem(editingItem, data, newImageFile || null);
+        try { chat.logSystemMessage(`${userName} atualizou o card "${data.titulo || editingItem.titulo}"`); } catch (_) { }
+      } else {
+        const id = await firebaseService.addItem(data, newImageFile || null);
+        grid.scrollToCard(id);
+      }
+    },
+    onTagInputInit: (inputEl) => initializeTagInput(inputEl, { suggestions: appSettings.recommendedTags || [] }),
+  });
+
+  // Handlers de card (grid)
+  const cardActionHandlers = {
+    onDelete: handleDeleteItem,
+    onEdit: (card, item) => openCardModal(item),
+    onSave: async (cardElement, item) => {
+      const updatedData = cardRenderer.getCardFormData(cardElement);
+      const newImageFile = cardElement._newImageFile || null;
+      try {
+        if (newImageFile) {
+          const dims = await cardRenderer.getImageDimensions(newImageFile);
+          updatedData.width = dims.width;
+          updatedData.height = dims.height;
         }
-    });
-
-    injectDragDropStyles();
-
-    // 6. Settings
-    try {
-        appSettings = await initializeApp({ pageTitle: 'GameBoard' });
-        cardRenderer.initializeCardRenderer(appSettings);
-        generateTagFilters(appSettings.filters, tagFiltersContainer);
-    } catch (error) {
-        console.error("Falha ao carregar as configurações do site:", error);
-    }
-
-    // 7. Card Modal (Tiptap) ─────────────────────────────────────────────────
-    await initializeCardModal({
-        onSave: async (data, newImageFile, editingItem) => {
-            const userName = auth.getCurrentUserName();
-            if (editingItem) {
-                await firebaseService.updateItem(editingItem, data, newImageFile || null);
-                try { chat.logSystemMessage(`${userName} atualizou o card "${data.titulo || editingItem.titulo}"`); } catch (_) { }
-            } else {
-                const id = await firebaseService.addItem(data, newImageFile || null);
-                grid.scrollToCard(id);
-            }
-        },
-        onTagInputInit: (inputEl) => initializeTagInput(inputEl, { suggestions: appSettings.recommendedTags || [] }),
-    });
-
-    // 8. Handlers de card (grid)
-    const cardActionHandlers = {
-        onDelete: handleDeleteItem,
-        // onEdit abre o modal de edição via cardModal.js
-        onEdit: (card, item) => openCardModal(item),
-        // onSave mantido para compatibilidade com sheet-mode e outros contextos inline
-        onSave: async (cardElement, item) => {
-            const updatedData = cardRenderer.getCardFormData(cardElement);
-            const newImageFile = cardElement._newImageFile || null;
-            try {
-                if (newImageFile) {
-                    const dims = await cardRenderer.getImageDimensions(newImageFile);
-                    updatedData.width = dims.width;
-                    updatedData.height = dims.height;
-                }
-                await firebaseService.updateItem(item, updatedData, newImageFile);
-                if (cardElement._newImageFile) delete cardElement._newImageFile;
-                try {
-                    const userName = auth.getCurrentUserName();
-                    chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
-                } catch (e) { }
-                return { ...item, ...updatedData };
-            } catch (error) { console.error(error); alert("Falha ao salvar."); throw error; }
-        },
-        onView: showDetailModal,
-        onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
-        onPositionChange: handlePositionChange,
-        onReorder: handleReorder
-    };
-
-    await cardManager.initialize(cardActionHandlers);
-    grid.initializeGrid(cardActionHandlers);
-    viewWrapper.classList.add('view-grid');
-    grid.show();
-
-    // FAB → abre modal de criação
-    if (addCardButton) {
-        addCardButton.addEventListener('click', () => openCardModal());
-    }
-
-    // 9. Narrador
-    function updateMasterView(isNarrator) {
-        narrator.updateNarratorUI(isNarrator);
-        document.body.classList.toggle('master-view', isNarrator);
-    }
-    updateMasterView(auth.isNarrator());
-
-    window.addEventListener('narratorStatusChange', () => {
-        const isNarrator = auth.isNarrator();
-        updateMasterView(isNarrator);
-        if (!isNarrator) bulkEdit.exitBulkEditMode();
-        applyFilters();
-    });
-
-    // 10. Shortcode value handlers
-    async function handleShortcodeValueChange(itemId, encodedShortcode, newCurrentValue, triggerElement = null) {
-        const item = allItems.find(i => i.id === itemId);
-        if (!item || !item.conteudo) return;
-        if (triggerElement) {
-            const componentRoot = triggerElement.closest('.shortcode-hp, .shortcode-count');
-            if (componentRoot) {
-                componentRoot.classList.add('is-updating');
-                setTimeout(() => componentRoot.classList.remove('is-updating'), 700);
-            }
-        }
-        const decodedShortcode = decodeURIComponent(encodedShortcode);
-        let newShortcode;
-        if (/current=/.test(decodedShortcode)) {
-            newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newCurrentValue}"`);
-        } else {
-            newShortcode = decodedShortcode.replace(/]$/, ` current="${newCurrentValue}"]`);
-        }
-        const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
-        
-        // Sincroniza cache local
-        item.conteudo = newContent;
-
-        try { await firebaseService.updateItem(item, { conteudo: newContent }); } catch (error) { console.error(error); }
-    }
-
-    async function handleMoneyChange(inputElement) {
-        const moneyComponent = inputElement.closest('.shortcode-money');
-        if (!moneyComponent || !moneyComponent.dataset.itemId) return;
-        const { itemId, shortcode: encodedShortcode } = moneyComponent.dataset;
-        const item = allItems.find(i => i.id === itemId);
-        if (!item) return;
-        const decodedShortcode = decodeURIComponent(encodedShortcode);
-        const originalArgs = shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1);
-        const originalParams = shortcodeParser.parseKeyValueArgs(originalArgs);
-        const originalValue = parseFloat(originalParams.current) || 0;
-        
-        const newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, inputElement.value) * 100) / 100;
-        
-        if (isNaN(newValue)) return;
-        const newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newValue}"`);
-        const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
-        if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
-    }
-
-    async function handleXpChange(inputElement) {
-        const xpComponent = inputElement.closest('.shortcode-xp');
-        if (!xpComponent || !xpComponent.dataset.itemId) return;
-        const { itemId, shortcode: encodedShortcode } = xpComponent.dataset;
-        const item = allItems.find(i => i.id === itemId);
-        if (!item) return;
-        const decodedShortcode = decodeURIComponent(encodedShortcode);
-        const originalArgs = shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1);
-        const originalParams = shortcodeParser.parseKeyValueArgs(originalArgs);
-        const originalValue = parseInt(originalParams.current, 10) || 0;
-        
-        const newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, inputElement.value));
-        
-        if (isNaN(newValue)) return;
-        const newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newValue}"`);
-        const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
-        if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
-    }
-
-    // 11. Firebase Realtime
-    firebaseService.listenToItems(async (snapshot) => {
+        await firebaseService.updateItem(item, updatedData, newImageFile);
+        if (cardElement._newImageFile) delete cardElement._newImageFile;
         try {
-            if (!isInitialGridLoaded) {
-                let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (!auth.isNarrator()) items = items.filter(item => item.isVisibleToPlayers !== false);
-                allItems = items;
-                allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-                await cardManager.loadItems(allItems);
-                isInitialGridLoaded = true;
-                applyFilters();
-                return;
-            }
-        } catch (error) { console.error(error); }
+          const userName = auth.getCurrentUserName();
+          chat.logSystemMessage(`${userName} atualizou o card "${updatedData.titulo || item.titulo}"`);
+        } catch (e) { }
+        return { ...item, ...updatedData };
+      } catch (error) { console.error(error); alert('Falha ao salvar.'); throw error; }
+    },
+    onView: showDetailModal,
+    onTagInputInit: (inputElement) => initializeTagInput(inputElement, { suggestions: appSettings.recommendedTags || [] }),
+    onPositionChange: handlePositionChange,
+    onReorder: handleReorder
+  };
 
-        snapshot.docChanges().forEach((change) => {
-            const itemData = { id: change.doc.id, ...change.doc.data() };
-            const indexInCache = allItems.findIndex(i => i.id === itemData.id);
-            const isNarrator = auth.isNarrator();
-            if (change.type === "added") {
-                if (isNarrator || itemData.isVisibleToPlayers !== false) {
-                    if (indexInCache === -1) allItems.push(itemData);
-                }
-            } else if (change.type === "modified") {
-                const visible = isNarrator || itemData.isVisibleToPlayers !== false;
-                if (indexInCache > -1) {
-                    if (visible) allItems[indexInCache] = itemData;
-                    else allItems.splice(indexInCache, 1);
-                } else if (visible) { allItems.push(itemData); }
-            } else if (change.type === "removed") {
-                if (indexInCache > -1) allItems.splice(indexInCache, 1);
-                if (detailModal.classList.contains('is-active')) {
-                    if (detailModal.querySelector('.box')?.dataset.itemId === itemData.id) closeModal(detailModal);
-                }
-            }
-        });
+  await cardManager.initialize(cardActionHandlers);
+  grid.initializeGrid(cardActionHandlers);
+  viewWrapper.classList.add('view-grid');
+  grid.show();
+
+  if (addCardButton) {
+    addCardButton.addEventListener('click', () => openCardModal());
+  }
+
+  // Narrador
+  function updateMasterView(isNarrator) {
+    narrator.updateNarratorUI(isNarrator);
+    document.body.classList.toggle('master-view', isNarrator);
+  }
+  updateMasterView(auth.isNarrator());
+
+  window.addEventListener('narratorStatusChange', () => {
+    const isNarrator = auth.isNarrator();
+    updateMasterView(isNarrator);
+    if (!isNarrator) bulkEdit.exitBulkEditMode();
+    applyFilters();
+  });
+
+  // Shortcode value handlers
+  async function handleShortcodeValueChange(itemId, encodedShortcode, newCurrentValue, triggerElement = null) {
+    const item = allItems.find(i => i.id === itemId);
+    if (!item || !item.conteudo) return;
+    if (triggerElement) {
+      const componentRoot = triggerElement.closest('.shortcode-hp, .shortcode-count');
+      if (componentRoot) {
+        componentRoot.classList.add('is-updating');
+        setTimeout(() => componentRoot.classList.remove('is-updating'), 700);
+      }
+    }
+    const decodedShortcode = decodeURIComponent(encodedShortcode);
+    let newShortcode;
+    if (/current=/.test(decodedShortcode)) {
+      newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newCurrentValue}"`);
+    } else {
+      newShortcode = decodedShortcode.replace(/]$/, ` current="${newCurrentValue}"]`);
+    }
+    const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
+    item.conteudo = newContent;
+    try { await firebaseService.updateItem(item, { conteudo: newContent }); } catch (error) { console.error(error); }
+  }
+
+  async function handleMoneyChange(inputElement) {
+    const moneyComponent = inputElement.closest('.shortcode-money');
+    if (!moneyComponent || !moneyComponent.dataset.itemId) return;
+    const { itemId, shortcode: encodedShortcode } = moneyComponent.dataset;
+    const item = allItems.find(i => i.id === itemId);
+    if (!item) return;
+    const decodedShortcode = decodeURIComponent(encodedShortcode);
+    const originalArgs = shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1);
+    const originalParams = shortcodeParser.parseKeyValueArgs(originalArgs);
+    const originalValue = parseFloat(originalParams.current) || 0;
+    const newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, inputElement.value) * 100) / 100;
+    if (isNaN(newValue)) return;
+    const newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newValue}"`);
+    const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
+    if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
+  }
+
+  async function handleXpChange(inputElement) {
+    const xpComponent = inputElement.closest('.shortcode-xp');
+    if (!xpComponent || !xpComponent.dataset.itemId) return;
+    const { itemId, shortcode: encodedShortcode } = xpComponent.dataset;
+    const item = allItems.find(i => i.id === itemId);
+    if (!item) return;
+    const decodedShortcode = decodeURIComponent(encodedShortcode);
+    const originalArgs = shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1);
+    const originalParams = shortcodeParser.parseKeyValueArgs(originalArgs);
+    const originalValue = parseInt(originalParams.current, 10) || 0;
+    const newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, inputElement.value));
+    if (isNaN(newValue)) return;
+    const newShortcode = decodedShortcode.replace(/current=(?:["']?)-?\d+(?:\.\d+)?(?:["']?)/, `current="${newValue}"`);
+    const escapedSearch = decodedShortcode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const newContent = item.conteudo.replace(new RegExp(escapedSearch, 'g'), newShortcode);
+    if (newContent !== item.conteudo) await firebaseService.updateItem(item, { conteudo: newContent });
+  }
+
+  // Firebase Realtime
+  unsubscribeItems = firebaseService.listenToItems(async (snapshot) => {
+    try {
+      if (!isInitialGridLoaded) {
+        let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (!auth.isNarrator()) items = items.filter(item => item.isVisibleToPlayers !== false);
+        allItems = items;
         allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
-        cardManager.loadItems(allItems);
+        await cardManager.loadItems(allItems);
+        isInitialGridLoaded = true;
         applyFilters();
+        return;
+      }
+    } catch (error) { console.error(error); }
+
+    snapshot.docChanges().forEach((change) => {
+      const itemData = { id: change.doc.id, ...change.doc.data() };
+      const indexInCache = allItems.findIndex(i => i.id === itemData.id);
+      const isNarrator = auth.isNarrator();
+      if (change.type === "added") {
+        if (isNarrator || itemData.isVisibleToPlayers !== false) {
+          if (indexInCache === -1) allItems.push(itemData);
+        }
+      } else if (change.type === "modified") {
+        const visible = isNarrator || itemData.isVisibleToPlayers !== false;
+        if (indexInCache > -1) {
+          if (visible) allItems[indexInCache] = itemData;
+          else allItems.splice(indexInCache, 1);
+        } else if (visible) { allItems.push(itemData); }
+      } else if (change.type === "removed") {
+        if (indexInCache > -1) allItems.splice(indexInCache, 1);
+        if (detailModal.classList.contains('is-active')) {
+          if (detailModal.querySelector('.box')?.dataset.itemId === itemData.id) closeModal(detailModal);
+        }
+      }
+    });
+    allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+    cardManager.loadItems(allItems);
+    applyFilters();
+  });
+
+  // Filtros
+  function applyFilters() {
+    const searchTerm = searchInput.value.trim();
+    const selectedTags = Array.from(tagFiltersContainer.querySelectorAll('input:not([value="visible"]):not([value="hidden"]):checked')).map(checkbox => checkbox.value);
+    const normalizedSearchTerm = normalizeString(searchTerm);
+    const categoryFilter = currentCategoryFilter;
+    const visibilityFilters = {
+      visible: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.VISIBLE}"]`)?.checked,
+      hidden: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.HIDDEN}"]`)?.checked
+    };
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) loadingIndicator.style.display = 'none';
+
+    const filteredItems = allItems.filter(dataItem => {
+      const textMatch = !normalizedSearchTerm ||
+        [dataItem.titulo, dataItem.conteudo].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) ||
+        dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
+      const tagMatch = selectedTags.length === 0 || selectedTags.every(selectedTag => dataItem.tags.some(itemTag => normalizeString(itemTag) === selectedTag));
+      const dataCategory = dataItem.cat || dataItem.category || dataItem.categoria;
+      let categoryMatch = false;
+      if (!categoryFilter || categoryFilter === 'all') {
+        categoryMatch = true;
+      } else if (categoryFilter === 'pj') {
+        const val = (dataCategory || "").toLowerCase();
+        categoryMatch = ['pj', 'personagem', 'personagens'].includes(val) || (dataItem.tags && dataItem.tags.some(t => t.toLowerCase() === 'pj'));
+      } else {
+        categoryMatch = dataCategory === categoryFilter;
+      }
+      let visibilityMatch = true;
+      if (auth.isNarrator() && (visibilityFilters.visible || visibilityFilters.hidden)) {
+        if (visibilityFilters.visible && !visibilityFilters.hidden) visibilityMatch = dataItem.isVisibleToPlayers !== false;
+        else if (!visibilityFilters.visible && visibilityFilters.hidden) visibilityMatch = dataItem.isVisibleToPlayers === false;
+      }
+      return textMatch && tagMatch && visibilityMatch && categoryMatch;
     });
 
-    // 12. Filtros
-    function applyFilters() {
-        const searchTerm = searchInput.value.trim();
-        const selectedTags = Array.from(tagFiltersContainer.querySelectorAll('input:not([value="visible"]):not([value="hidden"]):checked')).map(checkbox => checkbox.value);
-        const normalizedSearchTerm = normalizeString(searchTerm);
-        
-        const categoryFilter = currentCategoryFilter;
-        const visibilityFilters = {
-            visible: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.VISIBLE}"]`)?.checked,
-            hidden: tagFiltersContainer.querySelector(`input[value="${VISIBILITY_FILTERS.HIDDEN}"]`)?.checked
+    if (viewWrapper.classList.contains('view-grid')) {
+      grid.setItems(filteredItems, selectedTags);
+    }
+    updateClearButtonVisibility();
+    updateActiveFiltersDisplay();
+  }
+
+  function updateClearButtonVisibility() {
+    const isSearchActive = searchInput.value.trim() !== '';
+    const areFiltersActive = tagFiltersContainer.querySelector('input:checked') !== null;
+    const isCategoryActive = currentCategoryFilter !== 'all';
+    if (clearFiltersBtn) clearFiltersBtn.classList.toggle('is-hidden', !isSearchActive && !areFiltersActive && !isCategoryActive);
+  }
+
+  function updateActiveFiltersDisplay() {
+    activeFiltersContainer.innerHTML = '';
+    const checkedFilters = tagFiltersContainer.querySelectorAll('input:checked');
+    checkedFilters.forEach(checkbox => {
+      const tagPill = document.createElement('div');
+      tagPill.className = 'tags has-addons';
+      tagPill.innerHTML = `<span class="tag is-link">${checkbox.nextElementSibling.textContent}</span><a class="tag is-delete" data-value="${checkbox.value}"></a>`;
+      tagPill.querySelector('.is-delete').onclick = () => { checkbox.checked = false; applyFilters(); };
+      activeFiltersContainer.appendChild(tagPill);
+    });
+  }
+
+  searchInput.addEventListener('input', applyFilters);
+  tagFiltersContainer.addEventListener('change', applyFilters);
+
+  if (categoryFiltersContainer) {
+    categoryFiltersContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      categoryFiltersContainer.querySelectorAll('button').forEach(b => b.classList.remove('is-link', 'active'));
+      btn.classList.add('is-link', 'active');
+      currentCategoryFilter = btn.dataset.category;
+      applyFilters();
+    });
+  }
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      tagFiltersContainer.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = false; });
+      if (categoryFiltersContainer) {
+        categoryFiltersContainer.querySelectorAll('button').forEach(b => b.classList.remove('is-link', 'active'));
+        const allBtn = categoryFiltersContainer.querySelector('[data-category="all"]');
+        if (allBtn) allBtn.classList.add('active');
+        currentCategoryFilter = 'all';
+      }
+      applyFilters();
+    });
+  }
+
+  // Tag suggestions
+  function initializeTagInput(inputElement, options = {}) {
+    const { isMultiTag = true, suggestions = [], showRecsOnFocus = true } = options;
+    if (!tagSuggestionsContainer) {
+      tagSuggestionsContainer = document.createElement('div');
+      tagSuggestionsContainer.className = 'tag-suggestions';
+      document.body.appendChild(tagSuggestionsContainer);
+    }
+    const showSuggestions = (list) => {
+      tagSuggestionsContainer.innerHTML = '';
+      if (list.length === 0) { tagSuggestionsContainer.style.display = 'none'; return; }
+      list.forEach(tag => {
+        const item = document.createElement('div');
+        item.className = 'tag-suggestion-item';
+        item.textContent = tag;
+        item.onmousedown = (e) => {
+          e.preventDefault();
+          if (isMultiTag) {
+            const parts = inputElement.value.split(',').map(p => p.trim());
+            parts[parts.length - 1] = tag;
+            inputElement.value = parts.join(', ') + ', ';
+          } else { inputElement.value = tag; }
+          tagSuggestionsContainer.style.display = 'none';
+          inputElement.focus();
         };
-        const loadingIndicator = document.getElementById('loading-indicator');
-        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        tagSuggestionsContainer.appendChild(item);
+      });
+      const rect = inputElement.getBoundingClientRect();
+      tagSuggestionsContainer.style.cssText = `display:block; left:${rect.left + window.scrollX}px; top:${rect.bottom + window.scrollY}px; width:${rect.width}px;`;
+    };
+    inputElement.onfocus = () => { if (showRecsOnFocus && inputElement.value === '') showSuggestions(suggestions); };
+    inputElement.oninput = () => {
+      const parts = inputElement.value.split(',');
+      const curr = normalizeString(parts[parts.length - 1].trim());
+      if (!curr) return showSuggestions(suggestions);
+      const allTags = [...new Set(allItems.flatMap(i => i.tags || []))];
+      showSuggestions(allTags.filter(t => normalizeString(t).includes(curr)));
+    };
+    inputElement.onblur = () => setTimeout(() => { tagSuggestionsContainer.style.display = 'none'; }, 200);
+  }
 
-        const filteredItems = allItems.filter(dataItem => {
-            const textMatch = !normalizedSearchTerm ||
-                [dataItem.titulo, dataItem.conteudo].some(t => normalizeString(t || '').includes(normalizedSearchTerm)) ||
-                dataItem.tags.some(tag => normalizeString(tag).includes(normalizedSearchTerm));
-            const tagMatch = selectedTags.length === 0 || selectedTags.every(selectedTag => dataItem.tags.some(itemTag => normalizeString(itemTag) === selectedTag));
-            const dataCategory = dataItem.cat || dataItem.category || dataItem.categoria;
-            // Caso a categoria seja 'pj' no filtro, buscar PJs retrocompatíveis
-            let categoryMatch = false;
-            if (!categoryFilter || categoryFilter === 'all') {
-                categoryMatch = true;
-            } else if (categoryFilter === 'pj') {
-                const val = (dataCategory || "").toLowerCase();
-                categoryMatch = ['pj', 'personagem', 'personagens'].includes(val) || (dataItem.tags && dataItem.tags.some(t => t.toLowerCase() === 'pj'));
-            } else {
-                categoryMatch = dataCategory === categoryFilter;
-            }
-            
-            let visibilityMatch = true;
-            if (auth.isNarrator() && (visibilityFilters.visible || visibilityFilters.hidden)) {
-                if (visibilityFilters.visible && !visibilityFilters.hidden) visibilityMatch = dataItem.isVisibleToPlayers !== false;
-                else if (!visibilityFilters.visible && visibilityFilters.hidden) visibilityMatch = dataItem.isVisibleToPlayers === false;
-            }
-            return textMatch && tagMatch && visibilityMatch && categoryMatch;
-        });
+  initializeTagInput(searchInput, { isMultiTag: false, showRecsOnFocus: false });
 
-        if (viewWrapper.classList.contains('view-grid')) {
-            grid.setItems(filteredItems, selectedTags);
-        }
-        updateClearButtonVisibility();
-        updateActiveFiltersDisplay();
+  // Eventos globais (money, HP, card-link, count)
+  document.body.addEventListener('click', (event) => {
+    const target = event.target;
+    const activeMoneyInput = document.querySelector('.money-value-input:not(.is-hidden)');
+    if (activeMoneyInput && !activeMoneyInput.contains(target) && !target.closest('.shortcode-money')) {
+      activeMoneyInput.closest('.shortcode-money').querySelector('.money-value-display').classList.remove('is-hidden');
+      activeMoneyInput.classList.add('is-hidden');
     }
 
-    function updateClearButtonVisibility() {
-        const isSearchActive = searchInput.value.trim() !== '';
-        const areFiltersActive = tagFiltersContainer.querySelector('input:checked') !== null;
-        const isCategoryActive = currentCategoryFilter !== 'all';
-        if (clearFiltersBtn) clearFiltersBtn.classList.toggle('is-hidden', !isSearchActive && !areFiltersActive && !isCategoryActive);
+    const xpComponent = target.closest('.shortcode-xp');
+    if (xpComponent) {
+      const display = xpComponent.querySelector('.xp-value-display');
+      const input = xpComponent.querySelector('.xp-value-input');
+      if (display && input) { display.classList.add('is-hidden'); input.classList.remove('is-hidden'); input.focus(); input.select(); }
     }
 
-    function updateActiveFiltersDisplay() {
-        activeFiltersContainer.innerHTML = '';
-        const checkedFilters = tagFiltersContainer.querySelectorAll('input:checked');
-        checkedFilters.forEach(checkbox => {
-            const tagPill = document.createElement('div');
-            tagPill.className = 'tags has-addons';
-            tagPill.innerHTML = `<span class="tag is-link">${checkbox.nextElementSibling.textContent}</span><a class="tag is-delete" data-value="${checkbox.value}"></a>`;
-            tagPill.querySelector('.is-delete').onclick = () => { checkbox.checked = false; applyFilters(); };
-            activeFiltersContainer.appendChild(tagPill);
-        });
+    const moneyComponent = target.closest('.shortcode-money');
+    if (moneyComponent) {
+      const display = moneyComponent.querySelector('.money-value-display');
+      const input = moneyComponent.querySelector('.money-value-input');
+      if (display && input) { display.classList.add('is-hidden'); input.classList.remove('is-hidden'); input.focus(); input.select(); }
     }
 
-    searchInput.addEventListener('input', applyFilters);
-    tagFiltersContainer.addEventListener('change', applyFilters);
-
-    if (categoryFiltersContainer) {
-        categoryFiltersContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('button');
-            if (!btn) return;
-            categoryFiltersContainer.querySelectorAll('button').forEach(b => b.classList.remove('is-link', 'active'));
-            btn.classList.add('is-link', 'active');
-            currentCategoryFilter = btn.dataset.category;
-            applyFilters();
-        });
+    const statComponent = target.closest('.shortcode-stat:not(.is-rendered-in-editor)');
+    if (statComponent) {
+      const display = statComponent.querySelector('.stat-value-display');
+      const input = statComponent.querySelector('.stat-value-input');
+      if (display && input) { display.classList.add('is-hidden'); input.classList.remove('is-hidden'); input.focus(); input.select(); }
     }
 
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', () => {
-            searchInput.value = '';
-            tagFiltersContainer.querySelectorAll('input[type="checkbox"]').forEach(c => { c.checked = false; });
-            if (categoryFiltersContainer) {
-                categoryFiltersContainer.querySelectorAll('button').forEach(b => b.classList.remove('is-link', 'active'));
-                const allBtn = categoryFiltersContainer.querySelector('[data-category="all"]');
-                if (allBtn) allBtn.classList.add('active');
-                currentCategoryFilter = 'all';
-            }
-            applyFilters();
-        });
+    const hpComponent = target.closest('.shortcode-hp');
+    if (hpComponent && !target.closest('.hp-current-input')) {
+      const displayMode = hpComponent.querySelector('.hp-display-mode');
+      const editMode = hpComponent.querySelector('.hp-edit-mode');
+      const input = hpComponent.querySelector('.hp-current-input');
+      if (displayMode && editMode && input) { displayMode.classList.add('is-hidden'); editMode.classList.remove('is-hidden'); input.focus(); input.select(); }
     }
 
-    // 13. Tag suggestions
-    function initializeTagInput(inputElement, options = {}) {
-        const { isMultiTag = true, suggestions = [], showRecsOnFocus = true } = options;
-        if (!tagSuggestionsContainer) {
-            tagSuggestionsContainer = document.createElement('div');
-            tagSuggestionsContainer.className = 'tag-suggestions';
-            document.body.appendChild(tagSuggestionsContainer);
-        }
-        const showSuggestions = (list) => {
-            tagSuggestionsContainer.innerHTML = '';
-            if (list.length === 0) { tagSuggestionsContainer.style.display = 'none'; return; }
-            list.forEach(tag => {
-                const item = document.createElement('div');
-                item.className = 'tag-suggestion-item';
-                item.textContent = tag;
-                item.onmousedown = (e) => {
-                    e.preventDefault();
-                    if (isMultiTag) {
-                        const parts = inputElement.value.split(',').map(p => p.trim());
-                        parts[parts.length - 1] = tag;
-                        inputElement.value = parts.join(', ') + ', ';
-                    } else { inputElement.value = tag; }
-                    tagSuggestionsContainer.style.display = 'none';
-                    inputElement.focus();
-                };
-                tagSuggestionsContainer.appendChild(item);
-            });
-            const rect = inputElement.getBoundingClientRect();
-            tagSuggestionsContainer.style.cssText = `display:block; left:${rect.left + window.scrollX}px; top:${rect.bottom + window.scrollY}px; width:${rect.width}px;`;
-        };
-        inputElement.onfocus = () => { if (showRecsOnFocus && inputElement.value === '') showSuggestions(suggestions); };
-        inputElement.oninput = () => {
-            const parts = inputElement.value.split(',');
-            const curr = normalizeString(parts[parts.length - 1].trim());
-            if (!curr) return showSuggestions(suggestions);
-            const allTags = [...new Set(allItems.flatMap(i => i.tags || []))];
-            showSuggestions(allTags.filter(t => normalizeString(t).includes(curr)));
-        };
-        inputElement.onblur = () => setTimeout(() => { tagSuggestionsContainer.style.display = 'none'; }, 200);
+    const cardLink = target.closest('.card-link');
+    if (cardLink) {
+      event.stopPropagation();
+      const foundCard = allItems.find(item => normalizeString(item.titulo) === normalizeString(cardLink.dataset.cardName));
+      if (foundCard) showDetailModal(foundCard);
     }
 
-    initializeTagInput(searchInput, { isMultiTag: false, showRecsOnFocus: false });
-
-    // 14. Modal Detalhes
-
-
-    // 15. Eventos globais (money, HP, card-link, count)
-    document.body.addEventListener('click', (event) => {
-        const target = event.target;
-        const activeMoneyInput = document.querySelector('.money-value-input:not(.is-hidden)');
-        if (activeMoneyInput && !activeMoneyInput.contains(target) && !target.closest('.shortcode-money')) {
-            activeMoneyInput.closest('.shortcode-money').querySelector('.money-value-display').classList.remove('is-hidden');
-            activeMoneyInput.classList.add('is-hidden');
+    const countTrigger = target.closest('.count-btn, .count-checkbox');
+    if (countTrigger) {
+      event.stopPropagation();
+      const countComponent = countTrigger.closest('.shortcode-count');
+      if (!countComponent) return;
+      const { itemId, shortcode } = countComponent.dataset;
+      if (itemId && shortcode) {
+        const decoded = decodeURIComponent(shortcode);
+        const max = parseInt(decoded.match(/max=(?:["']?)(\d+)(?:["']?)/)?.[1] || 0);
+        let current = parseInt(decoded.match(/current=(?:["']?)(-?\d+)(?:["']?)/)?.[1] || 0);
+        let next = current;
+        if (countTrigger.classList.contains('count-btn')) {
+          next = (countTrigger.dataset.action === 'increment') ? Math.min(current + 1, max) : Math.max(current - 1, 0);
+        } else if (countTrigger.classList.contains('count-checkbox')) {
+          const val = parseInt(countTrigger.dataset.value, 10);
+          next = (val === current) ? 0 : val;
         }
+        handleShortcodeValueChange(itemId, shortcode, next, countTrigger);
+      }
+    }
+  });
 
-        const xpComponent = target.closest('.shortcode-xp');
-        if (xpComponent) {
-            const display = xpComponent.querySelector('.xp-value-display');
-            const input = xpComponent.querySelector('.xp-value-input');
-            if (display && input) {
-                display.classList.add('is-hidden');
-                input.classList.remove('is-hidden');
-                input.focus(); input.select();
-            }
-        }
+  document.body.addEventListener('focusout', (event) => {
+    if (event.target.classList.contains('money-value-input')) {
+      handleMoneyChange(event.target);
+      event.target.closest('.shortcode-money').querySelector('.money-value-display').classList.remove('is-hidden');
+      event.target.classList.add('is-hidden');
+    }
+    if (event.target.classList.contains('xp-value-input')) {
+      handleXpChange(event.target);
+      event.target.closest('.shortcode-xp').querySelector('.xp-value-display').classList.remove('is-hidden');
+      event.target.classList.add('is-hidden');
+    }
+    if (event.target.classList.contains('stat-value-input')) {
+      const statComp = event.target.closest('.shortcode-stat');
+      if (statComp) {
+        const { itemId, shortcode } = statComp.dataset;
+        handleShortcodeValueChange(itemId, shortcode, event.target.value.trim(), event.target);
+        statComp.querySelector('.stat-value-display').classList.remove('is-hidden');
+        event.target.classList.add('is-hidden');
+      }
+    }
+    if (event.target.classList.contains('hp-current-input')) {
+      const hpComponent = event.target.closest('.shortcode-hp');
+      if (!hpComponent) return;
+      const maxHp = parseInt(hpComponent.dataset.maxHp, 10) || 100;
+      const decodedShortcode = decodeURIComponent(hpComponent.dataset.shortcode);
+      const originalParams = shortcodeParser.parseKeyValueArgs(shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1));
+      const originalValue = parseInt(originalParams.current, 10) || 0;
+      let newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, event.target.value));
+      newValue = Math.max(-10, Math.min(newValue, maxHp));
+      event.target.value = newValue;
+      const hpText = hpComponent.querySelector('.hp-text');
+      const hpBarFill = hpComponent.querySelector('.hp-bar-fill');
+      if (hpText) hpText.textContent = `${newValue} / ${maxHp}`;
+      hpComponent.classList.toggle('is-unconscious', newValue <= 0);
+      if (hpBarFill) {
+        const percent = newValue > 0 ? Math.round((newValue / maxHp) * 100) : 0;
+        hpBarFill.style.width = `${percent}%`;
+        hpBarFill.classList.remove('is-low', 'is-medium', 'is-high', 'is-critical', 'is-dead');
+        if (newValue <= 0) hpBarFill.classList.add('is-dead');
+        else if (percent < 15) hpBarFill.classList.add('is-critical');
+        else if (percent < 30) hpBarFill.classList.add('is-low');
+        else if (percent < 60) hpBarFill.classList.add('is-medium');
+        else hpBarFill.classList.add('is-high');
+      }
+      hpComponent.querySelector('.hp-display-mode').classList.remove('is-hidden');
+      hpComponent.querySelector('.hp-edit-mode').classList.add('is-hidden');
+      handleShortcodeValueChange(hpComponent.dataset.itemId, hpComponent.dataset.shortcode, newValue, event.target);
+    }
+  });
 
-        const moneyComponent = target.closest('.shortcode-money');
-        if (moneyComponent) {
-            const display = moneyComponent.querySelector('.money-value-display');
-            const input = moneyComponent.querySelector('.money-value-input');
-            if (display && input) {
-                display.classList.add('is-hidden');
-                input.classList.remove('is-hidden');
-                input.focus(); input.select();
-            }
-        }
-
-        const statComponent = target.closest('.shortcode-stat:not(.is-rendered-in-editor)');
-        if (statComponent) {
-            const display = statComponent.querySelector('.stat-value-display');
-            const input = statComponent.querySelector('.stat-value-input');
-            if (display && input) {
-                display.classList.add('is-hidden');
-                input.classList.remove('is-hidden');
-                input.focus(); input.select();
-            }
-        }
-
-        const hpComponent = target.closest('.shortcode-hp');
-        if (hpComponent && !target.closest('.hp-current-input')) {
-            const displayMode = hpComponent.querySelector('.hp-display-mode');
-            const editMode = hpComponent.querySelector('.hp-edit-mode');
-            const input = hpComponent.querySelector('.hp-current-input');
-            if (displayMode && editMode && input) {
-                displayMode.classList.add('is-hidden');
-                editMode.classList.remove('is-hidden');
-                input.focus(); input.select();
-            }
-        }
-
-        const cardLink = target.closest('.card-link');
-        if (cardLink) {
-            event.stopPropagation();
-            const foundCard = allItems.find(item => normalizeString(item.titulo) === normalizeString(cardLink.dataset.cardName));
-            if (foundCard) showDetailModal(foundCard);
-        }
-
-        const countTrigger = target.closest('.count-btn, .count-checkbox');
-        if (countTrigger) {
-            event.stopPropagation();
-            const countComponent = countTrigger.closest('.shortcode-count');
-            if (!countComponent) return;
-            const { itemId, shortcode } = countComponent.dataset;
-            if (itemId && shortcode) {
-                const decoded = decodeURIComponent(shortcode);
-                const max = parseInt(decoded.match(/max=(?:["']?)(\d+)(?:["']?)/)?.[1] || 0);
-                let current = parseInt(decoded.match(/current=(?:["']?)(-?\d+)(?:["']?)/)?.[1] || 0);
-                let next = current;
-                if (countTrigger.classList.contains('count-btn')) {
-                    next = (countTrigger.dataset.action === 'increment') ? Math.min(current + 1, max) : Math.max(current - 1, 0);
-                } else if (countTrigger.classList.contains('count-checkbox')) {
-                    const val = parseInt(countTrigger.dataset.value, 10);
-                    next = (val === current) ? 0 : val;
-                }
-                handleShortcodeValueChange(itemId, shortcode, next, countTrigger);
-            }
-        }
-    });
-
-    document.body.addEventListener('focusout', (event) => {
-        if (event.target.classList.contains('money-value-input')) {
-            handleMoneyChange(event.target);
-            event.target.closest('.shortcode-money').querySelector('.money-value-display').classList.remove('is-hidden');
-            event.target.classList.add('is-hidden');
-        }
-
-        if (event.target.classList.contains('xp-value-input')) {
-            handleXpChange(event.target);
-            event.target.closest('.shortcode-xp').querySelector('.xp-value-display').classList.remove('is-hidden');
-            event.target.classList.add('is-hidden');
-        }
-
-        if (event.target.classList.contains('stat-value-input')) {
-            const statComp = event.target.closest('.shortcode-stat');
-            if (statComp) {
-                const { itemId, shortcode } = statComp.dataset;
-                handleShortcodeValueChange(itemId, shortcode, event.target.value.trim(), event.target);
-                statComp.querySelector('.stat-value-display').classList.remove('is-hidden');
-                event.target.classList.add('is-hidden');
-            }
-        }
-
-        if (event.target.classList.contains('hp-current-input')) {
-            const hpComponent = event.target.closest('.shortcode-hp');
-            if (!hpComponent) return;
-            const maxHp = parseInt(hpComponent.dataset.maxHp, 10) || 100;
-            const decodedShortcode = decodeURIComponent(hpComponent.dataset.shortcode);
-            const originalParams = shortcodeParser.parseKeyValueArgs(shortcodeParser.parseArguments(decodedShortcode.slice(1, -1)).slice(1));
-            const originalValue = parseInt(originalParams.current, 10) || 0;
-            
-            let newValue = Math.round(shortcodeParser.calculateMathExpression(originalValue, event.target.value));
-            newValue = Math.max(-10, Math.min(newValue, maxHp));
-            
-            event.target.value = newValue;
-            const hpText = hpComponent.querySelector('.hp-text');
-            const hpBarFill = hpComponent.querySelector('.hp-bar-fill');
-            if (hpText) hpText.textContent = `${newValue} / ${maxHp}`;
-            hpComponent.classList.toggle('is-unconscious', newValue <= 0);
-            if (hpBarFill) {
-                const percent = newValue > 0 ? Math.round((newValue / maxHp) * 100) : 0;
-                hpBarFill.style.width = `${percent}%`;
-                hpBarFill.classList.remove('is-low', 'is-medium', 'is-high', 'is-critical', 'is-dead');
-                if (newValue <= 0) hpBarFill.classList.add('is-dead');
-                else if (percent < 15) hpBarFill.classList.add('is-critical');
-                else if (percent < 30) hpBarFill.classList.add('is-low');
-                else if (percent < 60) hpBarFill.classList.add('is-medium');
-                else hpBarFill.classList.add('is-high');
-            }
-            hpComponent.querySelector('.hp-display-mode').classList.remove('is-hidden');
-            hpComponent.querySelector('.hp-edit-mode').classList.add('is-hidden');
-            handleShortcodeValueChange(hpComponent.dataset.itemId, hpComponent.dataset.shortcode, newValue, event.target);
-        }
-    });
-
-    document.body.addEventListener('keydown', (event) => {
-        const isMoney = event.target.classList.contains('money-value-input');
-        const isHp = event.target.classList.contains('hp-current-input');
-        if ((isMoney || isHp || event.target.classList.contains('xp-value-input')) && event.key === 'Enter') {
-            event.preventDefault();
-            event.target.blur();
-        }
-    });
-});
+  document.body.addEventListener('keydown', (event) => {
+    const isMoney = event.target.classList.contains('money-value-input');
+    const isHp = event.target.classList.contains('hp-current-input');
+    if ((isMoney || isHp || event.target.classList.contains('xp-value-input')) && event.key === 'Enter') {
+      event.preventDefault();
+      event.target.blur();
+    }
+  });
+}
