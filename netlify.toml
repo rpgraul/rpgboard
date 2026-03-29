@@ -1,5 +1,5 @@
 [build]
-  command = ""
+  command = "cd public && npm install && npm run build"
   publish = "public/dist"
 
 [[headers]]
