@@ -26,7 +26,6 @@ let localVolume = parseInt(localStorage.getItem(VOLUME_STORAGE_KEY)) || DEFAULT_
 let lastVolumeBeforeMute = 50;
 let iframePlayer = null;
 let iframeReady = false;
-let isLoadingVideo = false;
 let lastProcessedCommandTime = 0;
 let unsubscribe = null;
 let draggedIndex = null;
@@ -35,7 +34,9 @@ let isShuffle = false;
 let isRepeat = false;
 let isMuted = false;
 let shuffleOrder = [];
-let pendingRestoredState = null;
+
+let pendingState = null;
+let pendingRetry = null;
 
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -51,9 +52,7 @@ async function fetchVideoTitle(videoId) {
     if (data && data.title) {
       return data.title;
     }
-  } catch (e) {
-    console.warn('Could not fetch video title:', e);
-  }
+  } catch (e) {}
   return `YouTube Video`;
 }
 
@@ -184,11 +183,35 @@ function getPrevIndex() {
   return currentIndex <= 0 ? audioState.playlist.length - 1 : currentIndex - 1;
 }
 
+function applyPendingState() {
+  if (!pendingState || !iframeReady) return;
+  const state = pendingState;
+  pendingState = null;
+  applyStateToPlayer(state);
+}
+
+function scheduleRetry(state) {
+  if (pendingRetry) clearTimeout(pendingRetry);
+  
+  pendingRetry = setTimeout(() => {
+    if (!iframeReady) {
+      scheduleRetry(state);
+    } else {
+      applyPendingState();
+    }
+  }, 1000);
+}
+
 function applyStateToPlayer(state) {
   if (!iframeReady) {
-    console.log('[applyStateToPlayer] Iframe not ready, waiting...');
-    setTimeout(() => applyStateToPlayer(state), 500);
+    pendingState = state;
+    scheduleRetry(state);
     return;
+  }
+
+  if (pendingRetry) {
+    clearTimeout(pendingRetry);
+    pendingRetry = null;
   }
 
   let effectiveSeekTime = state.seekTime;
@@ -339,10 +362,7 @@ export function toggleAudio() {
 
 export async function addAudioByUrl(url) {
   const videoId = extractYouTubeId(url);
-  if (!videoId) {
-    console.error('Invalid YouTube URL');
-    return;
-  }
+  if (!videoId) return;
   
   const title = await fetchVideoTitle(videoId);
   const userName = getCurrentUserName();
@@ -576,63 +596,30 @@ export function getVolume() {
   return localVolume;
 }
 
-function savePlayerState() {
-  const state = {
-    videoId: audioState.currentVideoId,
-    isPlaying: audioState.isPlaying,
-    seekTime: audioState.seekTime,
-    volume: localVolume,
-    savedAt: Date.now()
-  };
-  localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify(state));
-}
-
-function restorePlayerState() {
-  try {
-    const raw = localStorage.getItem(PLAYER_STATE_KEY);
-    if (!raw) return null;
-    const state = JSON.parse(raw);
-    // Descartar estados muito antigos (> 2h)
-    if (!state.savedAt || Date.now() - state.savedAt > 2 * 60 * 60 * 1000) {
-      localStorage.removeItem(PLAYER_STATE_KEY);
-      return null;
-    }
-    return state;
-  } catch (e) {
-    return null;
-  }
-}
-
 let _audioInitialized = false;
 
 export async function initializeAudio() {
-  if (_audioInitialized) {
-    console.log('[Audio] Already initialized. Skipping.');
-    return;
-  }
+  if (_audioInitialized) return;
   _audioInitialized = true;
 
   await initAudioPlayer();
 
-  // Restaurar volume salvo no slider antes de qualquer interação
   const volumeSlider = document.getElementById('audio-volume');
   if (volumeSlider) volumeSlider.value = localVolume;
-
-  // Salvar estado antes de navegar para outra página
-  window.addEventListener('beforeunload', savePlayerState);
 
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'AUDIO_STATE_UPDATE') {
       const wasReady = iframeReady;
       iframeReady = true;
 
-      // Aplicar volume imediatamente sempre que o iframe reportar estado
       sendToIframe('SET_VOLUME', { level: localVolume });
 
-      // Na primeira vez que o iframe está pronto, guardar estado salvo para
-      // consumir quando o Firebase entregar o estado remoto correspondente
       if (!wasReady) {
-        pendingRestoredState = restorePlayerState();
+        setTimeout(() => {
+          if (pendingState) {
+            applyPendingState();
+          }
+        }, 500);
       }
 
       handleIframeStateUpdate(event.data.state);
@@ -642,16 +629,17 @@ export async function initializeAudio() {
   const iframe = getIframe();
   if (iframe) {
     iframe.addEventListener('load', () => {
-      console.log('[Audio] Iframe loaded');
       setTimeout(() => {
         sendToIframe('SET_VOLUME', { level: localVolume });
+        if (pendingState) {
+          applyPendingState();
+        }
       }, 500);
     });
   }
 
   setTimeout(() => {
     if (!iframeReady) {
-      console.log('[Audio] Iframe not ready, requesting state...');
       sendToIframe('GET_STATE', {});
     }
   }, 2000);
@@ -672,21 +660,6 @@ export async function initializeAudio() {
       playlist: data.playlist || [],
       lastUpdated: data.lastUpdated
     };
-
-    // Aplicar estado salvo (posição da música) se o vídeo remoto bater com o salvo
-    if (pendingRestoredState?.videoId && pendingRestoredState.videoId === data.currentVideoId) {
-      const saved = pendingRestoredState;
-      pendingRestoredState = null; // consumir uma única vez
-      if (saved.isPlaying && data.isPlaying && iframeReady) {
-        const elapsed = (Date.now() - saved.savedAt) / 1000;
-        const resumeAt = (saved.seekTime || 0) + elapsed;
-        sendToIframe('LOAD_VIDEO', {
-          videoId: saved.videoId,
-          startSeconds: resumeAt,
-          isPlaying: true
-        });
-      }
-    }
 
     syncToUI();
     applyStateToPlayer(audioState);

@@ -130,6 +130,20 @@
         }, '*');
       }
 
+      function ensurePlaying(callback) {
+        if (player.getPlayerState() === YT.PlayerState.BUFFERING ||
+            player.getPlayerState() === YT.PlayerState.CUED) {
+          setTimeout(() => ensurePlaying(callback), 100);
+          return;
+        }
+        
+        player.unMute();
+        player.setVolume(currentState.volume);
+        player.playVideo();
+        
+        if (callback) callback();
+      }
+
       function executeCommand(cmd) {
         if (!isReady) {
           pendingCommand = cmd;
@@ -142,34 +156,27 @@
             currentVideoId = videoId;
             currentState.videoId = videoId;
             
+            player.loadVideoById({
+              videoId: videoId,
+              startSeconds: startSeconds || 0,
+              suggestedQuality: 'small'
+            });
+            
             if (isPlaying) {
-              player.loadVideoById({
-                videoId: videoId,
-                startSeconds: startSeconds || 0,
-                suggestedQuality: 'small'
-              });
-            } else {
-              player.cueVideoById({
-                videoId: videoId,
-                startSeconds: startSeconds || 0,
-                suggestedQuality: 'small'
-              });
+              setTimeout(() => ensurePlaying(), 150);
             }
             break;
 
           case 'PLAY':
             if (player.getVideoUrl()) {
-              if (player.isMuted()) {
-                player.unMute();
-                player.setVolume(currentState.volume);
-              }
-              player.playVideo();
+              ensurePlaying();
             } else if (currentVideoId) {
               player.loadVideoById({
                 videoId: currentVideoId,
                 startSeconds: currentState.currentTime,
                 suggestedQuality: 'small'
               });
+              setTimeout(() => ensurePlaying(), 150);
             }
             break;
 
