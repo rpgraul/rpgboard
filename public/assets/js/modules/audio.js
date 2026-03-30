@@ -71,7 +71,9 @@ function sendToIframe(type, payload = {}) {
 function handleIframeStateUpdate(state) {
   if (!state) return;
   
-  audioState.currentVideoId = state.videoId;
+  if (state.videoId) {
+    audioState.currentVideoId = state.videoId;
+  }
   audioState.isPlaying = state.isPlaying;
   
   if (state.currentTime !== undefined) {
@@ -223,16 +225,10 @@ function applyStateToPlayer(state) {
     pendingRetry = null;
   }
 
-  let effectiveSeekTime = state.seekTime;
-  if (state.isPlaying && state.commandTime > 0) {
-    const timeSinceCommand = (Date.now() - state.commandTime) / 1000;
-    effectiveSeekTime = state.seekTime + timeSinceCommand;
-  }
-
   if (state.currentVideoId) {
     sendToIframe('LOAD_VIDEO', {
       videoId: state.currentVideoId,
-      startSeconds: effectiveSeekTime,
+      startSeconds: 0,
       isPlaying: state.isPlaying
     });
   } else if (state.isPlaying) {
@@ -509,29 +505,22 @@ export async function togglePlayPause() {
   const newState = !audioState.isPlaying;
   
   if (!iframeReady && audioState.currentVideoId) {
-    const effectiveSeekTime = audioState.seekTime || 0;
     sendToIframe('LOAD_VIDEO', {
       videoId: audioState.currentVideoId,
-      startSeconds: effectiveSeekTime,
+      startSeconds: 0,
       isPlaying: newState
     });
   } else if (iframeReady) {
     if (newState) {
       sendToIframe('PLAY');
     } else {
-      const currentTime = audioState.seekTime || 0;
       sendToIframe('PAUSE');
-      await issueAudioCommand('playPause', {
-        isPlaying: false,
-        seekTime: currentTime
-      });
-      return;
     }
   }
   
   await issueAudioCommand('playPause', {
     isPlaying: newState,
-    seekTime: audioState.seekTime
+    seekTime: 0
   });
 }
 
@@ -621,7 +610,28 @@ export async function initializeAudio() {
   if (_audioInitialized) return;
   _audioInitialized = true;
 
-  await initAudioPlayer();
+  const existingData = await initAudioPlayer();
+  if (existingData) {
+    audioState = {
+      currentVideoId: existingData.currentVideoId,
+      isPlaying: existingData.isPlaying || false,
+      seekTime: existingData.seekTime || 0,
+      commandTime: existingData.commandTime || 0,
+      volume: existingData.volume || DEFAULT_VOLUME,
+      playlist: existingData.playlist || [],
+      lastUpdated: existingData.lastUpdated
+    };
+    
+    syncToUI();
+    if (audioState.currentVideoId) {
+      sendToIframe('LOAD_VIDEO', {
+        videoId: audioState.currentVideoId,
+        startSeconds: 0,
+        isPlaying: true
+      });
+      sendToIframe('SET_VOLUME', { level: isMuted ? 0 : audioState.volume });
+    }
+  }
 
   const volumeSlider = document.getElementById('audio-volume');
   if (volumeSlider) volumeSlider.value = audioState.volume;
@@ -633,6 +643,13 @@ export async function initializeAudio() {
 
       if (!wasReady) {
         sendToIframe('SET_VOLUME', { level: isMuted ? 0 : audioState.volume });
+        if (audioState.currentVideoId && audioState.isPlaying) {
+          sendToIframe('LOAD_VIDEO', {
+            videoId: audioState.currentVideoId,
+            startSeconds: 0,
+            isPlaying: true
+          });
+        }
         setTimeout(() => {
           if (pendingState) {
             applyPendingState();
@@ -666,7 +683,7 @@ export async function initializeAudio() {
     if (!data) return;
 
     const remoteCommandTime = data.commandTime || 0;
-    if (remoteCommandTime <= lastProcessedCommandTime) return;
+    if (lastProcessedCommandTime > 0 && remoteCommandTime <= lastProcessedCommandTime) return;
     lastProcessedCommandTime = remoteCommandTime;
 
     audioState = {

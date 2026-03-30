@@ -406,6 +406,7 @@ export async function initAudioPlayer() {
       playlist: []
     });
   }
+  return docSnap.exists() ? docSnap.data() : null;
 }
 
 // ============================================
