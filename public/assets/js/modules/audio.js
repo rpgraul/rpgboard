@@ -4,13 +4,12 @@ import {
   addToAudioPlaylistCommand,
   removeFromAudioPlaylistCommand,
   reorderAudioPlaylistCommand,
-  issueAudioCommand
+  issueAudioCommand,
+  updateAudioVolume
 } from './firebaseService.js';
 import { getCurrentUserName } from './auth.js';
 
-const VOLUME_STORAGE_KEY = 'rpg_audio_volume';
-const PLAYER_STATE_KEY = 'rpg_audio_player_state';
-const DEFAULT_VOLUME = 25;
+const DEFAULT_VOLUME = 50;
 
 let audioState = {
   currentVideoId: null,
@@ -22,8 +21,6 @@ let audioState = {
   lastUpdated: null
 };
 
-let localVolume = parseInt(localStorage.getItem(VOLUME_STORAGE_KEY)) || DEFAULT_VOLUME;
-let lastVolumeBeforeMute = 50;
 let iframePlayer = null;
 let iframeReady = false;
 let lastProcessedCommandTime = 0;
@@ -33,6 +30,7 @@ let draggedIndex = null;
 let isShuffle = false;
 let isRepeat = false;
 let isMuted = false;
+let localMutedVolume = 0;
 let shuffleOrder = [];
 
 let pendingState = null;
@@ -184,7 +182,7 @@ function getPrevIndex() {
 }
 
 function applyPendingState() {
-  if (!pendingState || !iframeReady) return;
+  if (!pendingState) return;
   const state = pendingState;
   pendingState = null;
   applyStateToPlayer(state);
@@ -199,13 +197,24 @@ function scheduleRetry(state) {
     } else {
       applyPendingState();
     }
-  }, 1000);
+  }, 500);
 }
 
 function applyStateToPlayer(state) {
   if (!iframeReady) {
     pendingState = state;
     scheduleRetry(state);
+    
+    if (state.currentVideoId) {
+      const effectiveSeekTime = state.seekTime || 0;
+      sendToIframe('LOAD_VIDEO', {
+        videoId: state.currentVideoId,
+        startSeconds: effectiveSeekTime,
+        isPlaying: state.isPlaying
+      });
+      sendToIframe('SET_VOLUME', { level: isMuted ? 0 : (state.volume || 50) });
+      iframeReady = true;
+    }
     return;
   }
 
@@ -231,6 +240,8 @@ function applyStateToPlayer(state) {
   } else {
     sendToIframe('PAUSE');
   }
+  
+  sendToIframe('SET_VOLUME', { level: isMuted ? 0 : (state.volume || 50) });
 }
 
 function syncToUI() {
@@ -266,10 +277,10 @@ function syncToUI() {
       const isActive = item.videoId === audioState.currentVideoId;
       return `
         <div class="audio-playlist-item ${isActive ? 'is-active' : ''}" draggable="true" data-index="${index}" data-id="${item.id}">
-          <span class="audio-drag-handle"><i class="fas fa-grip-vertical"></i></span>
-          <span class="audio-playlist-icon"><i class="fas fa-music"></i></span>
+          <span class="audio-drag-handle"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm6-12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm0 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></span>
+          <span class="audio-playlist-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span>
           <span class="audio-playlist-title">${item.title}</span>
-          <button class="audio-btn-remove" data-id="${item.id}"><i class="fas fa-times"></i></button>
+          <button class="audio-btn-remove" data-id="${item.id}"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
         </div>
       `;
     }).join('');
@@ -325,8 +336,8 @@ function syncToUI() {
   
   if (playBtn) {
     playBtn.innerHTML = audioState.isPlaying 
-      ? '<i class="fas fa-pause"></i>' 
-      : '<i class="fas fa-play"></i>';
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' 
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
   }
   
   if (prevBtn) prevBtn.disabled = !audioState.currentVideoId || audioState.playlist.length === 0;
@@ -336,13 +347,13 @@ function syncToUI() {
   if (repeatBtn) repeatBtn.classList.toggle('is-active', isRepeat);
   
   if (muteBtn) {
-    muteBtn.innerHTML = isMuted || localVolume === 0 
-      ? '<i class="fas fa-volume-mute"></i>' 
-      : '<i class="fas fa-volume-up"></i>';
-    muteBtn.classList.toggle('is-muted', isMuted || localVolume === 0);
+    muteBtn.innerHTML = isMuted || audioState.volume === 0 
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>' 
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+    muteBtn.classList.toggle('is-muted', isMuted || audioState.volume === 0);
   }
   
-  if (volumeSlider) volumeSlider.value = isMuted ? 0 : localVolume;
+  if (volumeSlider) volumeSlider.value = isMuted ? 0 : audioState.volume;
   
   if (playlistCount) playlistCount.textContent = audioState.playlist.length;
   
@@ -497,11 +508,24 @@ export async function togglePlayPause() {
   
   const newState = !audioState.isPlaying;
   
-  if (iframeReady) {
+  if (!iframeReady && audioState.currentVideoId) {
+    const effectiveSeekTime = audioState.seekTime || 0;
+    sendToIframe('LOAD_VIDEO', {
+      videoId: audioState.currentVideoId,
+      startSeconds: effectiveSeekTime,
+      isPlaying: newState
+    });
+  } else if (iframeReady) {
     if (newState) {
       sendToIframe('PLAY');
     } else {
+      const currentTime = audioState.seekTime || 0;
       sendToIframe('PAUSE');
+      await issueAudioCommand('playPause', {
+        isPlaying: false,
+        seekTime: currentTime
+      });
+      return;
     }
   }
   
@@ -514,31 +538,24 @@ export async function togglePlayPause() {
 export function toggleMute() {
   isMuted = !isMuted;
   
-  if (isMuted) {
-    lastVolumeBeforeMute = localVolume > 0 ? localVolume : 50;
-    localVolume = 0;
-  } else {
-    localVolume = lastVolumeBeforeMute;
-  }
+  const effectiveVolume = isMuted ? 0 : audioState.volume;
   
   if (iframeReady) {
-    sendToIframe('SET_VOLUME', { level: localVolume });
+    sendToIframe('SET_VOLUME', { level: effectiveVolume });
   }
-  
-  localStorage.setItem(VOLUME_STORAGE_KEY, localVolume);
   
   const muteBtn = document.getElementById('audio-btn-mute');
   const volumeSlider = document.getElementById('audio-volume');
   
   if (muteBtn) {
     muteBtn.innerHTML = isMuted 
-      ? '<i class="fas fa-volume-mute"></i>' 
-      : '<i class="fas fa-volume-up"></i>';
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>' 
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
     muteBtn.classList.toggle('is-muted', isMuted);
   }
   
   if (volumeSlider) {
-    volumeSlider.value = isMuted ? 0 : localVolume;
+    volumeSlider.value = isMuted ? 0 : audioState.volume;
   }
 }
 
@@ -564,36 +581,38 @@ export function toggleRepeat() {
   }
 }
 
-export function setVolume(level) {
-  localVolume = Math.max(0, Math.min(100, level));
+export async function setVolume(level) {
+  const newVolume = Math.max(0, Math.min(100, level));
   
-  if (localVolume > 0) {
+  if (newVolume > 0) {
     isMuted = false;
   }
   
-  localStorage.setItem(VOLUME_STORAGE_KEY, localVolume);
+  audioState.volume = newVolume;
   
   if (iframeReady) {
-    sendToIframe('SET_VOLUME', { level: localVolume });
+    sendToIframe('SET_VOLUME', { level: isMuted ? 0 : newVolume });
   }
+  
+  await updateAudioVolume(newVolume);
   
   const muteBtn = document.getElementById('audio-btn-mute');
   const volumeSlider = document.getElementById('audio-volume');
   
   if (muteBtn) {
-    muteBtn.innerHTML = localVolume === 0 || isMuted
-      ? '<i class="fas fa-volume-mute"></i>'
-      : '<i class="fas fa-volume-up"></i>';
-    muteBtn.classList.toggle('is-muted', localVolume === 0 || isMuted);
+    muteBtn.innerHTML = newVolume === 0 || isMuted
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>';
+    muteBtn.classList.toggle('is-muted', newVolume === 0 || isMuted);
   }
   
   if (volumeSlider) {
-    volumeSlider.value = localVolume;
+    volumeSlider.value = newVolume;
   }
 }
 
 export function getVolume() {
-  return localVolume;
+  return audioState.volume;
 }
 
 let _audioInitialized = false;
@@ -605,16 +624,15 @@ export async function initializeAudio() {
   await initAudioPlayer();
 
   const volumeSlider = document.getElementById('audio-volume');
-  if (volumeSlider) volumeSlider.value = localVolume;
+  if (volumeSlider) volumeSlider.value = audioState.volume;
 
   window.addEventListener('message', (event) => {
     if (event.data?.type === 'AUDIO_STATE_UPDATE') {
       const wasReady = iframeReady;
       iframeReady = true;
 
-      sendToIframe('SET_VOLUME', { level: localVolume });
-
       if (!wasReady) {
+        sendToIframe('SET_VOLUME', { level: isMuted ? 0 : audioState.volume });
         setTimeout(() => {
           if (pendingState) {
             applyPendingState();
@@ -630,7 +648,7 @@ export async function initializeAudio() {
   if (iframe) {
     iframe.addEventListener('load', () => {
       setTimeout(() => {
-        sendToIframe('SET_VOLUME', { level: localVolume });
+        sendToIframe('SET_VOLUME', { level: isMuted ? 0 : audioState.volume });
         if (pendingState) {
           applyPendingState();
         }
@@ -719,8 +737,8 @@ function setupEventListeners() {
   
   const volumeSlider = document.getElementById('audio-volume');
   if (volumeSlider) {
-    volumeSlider.addEventListener('input', (e) => {
-      setVolume(parseInt(e.target.value));
+    volumeSlider.addEventListener('input', async (e) => {
+      await setVolume(parseInt(e.target.value));
     });
   }
   

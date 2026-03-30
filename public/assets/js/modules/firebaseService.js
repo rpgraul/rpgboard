@@ -378,6 +378,21 @@ export async function issueAudioCommand(commandType, payload = {}) {
   return wrapSync(updateDoc(audioPlayerDocRef, { ...baseState, ...payload }));
 }
 
+export async function updateAudioVolume(volume) {
+  return wrapSync(updateDoc(audioPlayerDocRef, {
+    volume: Math.max(0, Math.min(100, volume)),
+    lastUpdated: serverTimestamp()
+  }));
+}
+
+export async function updateAudioPosition(seekTime) {
+  return wrapSync(updateDoc(audioPlayerDocRef, {
+    seekTime: seekTime,
+    commandTime: Date.now(),
+    lastUpdated: serverTimestamp()
+  }));
+}
+
 export async function initAudioPlayer() {
   const docSnap = await getDoc(audioPlayerDocRef);
   if (!docSnap.exists()) {

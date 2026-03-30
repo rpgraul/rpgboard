@@ -309,7 +309,7 @@
   cursor: grab;
   padding: 4px;
   font-size: 0.8rem;
-  opacity: 0;
+  opacity: 0.3;
   transition: opacity 0.2s;
 }
 
@@ -327,7 +327,7 @@
   color: #555;
   cursor: pointer;
   padding: 4px;
-  opacity: 0;
+  opacity: 0.3;
   transition: opacity 0.2s, color 0.2s;
 }
 
